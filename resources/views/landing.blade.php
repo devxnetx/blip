@@ -134,7 +134,8 @@
         }
 
         .copy {
-            max-width: 640px;
+            width: min(640px, 100%);
+            min-width: 0;
             padding: 8px 18px 4px;
             background: #d4d1cb;
             box-shadow: 0 0 28px 22px #d4d1cb;
