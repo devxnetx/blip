@@ -185,9 +185,14 @@
             box-shadow: 0 18px 40px rgba(28, 27, 25, 0.16);
         }
 
-        .panel { overflow: auto; }
+        .panel[hidden],
+        .nearby[hidden] {
+            display: none !important;
+        }
 
-        .nearby {
+        .panel { z-index: 650; overflow: auto; }
+
+        .nearby:not([hidden]) {
             display: flex;
             flex-direction: column;
             overflow: hidden;
