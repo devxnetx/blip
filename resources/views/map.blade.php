@@ -226,6 +226,11 @@
             transition: opacity 0.45s ease;
         }
 
+        #boot.boot-hold {
+            opacity: 0;
+            pointer-events: none;
+        }
+
         #boot.is-done { opacity: 0; }
 
         .boot-pin {
@@ -627,7 +632,7 @@
     </style>
 </head>
 <body>
-    <div id="boot">
+    <div id="boot" class="boot-hold">
         <div>
             <div class="boot-pin" aria-hidden="true"><span></span></div>
             <div class="boot-word"><i>KO</i>staa</div>

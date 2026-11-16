@@ -44,8 +44,8 @@ const CITIES = [
 const map = new maplibregl.Map({
   container: 'map',
   style: 'https://tiles.openfreemap.org/styles/liberty',
-  center: [25.3, 42.7],
-  zoom: 6.4,
+  center: [25.6345, 42.4258],
+  zoom: 12.2,
   pitch: 48,
   bearing: -14,
   maxPitch: 75,
@@ -1058,8 +1058,16 @@ function hideBoot() {
   }, 450);
 }
 
-function showCity(latitude, longitude) {
-  const span = 0.08;
+window.setTimeout(() => {
+  const boot = document.getElementById('boot');
+  if (!boot || boot.hidden || boot.classList.contains('is-done')) {
+    return;
+  }
+  boot.classList.remove('boot-hold');
+}, 200);
+
+function showCity(latitude, longitude, options = {}) {
+  const span = options.span || 0.08;
   const frame = (size, duration) => frameMap(
     longitude - size / 2,
     latitude - size / 2,
@@ -1079,7 +1087,7 @@ function showCity(latitude, longitude) {
       frame(span, 1100);
     };
     const arm = () => {
-      frame(0.13, 0);
+      frame(Math.min(0.13, span * 1.8), 0);
       map.once('moveend', zoomIn);
       window.setTimeout(zoomIn, 700);
     };
@@ -1296,15 +1304,6 @@ async function openLinkedPin() {
 }
 
 async function openOnCity() {
-  const gpsDone = followCity();
-  const ipTask = lookupIpCity(
-    'https://get.geojs.io/v1/ip/geo.json',
-    (body) => cityPoint(body.latitude, body.longitude),
-  ).then((point) => point || lookupIpCity(
-    'https://ipwho.is/',
-    (body) => (body && body.success ? cityPoint(body.latitude, body.longitude) : null),
-  ));
-
   if (holdLink) {
     const opened = await openLinkedPin();
     if (opened) {
@@ -1313,39 +1312,8 @@ async function openOnCity() {
     holdLink = false;
   }
 
-  const firstGps = await Promise.race([
-    gpsDone,
-    new Promise((resolve) => setTimeout(() => resolve(undefined), 900)),
-  ]);
-  if (firstGps) {
-    revealIfFar(firstGps);
-    return;
-  }
-
-  const ip = await Promise.race([
-    ipTask,
-    new Promise((resolve) => setTimeout(() => resolve(null), 1600)),
-  ]);
-  if (!placed) {
-    if (ip) {
-      showCity(ip.lat, ip.lng);
-    }
-  }
-
-  const gps = await gpsDone;
-  if (placed) {
-    return;
-  }
-  if (gps) {
-    showCity(gps.lat, gps.lng);
-    return;
-  }
-  const lateIp = ip || await ipTask;
-  if (lateIp) {
-    showCity(lateIp.lat, lateIp.lng);
-  } else if (!placed) {
-    showCity(42.6977, 23.3219);
-  }
+  const staraZagora = CITIES.find((city) => city.name === 'Стара Загора');
+  showCity(staraZagora.latitude, staraZagora.longitude, { span: 0.03 });
 }
 
 setInterval(() => loadPins(), 20000);
