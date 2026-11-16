@@ -833,14 +833,17 @@ FEATURED.forEach((name) => {
   moreCities.before(cityButton(city, 'city-pill'));
 });
 
-document.getElementById('open-cities').addEventListener('click', () => {
+function openCities() {
   panel.hidden = true;
   nearbyEl.hidden = true;
   document.getElementById('city-search').value = '';
   renderCityChoices();
   document.getElementById('cities-modal').hidden = false;
   document.getElementById('city-search').focus();
-});
+}
+
+document.getElementById('open-cities').addEventListener('click', openCities);
+document.getElementById('open-cities-mobile').addEventListener('click', openCities);
 
 document.getElementById('city-search').addEventListener('input', renderCityChoices);
 

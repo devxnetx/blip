@@ -116,9 +116,18 @@
             z-index: 600;
         }
 
-        .home {
+        .top-left {
+            position: fixed;
+            z-index: 600;
             top: 16px;
             left: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .home {
+            position: static;
             color: var(--ink);
             background: rgba(246, 244, 239, 0.94);
             text-decoration: none;
@@ -142,7 +151,14 @@
             cursor: pointer;
         }
 
-        #locate { left: 16px; bottom: 24px; background: var(--card); }
+        #locate, #open-list {
+            background: var(--card);
+            box-shadow: 0 1px 2px rgba(28, 27, 25, 0.22);
+        }
+
+        #locate { left: 16px; bottom: 24px; }
+
+        #open-list .bars i { background: var(--ink); }
 
         #locate span {
             display: block;
@@ -466,6 +482,8 @@
 
         #open-cities { background: var(--ink); color: var(--card); }
 
+        #open-cities-mobile { display: none; }
+
         #cities-modal { left: 16px; right: auto; }
 
         #city-search {
@@ -534,14 +552,22 @@
         }
 
         @media (max-width: 800px) {
-            .city-bar { left: 16px; right: 16px; top: 64px; }
-            .panel, .nearby { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
+            .city-bar { display: none; }
+            #open-cities-mobile { display: inline-flex; align-items: center; }
+            #locate { left: auto; right: 16px; bottom: 80px; }
+            body:has(#install:not([hidden])) #open-list { bottom: 148px; }
+            body:has(#install:not([hidden])) #locate { bottom: 204px; }
+            .maplibregl-ctrl-bottom-left { display: none; }
+            .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
+    <div class="top-left">
+        <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
+        <button class="city-pill" id="open-cities-mobile" type="button">Градове</button>
+    </div>
     <nav class="city-bar" id="city-bar" aria-label="Градове">
         <button class="city-pill" id="open-cities" type="button">Още</button>
     </nav>
