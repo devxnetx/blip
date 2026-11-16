@@ -127,7 +127,7 @@
             letter-spacing: -0.04em;
             padding: 6px 12px;
             border-radius: 999px;
-            box-shadow: 0 0 0 1px rgba(28, 27, 25, 0.1), 0 2px 6px rgba(28, 27, 25, 0.1), 0 10px 22px rgba(28, 27, 25, 0.18);
+            box-shadow: 0 1px 2px rgba(28, 27, 25, 0.22);
         }
 
         .home i { color: var(--pin); font-style: normal; }
@@ -438,11 +438,12 @@
         .city-bar {
             position: fixed;
             z-index: 600;
-            top: 16px;
+            top: 12px;
             left: 132px;
             right: 16px;
             display: flex;
             gap: 8px;
+            padding: 4px 2px 8px;
             overflow-x: auto;
             scrollbar-width: none;
         }
@@ -458,7 +459,7 @@
             font: inherit;
             font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 0 0 1px rgba(28, 27, 25, 0.1), 0 2px 6px rgba(28, 27, 25, 0.1), 0 10px 22px rgba(28, 27, 25, 0.18);
+            box-shadow: 0 1px 2px rgba(28, 27, 25, 0.22);
         }
 
         .city-pill { padding: 8px 14px; }
@@ -533,7 +534,7 @@
         }
 
         @media (max-width: 800px) {
-            .city-bar { left: 16px; right: 16px; top: 68px; }
+            .city-bar { left: 16px; right: 16px; top: 64px; }
             .panel, .nearby { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
         }
     </style>
