@@ -127,6 +127,7 @@
             letter-spacing: -0.04em;
             padding: 6px 12px;
             border-radius: 999px;
+            box-shadow: 0 0 0 1px rgba(28, 27, 25, 0.1), 0 2px 6px rgba(28, 27, 25, 0.1), 0 10px 22px rgba(28, 27, 25, 0.18);
         }
 
         .home i { color: var(--pin); font-style: normal; }
@@ -457,7 +458,7 @@
             font: inherit;
             font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 8px 20px rgba(28, 27, 25, 0.12);
+            box-shadow: 0 0 0 1px rgba(28, 27, 25, 0.1), 0 2px 6px rgba(28, 27, 25, 0.1), 0 10px 22px rgba(28, 27, 25, 0.18);
         }
 
         .city-pill { padding: 8px 14px; }
@@ -539,7 +540,7 @@
 </head>
 <body>
     <div id="map"></div>
-    <a class="home" href="{{ url('/') }}">Kost<i>aa</i></a>
+    <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
     <nav class="city-bar" id="city-bar" aria-label="Градове">
         <button class="city-pill" id="open-cities" type="button">Още</button>
     </nav>

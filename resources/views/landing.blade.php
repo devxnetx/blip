@@ -244,7 +244,7 @@
 </head>
 <body>
     <header>
-        <div class="mark">Kost<span>aa</span></div>
+        <div class="mark"><span>KO</span>staa</div>
         <p>Без акаунт. Пинът изтича.</p>
     </header>
     <main>
