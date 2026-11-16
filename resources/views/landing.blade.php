@@ -355,6 +355,7 @@
             .lede { max-width: 28ch; font-size: 16px; }
             .stores { width: 100%; }
             .store, .view-map { min-width: 0; flex: 1 1 140px; }
+            .view-map { flex-basis: 100%; }
             .latest {
                 position: relative;
                 top: auto;
