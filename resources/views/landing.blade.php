@@ -258,11 +258,11 @@
                 <div class="stores">
                     <a class="store" href="{{ $appStoreUrl }}" rel="noopener">
                         <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M16.4 12.7c0-2.2 1.8-3.2 1.9-3.3-1-1.5-2.6-1.7-3.2-1.7-1.3-.1-2.6.8-3.3.8s-1.7-.8-2.9-.8c-1.5 0-2.8.9-3.6 2.2-1.5 2.7-.4 6.6 1.1 8.8.7 1.1 1.6 2.3 2.7 2.2 1.1 0 1.5-.7 2.8-.7s1.7.7 2.9.7 1.9-1.1 2.6-2.2c.8-1.2 1.2-2.3 1.2-2.4-.1 0-2.2-.9-2.2-3.6zM14.6 6.4c.6-.7 1-1.7.9-2.7-1 .1-2.1.6-2.8 1.4-.6.7-1.1 1.7-.9 2.6 1 .1 2.1-.5 2.8-1.3z"/></svg>
-                        <span><small>Изтегли от</small><b>App Store</b></span>
+                        <span><small>За iPhone</small><b>Expo</b></span>
                     </a>
                     <a class="store" href="{{ $playStoreUrl }}" rel="noopener">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#34a853" d="M3.5 20.5 13.2 12 3.5 3.5z"/><path fill="#fbbc04" d="m13.2 12 2.6 2.2-9.4 5.4z"/><path fill="#ea4335" d="M15.8 9.8 13.2 12 3.5 3.5l9.4 5.4z"/><path fill="#4285f4" d="M20.2 10.7c.7.4.7 1.2 0 1.6l-3.4 2-2.6-2.3 2.6-2.3z"/></svg>
-                        <span><small>Вземи от</small><b>Google Play</b></span>
+                        <span><small>За Android</small><b>Expo</b></span>
                     </a>
                     <a class="view-map" href="{{ route('map') }}">Виж картата</a>
                 </div>

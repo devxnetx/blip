@@ -713,10 +713,10 @@
             <p>Има приложение за телефона. Може и да добавиш тази страница на началния екран.</p>
             <div class="row">
                 @if (config('blip.app_store_url'))
-                    <a href="{{ config('blip.app_store_url') }}" rel="noopener">App Store</a>
+                    <a href="{{ config('blip.app_store_url') }}" rel="noopener">Expo за iPhone</a>
                 @endif
                 @if (config('blip.play_store_url'))
-                    <a href="{{ config('blip.play_store_url') }}" rel="noopener">Google Play</a>
+                    <a href="{{ config('blip.play_store_url') }}" rel="noopener">Expo за Android</a>
                 @endif
             </div>
         @else

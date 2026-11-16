@@ -21,9 +21,13 @@ class PinTest extends TestCase
             ->assertSee('Остави бележка там, където стоиш.')
             ->assertSee('Пин тук')
             ->assertSee('Снимката не е задължителна')
-            ->assertSee('Изтегли от')
-            ->assertSee('App Store')
-            ->assertSee('Google Play')
+            ->assertSee('За iPhone')
+            ->assertSee('За Android')
+            ->assertSee('Expo')
+            ->assertSee('exp://u.expo.dev/update/01a1e4d4-a46f-7329-b742-e085945831eb', false)
+            ->assertSee('exp://u.expo.dev/update/01a1e4d4-a46f-7bac-9b48-48946b24bd2e', false)
+            ->assertDontSee('https://apps.apple.com', false)
+            ->assertDontSee('https://play.google.com/store', false)
             ->assertSee('Виж картата');
     }
 
