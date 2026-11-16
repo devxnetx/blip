@@ -1058,14 +1058,6 @@ function hideBoot() {
   }, 450);
 }
 
-window.setTimeout(() => {
-  const boot = document.getElementById('boot');
-  if (!boot || boot.hidden || boot.classList.contains('is-done')) {
-    return;
-  }
-  boot.classList.remove('boot-hold');
-}, 200);
-
 function showCity(latitude, longitude, options = {}) {
   const span = options.span || 0.08;
   const frame = (size, duration) => frameMap(
@@ -1313,7 +1305,7 @@ async function openOnCity() {
   }
 
   const staraZagora = CITIES.find((city) => city.name === 'Стара Загора');
-  showCity(staraZagora.latitude, staraZagora.longitude, { span: 0.03 });
+  showCity(staraZagora.latitude, staraZagora.longitude, { span: 0.022 });
 }
 
 setInterval(() => loadPins(), 20000);
