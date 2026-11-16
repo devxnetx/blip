@@ -272,6 +272,8 @@
 
         @media (max-width: 900px) {
             body { overflow-x: hidden; }
+            a.drop { width: 168px; }
+            a.drop:nth-child(n + 7) { display: none; }
             .center { width: 100%; min-height: auto; padding: 72px 16px 28px; }
             .copy { width: 100%; max-width: 100%; padding: 0; }
             h1 { font-size: 34px; max-width: 9em; }
@@ -322,7 +324,7 @@
         const categories = { seeking: 'Търся', lost: 'Загубено', warning: 'Внимание', free: 'Безплатно', other: 'Друго' };
         const rain = document.getElementById('rain');
         const boot = document.getElementById('boot');
-        const lanes = [3, 12, 21, 30, 39, 48, 57, 66, 75, 84, 17, 70];
+        const lanes = [2, 20, 38, 56, 74, 11, 29, 47, 65, 82];
 
         function timeAgo(createdAt) {
             const ms = Date.now() - new Date(createdAt).getTime();
@@ -363,7 +365,7 @@
                 drop.href = '/map?pin=' + encodeURIComponent(pin.id);
                 drop.style.left = lanes[index] + '%';
                 drop.style.animationDuration = (40 + (index % 3) * 6) + 's';
-                drop.style.animationDelay = (-index * 5) + 's';
+                drop.style.animationDelay = (-index * 8) + 's';
                 drop.appendChild(bubble(pin));
                 rain.appendChild(drop);
             });
