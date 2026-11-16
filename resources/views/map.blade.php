@@ -154,18 +154,6 @@
 
         #open-list { right: 16px; bottom: 24px; }
 
-        #open-cities {
-            display: none;
-            top: 16px;
-            left: 118px;
-            width: auto;
-            height: 40px;
-            padding: 0 14px;
-            border-radius: 999px;
-            font: inherit;
-            font-weight: 700;
-        }
-
         .bars { width: 18px; margin: 0 auto; }
 
         .bars i {
@@ -451,7 +439,7 @@
             z-index: 600;
             top: 16px;
             left: 132px;
-            right: 420px;
+            right: 16px;
             display: flex;
             gap: 8px;
             overflow-x: auto;
@@ -473,6 +461,21 @@
         }
 
         .city-pill { padding: 8px 14px; }
+
+        #open-cities { background: var(--ink); color: var(--card); }
+
+        #cities-modal { left: 16px; right: auto; }
+
+        #city-search {
+            width: 100%;
+            margin-top: 16px;
+            border: 0;
+            border-radius: 12px;
+            background: #fff;
+            padding: 12px 14px;
+            font: inherit;
+            color: var(--ink);
+        }
 
         #city-list {
             display: flex;
@@ -529,8 +532,7 @@
         }
 
         @media (max-width: 800px) {
-            .city-bar { display: none; }
-            #open-cities { display: flex; }
+            .city-bar { left: 16px; right: 16px; top: 68px; }
             .panel, .nearby { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
         }
     </style>
@@ -538,8 +540,9 @@
 <body>
     <div id="map"></div>
     <a class="home" href="{{ url('/') }}">Kost<i>aa</i></a>
-    <nav class="city-bar" id="city-bar" aria-label="Градове"></nav>
-    <button class="hud" id="open-cities" type="button">Градове</button>
+    <nav class="city-bar" id="city-bar" aria-label="Градове">
+        <button class="city-pill" id="open-cities" type="button">Още</button>
+    </nav>
     <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span></span></button>
     <button class="hud" id="open-list" type="button" aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
     <button class="toast" id="toast" type="button" hidden></button>
@@ -601,6 +604,8 @@
             <h2>Градове</h2>
             <button class="linkish" id="cities-close" type="button">Затвори</button>
         </div>
+        <input id="city-search" type="search" placeholder="Търси град" autocomplete="off" aria-label="Търси град">
+        <p class="faint" id="city-empty" hidden>Няма такъв град.</p>
         <div id="city-list"></div>
     </section>
 

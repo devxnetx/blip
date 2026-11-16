@@ -11,12 +11,12 @@ function categoryLabel(id) {
 }
 const REVEAL_DELTA = 0.012;
 const CITIES = [
-  { name: 'София', latitude: 42.6977, longitude: 23.3219 },
-  { name: 'Пловдив', latitude: 42.1354, longitude: 24.7453 },
-  { name: 'Варна', latitude: 43.2141, longitude: 27.9147 },
-  { name: 'Бургас', latitude: 42.5048, longitude: 27.4626 },
-  { name: 'Русе', latitude: 43.8356, longitude: 25.9657 },
-  { name: 'Стара Загора', latitude: 42.4258, longitude: 25.6345 },
+  { name: 'София', find: 'sofia sofiq', latitude: 42.6977, longitude: 23.3219 },
+  { name: 'Пловдив', find: 'plovdiv', latitude: 42.1354, longitude: 24.7453 },
+  { name: 'Варна', find: 'varna', latitude: 43.2141, longitude: 27.9147 },
+  { name: 'Бургас', find: 'burgas', latitude: 42.5048, longitude: 27.4626 },
+  { name: 'Стара Загора', find: 'stara zagora', latitude: 42.4258, longitude: 25.6345 },
+  { name: 'Русе', find: 'ruse', latitude: 43.8356, longitude: 25.9657 },
   { name: 'Плевен', latitude: 43.417, longitude: 24.6067 },
   { name: 'Сливен', latitude: 42.6816, longitude: 26.3292 },
   { name: 'Добрич', latitude: 43.5726, longitude: 27.8273 },
@@ -765,6 +765,7 @@ document.getElementById('category-filters').addEventListener('click', (event) =>
 document.getElementById('open-list').addEventListener('click', () => {
   listCenter = map.getCenter();
   panel.hidden = true;
+  document.getElementById('cities-modal').hidden = true;
   nearbyEl.hidden = false;
   loadNearby(Number(document.getElementById('radius').value));
 });
@@ -802,6 +803,8 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+const FEATURED = ['София', 'Пловдив', 'Варна', 'Бургас', 'Стара Загора'];
+
 function cityButton(city, className) {
   const button = document.createElement('button');
   button.type = 'button';
@@ -811,16 +814,35 @@ function cityButton(city, className) {
   return button;
 }
 
-CITIES.forEach((city) => {
-  document.getElementById('city-bar').append(cityButton(city, 'city-pill'));
-  document.getElementById('city-list').append(cityButton(city, 'city-choice'));
+function renderCityChoices() {
+  const list = document.getElementById('city-list');
+  const needle = document.getElementById('city-search').value.trim().toLowerCase();
+  const rows = CITIES.filter((city) => {
+    if (!needle) {
+      return true;
+    }
+    return city.name.toLowerCase().includes(needle) || (city.find || '').includes(needle);
+  });
+  list.replaceChildren(...rows.map((city) => cityButton(city, 'city-choice')));
+  document.getElementById('city-empty').hidden = rows.length > 0;
+}
+
+const moreCities = document.getElementById('open-cities');
+FEATURED.forEach((name) => {
+  const city = CITIES.find((item) => item.name === name);
+  moreCities.before(cityButton(city, 'city-pill'));
 });
 
 document.getElementById('open-cities').addEventListener('click', () => {
   panel.hidden = true;
   nearbyEl.hidden = true;
+  document.getElementById('city-search').value = '';
+  renderCityChoices();
   document.getElementById('cities-modal').hidden = false;
+  document.getElementById('city-search').focus();
 });
+
+document.getElementById('city-search').addEventListener('input', renderCityChoices);
 
 document.getElementById('cities-close').addEventListener('click', () => {
   document.getElementById('cities-modal').hidden = true;
