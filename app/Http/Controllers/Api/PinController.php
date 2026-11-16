@@ -68,6 +68,21 @@ class PinController extends Controller
         return response()->json(['pins' => $pins]);
     }
 
+    public function latest(): JsonResponse
+    {
+        Pin::pruneExpired();
+
+        $pins = Pin::query()
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->limit(15)
+            ->get()
+            ->map(fn (Pin $pin) => $pin->toApi(false))
+            ->values();
+
+        return response()->json(['pins' => $pins]);
+    }
+
     public function show(Request $request, Pin $pin): JsonResponse
     {
         $this->ensureActive($pin);

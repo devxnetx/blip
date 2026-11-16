@@ -19,8 +19,7 @@ class PinTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('Остави бележка там, където стоиш.')
-            ->assertSee('Пин тук')
-            ->assertSee('Снимката не е задължителна')
+            ->assertSee('„Пин тук“ ползва местоположението ти.', false)
             ->assertSee('За iPhone')
             ->assertSee('За Android')
             ->assertSee('Expo')
@@ -28,7 +27,68 @@ class PinTest extends TestCase
             ->assertSee('exp://u.expo.dev/update/01a1e4d4-a46f-7bac-9b48-48946b24bd2e', false)
             ->assertDontSee('https://apps.apple.com', false)
             ->assertDontSee('https://play.google.com/store', false)
-            ->assertSee('Виж картата');
+            ->assertSee('Виж картата')
+            ->assertSee('Последни')
+            ->assertSee('id="boot"', false)
+            ->assertDontSee('Снимката не е задължителна')
+            ->assertDontSee('Когато времето свърши');
+    }
+
+    public function test_the_latest_feed_is_the_fifteen_newest_pins_from_any_city(): void
+    {
+        $older = Pin::query()->create([
+            'device_hash' => hash('sha256', 'older'),
+            'message' => 'Older city note',
+            'category' => 'lost',
+            'latitude' => 42.6977,
+            'longitude' => 23.3219,
+            'expires_at' => now()->addHour(),
+        ]);
+        $older->forceFill(['created_at' => now()->subHours(2)])->save();
+
+        $newer = Pin::query()->create([
+            'device_hash' => hash('sha256', 'newer'),
+            'message' => 'Newer city note',
+            'category' => 'seeking',
+            'latitude' => 43.2141,
+            'longitude' => 27.9147,
+            'expires_at' => now()->addHour(),
+        ]);
+
+        Reply::query()->create([
+            'pin_id' => $newer->id,
+            'device_hash' => hash('sha256', 'someone'),
+            'message' => 'secret reply text',
+            'author_only' => false,
+        ]);
+
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'gone'),
+            'message' => 'Expired city note',
+            'latitude' => 42.4258,
+            'longitude' => 25.6345,
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        foreach (range(1, 14) as $n) {
+            $extra = Pin::query()->create([
+                'device_hash' => hash('sha256', 'extra-'.$n),
+                'message' => 'Extra '.$n,
+                'latitude' => 42.1,
+                'longitude' => 24.7,
+                'expires_at' => now()->addHour(),
+            ]);
+            $extra->forceFill(['created_at' => now()->subMinutes($n)])->save();
+        }
+
+        $this->getJson('/api/pins/latest')
+            ->assertOk()
+            ->assertJsonCount(15, 'pins')
+            ->assertJsonPath('pins.0.message', 'Newer city note')
+            ->assertJsonPath('pins.1.message', 'Extra 1')
+            ->assertJsonMissing(['message' => 'Older city note'])
+            ->assertJsonMissing(['message' => 'Expired city note'])
+            ->assertJsonMissing(['message' => 'secret reply text']);
     }
 
     public function test_the_desktop_map_views_pins_without_a_way_to_add_one(): void
