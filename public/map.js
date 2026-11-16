@@ -285,13 +285,14 @@ function zoomRegion(region, cluster) {
   };
 }
 
-function frameMap(west, south, east, north, duration) {
+function frameMap(west, south, east, north, duration, padding) {
   placed = true;
   map.fitBounds([[west, south], [east, north]], {
     pitch: Math.max(map.getPitch(), 48),
     bearing: map.getBearing(),
     maxZoom: 17,
     duration: duration ?? 700,
+    padding: padding || 0,
   });
 }
 
@@ -341,7 +342,10 @@ function drawMarkers() {
     const kindHtml = kind ? `<small>${escapeHtml(kind)}</small>` : '';
     const element = markerElement(
       `<div class="bubble-wrap" style="height:${base}px;padding-bottom:${pin.stackOffset || 0}px"><div class="bubble">${image}<span>${escapeHtml(pin.message)}</span>${kindHtml}</div><div class="tail"></div></div>`,
-      () => openPin(pin),
+      () => {
+        focusPin(pin, { padPanel: true });
+        openPin(pin);
+      },
     );
     const marker = new maplibregl.Marker({ element, anchor: 'bottom' })
       .setLngLat([pin.longitude, pin.latitude])
@@ -723,7 +727,9 @@ function renderNearbyList() {
       button.append(copy);
       button.addEventListener('click', () => {
         nearbyEl.hidden = true;
-        map.panTo([pin.longitude, pin.latitude]);
+        if (!focusPin(pin)) {
+          map.panTo([pin.longitude, pin.latitude]);
+        }
       });
       const actions = document.createElement('div');
       actions.className = 'pin-actions';
@@ -1078,6 +1084,41 @@ function showCity(latitude, longitude) {
   introToken += 1;
   hideBoot();
   frame(span, 900);
+}
+
+function focusPin(pin, options = {}) {
+  if (!desktopBoot) {
+    return false;
+  }
+  const latitude = Number(pin.latitude);
+  const longitude = Number(pin.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return false;
+  }
+  viewTouched = true;
+  introToken += 1;
+  const span = 0.006;
+  const bounds = map.getBounds();
+  const padding = options.padPanel
+    ? { top: 48, right: 440, bottom: 48, left: 48 }
+    : { top: 48, right: 48, bottom: 48, left: 48 };
+  if (bounds.getNorth() - bounds.getSouth() <= span) {
+    map.easeTo({
+      center: [longitude, latitude],
+      duration: 700,
+      padding,
+    });
+    return true;
+  }
+  frameMap(
+    longitude - span / 2,
+    latitude - span / 2,
+    longitude + span / 2,
+    latitude + span / 2,
+    850,
+    padding,
+  );
+  return true;
 }
 
 function goToCity(city) {
