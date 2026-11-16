@@ -1028,15 +1028,56 @@ function watchNearby() {
   );
 }
 
+const desktopBoot = window.matchMedia('(min-width: 801px)').matches;
+let introPlayed = false;
+let introToken = 0;
+
+function hideBoot() {
+  const boot = document.getElementById('boot');
+  if (!boot || boot.hidden || boot.classList.contains('is-done')) {
+    return;
+  }
+  boot.classList.add('is-done');
+  window.setTimeout(() => {
+    boot.hidden = true;
+  }, 450);
+}
+
 function showCity(latitude, longitude) {
   const span = 0.08;
-  frameMap(
-    longitude - span / 2,
-    latitude - span / 2,
-    longitude + span / 2,
-    latitude + span / 2,
-    900,
+  const frame = (size, duration) => frameMap(
+    longitude - size / 2,
+    latitude - size / 2,
+    longitude + size / 2,
+    latitude + size / 2,
+    duration,
   );
+  if (desktopBoot && !introPlayed) {
+    introPlayed = true;
+    const token = ++introToken;
+    const zoomIn = () => {
+      if (token !== introToken) {
+        return;
+      }
+      introToken += 1;
+      hideBoot();
+      frame(span, 1100);
+    };
+    const arm = () => {
+      frame(0.13, 0);
+      map.once('moveend', zoomIn);
+      window.setTimeout(zoomIn, 700);
+    };
+    if (map.isStyleLoaded()) {
+      arm();
+    } else {
+      map.once('load', arm);
+    }
+    return;
+  }
+  introToken += 1;
+  hideBoot();
+  frame(span, 900);
 }
 
 function goToCity(city) {
@@ -1158,6 +1199,7 @@ async function openLinkedPin() {
       0,
     );
     openPin(pin);
+    hideBoot();
     return true;
   } catch {
     return false;

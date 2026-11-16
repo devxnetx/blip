@@ -210,9 +210,66 @@
 
         .panel[hidden],
         .nearby[hidden],
-        .install[hidden] {
+        .install[hidden],
+        #boot[hidden] {
             display: none !important;
         }
+
+        #boot {
+            position: fixed;
+            inset: 0;
+            z-index: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            transition: opacity 0.45s ease;
+        }
+
+        #boot.is-done { opacity: 0; }
+
+        .boot-pin {
+            position: relative;
+            z-index: 1;
+            width: 64px;
+            height: 64px;
+            margin: 0 auto;
+            border-radius: 32px;
+            background: var(--pin);
+        }
+
+        .boot-pin span {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .boot-pin::after {
+            content: "";
+            position: absolute;
+            left: 20px;
+            bottom: -16px;
+            width: 24px;
+            height: 24px;
+            background: var(--pin);
+            transform: rotate(45deg);
+            z-index: -1;
+        }
+
+        .boot-word {
+            margin-top: 28px;
+            color: var(--ink);
+            font-size: 56px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            text-align: center;
+        }
+
+        .boot-word i { color: var(--pin); font-style: normal; }
 
         .panel { z-index: 650; overflow: auto; }
 
@@ -560,6 +617,7 @@
         }
 
         @media (max-width: 800px) {
+            #boot { display: none !important; }
             .city-bar { display: none; }
             #open-cities-mobile { display: inline-flex; align-items: center; }
             body:has(#install:not([hidden])) #locate { bottom: 148px; }
@@ -569,6 +627,12 @@
     </style>
 </head>
 <body>
+    <div id="boot">
+        <div>
+            <div class="boot-pin" aria-hidden="true"><span></span></div>
+            <div class="boot-word"><i>KO</i>staa</div>
+        </div>
+    </div>
     <div id="map"></div>
     <div class="top-left">
         <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
