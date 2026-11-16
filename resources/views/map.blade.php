@@ -716,7 +716,7 @@
                     <a href="{{ config('blip.app_store_url') }}" rel="noopener">Expo за iPhone</a>
                 @endif
                 @if (config('blip.play_store_url'))
-                    <a href="{{ config('blip.play_store_url') }}" rel="noopener">Expo за Android</a>
+                    <a href="{{ config('blip.play_store_url') }}" rel="noopener">APK за Android</a>
                 @endif
             </div>
         @else

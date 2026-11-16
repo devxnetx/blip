@@ -5,6 +5,7 @@ return [
     // Live Expo tunnel from this computer. It changes if that process restarts.
     'app_store_url' => env('APP_STORE_URL') ?: 'exp://jvjzxya-devxnetx-8081.exp.direct',
 
-    'play_store_url' => env('PLAY_STORE_URL') ?: 'exp://u.expo.dev/update/01a1e4d4-a46f-7bac-9b48-48946b24bd2e',
+    // Android internal APK. Expo deletes this file on 2026-11-30.
+    'play_store_url' => env('PLAY_STORE_URL') ?: 'https://expo.dev/artifacts/eas/LEjq1XFy2T8F_lM0ipt9tkKzhwKxf0Ch2bROjNcnBis.apk',
 
 ];

@@ -319,7 +319,7 @@
                 </a>
                 <a class="store" href="{{ $playStoreUrl }}" rel="noopener">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#34a853" d="M3.5 20.5 13.2 12 3.5 3.5z"/><path fill="#fbbc04" d="m13.2 12 2.6 2.2-9.4 5.4z"/><path fill="#ea4335" d="M15.8 9.8 13.2 12 3.5 3.5l9.4 5.4z"/><path fill="#4285f4" d="M20.2 10.7c.7.4.7 1.2 0 1.6l-3.4 2-2.6-2.3 2.6-2.3z"/></svg>
-                    <span><small>За Android</small><b>Expo</b></span>
+                    <span><small>За Android</small><b>APK</b></span>
                 </a>
                 <a class="view-map" href="{{ route('map') }}">Виж картата</a>
             </div>
