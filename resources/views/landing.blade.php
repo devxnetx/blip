@@ -52,18 +52,23 @@
         .v1 { left: 24%; }
         .v2 { left: 57%; }
 
-        #rain {
+        .rain-side {
             position: fixed;
-            inset: 0;
+            top: 0;
+            bottom: 0;
             z-index: 1;
+            width: max(0px, calc((100% - 760px) / 2));
             overflow: hidden;
             pointer-events: none;
         }
 
+        #rain-left { left: 0; }
+        #rain-right { right: 0; }
+
         a.drop {
             position: absolute;
             top: 0;
-            width: 200px;
+            width: min(210px, calc(100% - 28px));
             opacity: 0;
             color: inherit;
             text-decoration: none;
@@ -71,7 +76,10 @@
             cursor: pointer;
         }
 
-        #rain.on a.drop {
+        #rain-left a.drop { left: auto; right: 16px; }
+        #rain-right a.drop { left: 16px; }
+
+        .rain-side.on a.drop {
             opacity: 1;
             animation-name: fall;
             animation-timing-function: linear;
@@ -80,7 +88,7 @@
 
         @keyframes fall {
             from { transform: translate3d(0, -28vh, 0); }
-            to { transform: translate3d(10px, 118vh, 0); }
+            to { transform: translate3d(0, 118vh, 0); }
         }
 
         .bubble {
@@ -270,10 +278,12 @@
 
         .boot-word i { color: var(--pin); font-style: normal; }
 
+        @media (max-width: 1100px) {
+            .rain-side { display: none; }
+        }
+
         @media (max-width: 900px) {
             body { overflow-x: hidden; }
-            a.drop { width: 168px; }
-            a.drop:nth-child(n + 7) { display: none; }
             .center { width: 100%; min-height: auto; padding: 72px 16px 28px; }
             .copy { width: 100%; max-width: 100%; padding: 0; }
             h1 { font-size: 34px; max-width: 9em; }
@@ -284,7 +294,7 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
-            #rain.on a.drop { animation: none; opacity: 1; }
+            .rain-side.on a.drop { animation: none; opacity: 1; }
             #boot { transition: none; }
         }
     </style>
@@ -296,7 +306,8 @@
         <div class="street v v1"></div>
         <div class="street v v2"></div>
     </div>
-    <div id="rain"></div>
+    <div id="rain-left" class="rain-side"></div>
+    <div id="rain-right" class="rain-side"></div>
     <main class="center">
         <div class="copy">
             <h1>Остави бележка там, където стоиш.</h1>
@@ -322,9 +333,9 @@
     </div>
     <script>
         const categories = { seeking: 'Търся', lost: 'Загубено', warning: 'Внимание', free: 'Безплатно', other: 'Друго' };
-        const rain = document.getElementById('rain');
+        const rainLeft = document.getElementById('rain-left');
+        const rainRight = document.getElementById('rain-right');
         const boot = document.getElementById('boot');
-        const lanes = [2, 20, 38, 56, 74, 11, 29, 47, 65, 82];
 
         function timeAgo(createdAt) {
             const ms = Date.now() - new Date(createdAt).getTime();
@@ -359,15 +370,15 @@
         }
 
         function startRain(pins) {
-            pins.slice(0, lanes.length).forEach((pin, index) => {
+            pins.slice(0, 10).forEach((pin, index) => {
                 const drop = document.createElement('a');
+                const sideIndex = Math.floor(index / 2);
                 drop.className = 'drop';
                 drop.href = '/map?pin=' + encodeURIComponent(pin.id);
-                drop.style.left = lanes[index] + '%';
-                drop.style.animationDuration = (40 + (index % 3) * 6) + 's';
-                drop.style.animationDelay = (-index * 8) + 's';
+                drop.style.animationDuration = (index % 2 === 0 ? 42 : 48) + 's';
+                drop.style.animationDelay = (-sideIndex * (index % 2 === 0 ? 8 : 10)) + 's';
                 drop.appendChild(bubble(pin));
-                rain.appendChild(drop);
+                (index % 2 === 0 ? rainLeft : rainRight).appendChild(drop);
             });
         }
 
@@ -383,7 +394,8 @@
             const wait = Math.max(0, 1100 - (performance.now() - opened));
             setTimeout(() => {
                 startRain(pins);
-                rain.classList.add('on');
+                rainLeft.classList.add('on');
+                rainRight.classList.add('on');
                 boot.classList.add('is-done');
                 setTimeout(() => { boot.hidden = true; }, 480);
             }, wait);
