@@ -28,7 +28,9 @@ class PinTest extends TestCase
             ->assertDontSee('https://apps.apple.com', false)
             ->assertDontSee('https://play.google.com/store', false)
             ->assertSee('Виж картата')
-            ->assertSee('Последни')
+            ->assertSee('id="rain"', false)
+            ->assertSee('/map?pin=', false)
+            ->assertDontSee('Последни')
             ->assertSee('id="boot"', false)
             ->assertDontSee('Снимката не е задължителна')
             ->assertDontSee('Когато времето свърши');

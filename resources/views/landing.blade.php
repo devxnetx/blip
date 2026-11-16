@@ -54,20 +54,24 @@
 
         #rain {
             position: fixed;
-            inset: 0 352px 0 0;
+            inset: 0;
             z-index: 1;
             overflow: hidden;
             pointer-events: none;
         }
 
-        .drop {
+        a.drop {
             position: absolute;
             top: 0;
-            width: 210px;
+            width: 200px;
             opacity: 0;
+            color: inherit;
+            text-decoration: none;
+            pointer-events: auto;
+            cursor: pointer;
         }
 
-        #rain.on .drop {
+        #rain.on a.drop {
             opacity: 1;
             animation-name: fall;
             animation-timing-function: linear;
@@ -129,16 +133,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 48px 380px 48px 48px;
+            padding: 48px 24px;
             text-align: center;
+            pointer-events: none;
         }
 
         .copy {
             width: min(640px, 100%);
             min-width: 0;
-            padding: 8px 18px 4px;
-            background: #d4d1cb;
-            box-shadow: 0 0 28px 22px #d4d1cb;
+            pointer-events: auto;
         }
 
         h1 {
@@ -148,7 +151,6 @@
             font-weight: 400;
             letter-spacing: -0.04em;
             line-height: 0.95;
-            text-shadow: 0 0 16px #d4d1cb, 0 0 6px #d4d1cb;
         }
 
         .lede {
@@ -156,7 +158,6 @@
             max-width: 38ch;
             color: var(--muted);
             font-size: 18px;
-            text-shadow: 0 0 12px #d4d1cb;
         }
 
         .stores {
@@ -211,83 +212,6 @@
             text-decoration: none;
             font-weight: 600;
         }
-
-        .latest {
-            position: fixed;
-            z-index: 3;
-            top: 16px;
-            right: 16px;
-            bottom: 16px;
-            width: 320px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            background: var(--card);
-            border-radius: 22px;
-            box-shadow: 0 18px 40px rgba(28, 27, 25, 0.16);
-        }
-
-        .latest h2 {
-            margin: 0;
-            padding: 18px 18px 12px;
-            font-size: 18px;
-            letter-spacing: -0.03em;
-        }
-
-        .feed {
-            margin: 0;
-            padding: 0 10px 12px;
-            list-style: none;
-            overflow: auto;
-        }
-
-        .feed li { overflow: hidden; }
-
-        .feed a {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin: 0;
-            padding: 10px 8px;
-            border-radius: 14px;
-            color: inherit;
-            text-decoration: none;
-        }
-
-        .feed a:hover { background: rgba(28, 27, 25, 0.05); }
-
-        .feed a.enter { animation: push-in 0.9s cubic-bezier(.16, 1, .3, 1); }
-
-        @keyframes push-in {
-            from { transform: translateX(110%); }
-            to { transform: translateX(0); }
-        }
-
-        .feed img {
-            width: 42px;
-            height: 42px;
-            border-radius: 8px;
-            object-fit: cover;
-            flex: none;
-            background: #d9d6d0;
-        }
-
-        .feed strong {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            line-height: 1.3;
-        }
-
-        .feed em {
-            display: block;
-            margin-top: 2px;
-            color: var(--muted);
-            font-size: 12px;
-            font-style: normal;
-        }
-
-        .empty { margin: 0; padding: 0 18px 18px; color: var(--muted); font-size: 14px; }
 
         #boot {
             position: fixed;
@@ -348,7 +272,6 @@
 
         @media (max-width: 900px) {
             body { overflow-x: hidden; }
-            #rain { right: 0; }
             .center { width: 100%; min-height: auto; padding: 72px 16px 28px; }
             .copy { width: 100%; max-width: 100%; padding: 0; }
             h1 { font-size: 34px; max-width: 9em; }
@@ -356,20 +279,10 @@
             .stores { width: 100%; }
             .store, .view-map { min-width: 0; flex: 1 1 140px; }
             .view-map { flex-basis: 100%; }
-            .latest {
-                position: relative;
-                top: auto;
-                right: auto;
-                bottom: auto;
-                width: auto;
-                max-height: 70vh;
-                margin: 0 16px 24px;
-            }
         }
 
         @media (prefers-reduced-motion: reduce) {
-            #rain { display: none; }
-            .feed a.enter { animation: none; }
+            #rain.on a.drop { animation: none; opacity: 1; }
             #boot { transition: none; }
         }
     </style>
@@ -381,7 +294,7 @@
         <div class="street v v1"></div>
         <div class="street v v2"></div>
     </div>
-    <div id="rain" aria-hidden="true"></div>
+    <div id="rain"></div>
     <main class="center">
         <div class="copy">
             <h1>Остави бележка там, където стоиш.</h1>
@@ -399,11 +312,6 @@
             </div>
         </div>
     </main>
-    <aside class="latest" aria-labelledby="latest-title">
-        <h2 id="latest-title">Последни</h2>
-        <p class="empty" id="latest-empty">Зарежда…</p>
-        <ul class="feed" id="latest-list"></ul>
-    </aside>
     <div id="boot">
         <div>
             <div class="boot-pin" aria-hidden="true"><span></span></div>
@@ -413,12 +321,8 @@
     <script>
         const categories = { seeking: 'Търся', lost: 'Загубено', warning: 'Внимание', free: 'Безплатно', other: 'Друго' };
         const rain = document.getElementById('rain');
-        const list = document.getElementById('latest-list');
-        const empty = document.getElementById('latest-empty');
         const boot = document.getElementById('boot');
-        const lanes = [4, 18, 76, 88, 10, 82];
-        let shown = [];
-        let rained = false;
+        const lanes = [3, 12, 21, 30, 39, 48, 57, 66, 75, 84, 17, 70];
 
         function timeAgo(createdAt) {
             const ms = Date.now() - new Date(createdAt).getTime();
@@ -453,50 +357,15 @@
         }
 
         function startRain(pins) {
-            if (rained) return;
-            rained = true;
             pins.slice(0, lanes.length).forEach((pin, index) => {
-                const drop = document.createElement('div');
+                const drop = document.createElement('a');
                 drop.className = 'drop';
+                drop.href = '/map?pin=' + encodeURIComponent(pin.id);
                 drop.style.left = lanes[index] + '%';
-                drop.style.animationDuration = (46 + (index % 3) * 8) + 's';
-                drop.style.animationDelay = (-index * 9) + 's';
+                drop.style.animationDuration = (40 + (index % 3) * 6) + 's';
+                drop.style.animationDelay = (-index * 5) + 's';
                 drop.appendChild(bubble(pin));
                 rain.appendChild(drop);
-            });
-        }
-
-        function render(pins, arrive) {
-            const arriving = new Set(arrive || []);
-            list.replaceChildren();
-            if (!pins.length) {
-                empty.hidden = false;
-                empty.textContent = 'Няма активни пинове.';
-                return;
-            }
-            empty.hidden = true;
-            pins.forEach((pin) => {
-                const item = document.createElement('li');
-                const link = document.createElement('a');
-                link.href = '/map?pin=' + encodeURIComponent(pin.id);
-                if (pin.image_url) {
-                    const img = document.createElement('img');
-                    img.alt = '';
-                    img.src = pin.image_url;
-                    link.appendChild(img);
-                }
-                const text = document.createElement('span');
-                const title = document.createElement('strong');
-                title.textContent = pin.message || '';
-                const note = document.createElement('em');
-                note.textContent = meta(pin);
-                text.append(title, note);
-                link.appendChild(text);
-                item.appendChild(link);
-                list.appendChild(item);
-                if (arriving.has(pin.id)) {
-                    requestAnimationFrame(() => link.classList.add('enter'));
-                }
             });
         }
 
@@ -507,41 +376,19 @@
             return Array.isArray(data.pins) ? data.pins.slice(0, 15) : [];
         }
 
-        function reveal(pins, arrive) {
-            render(pins, arrive);
-            startRain(pins);
-            rain.classList.add('on');
-        }
-
         const opened = performance.now();
         load().then((pins) => {
-            shown = pins;
             const wait = Math.max(0, 1100 - (performance.now() - opened));
             setTimeout(() => {
-                reveal(pins, []);
+                startRain(pins);
+                rain.classList.add('on');
                 boot.classList.add('is-done');
-                setTimeout(() => {
-                    boot.hidden = true;
-                    const first = list.querySelector('a');
-                    if (first) first.classList.add('enter');
-                }, 480);
+                setTimeout(() => { boot.hidden = true; }, 480);
             }, wait);
         }).catch(() => {
-            empty.hidden = false;
-            empty.textContent = 'Не можах да заредя пиновете.';
             boot.classList.add('is-done');
             setTimeout(() => { boot.hidden = true; }, 480);
         });
-
-        setInterval(() => {
-            load().then((pins) => {
-                const known = new Set(shown.map((pin) => pin.id));
-                const arrive = pins.filter((pin) => !known.has(pin.id)).map((pin) => pin.id);
-                shown = pins;
-                if (!boot.hidden && !boot.classList.contains('is-done')) return;
-                reveal(pins, arrive);
-            }).catch(() => {});
-        }, 20000);
     </script>
 </body>
 </html>
