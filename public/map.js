@@ -762,7 +762,7 @@ document.getElementById('category-filters').addEventListener('click', (event) =>
   renderNearbyList();
 });
 
-document.getElementById('open-list').addEventListener('click', () => {
+document.getElementById('open-pins').addEventListener('click', () => {
   listCenter = map.getCenter();
   panel.hidden = true;
   document.getElementById('cities-modal').hidden = true;

@@ -151,14 +151,14 @@
             cursor: pointer;
         }
 
-        #locate, #open-list {
+        #locate {
+            right: 16px;
+            bottom: 24px;
             background: var(--card);
             box-shadow: 0 1px 2px rgba(28, 27, 25, 0.22);
         }
 
-        #locate { left: 16px; bottom: 24px; }
-
-        #open-list .bars i { background: var(--ink); }
+        #open-list { display: none; }
 
         #locate span {
             display: block;
@@ -168,8 +168,6 @@
             border: 2px solid var(--ink);
             border-radius: 8px;
         }
-
-        #open-list { right: 16px; bottom: 24px; }
 
         .bars { width: 18px; margin: 0 auto; }
 
@@ -448,7 +446,7 @@
         }
         #nearby-list small { color: var(--faint); }
 
-        .maplibregl-ctrl-bottom-left { bottom: 72px; }
+        .maplibregl-ctrl-bottom-left { bottom: 10px; }
         .maplibregl-ctrl-attrib { font-size: 11px; }
 
         .city-bar {
@@ -456,7 +454,7 @@
             z-index: 600;
             top: 12px;
             left: 132px;
-            right: 16px;
+            right: 128px;
             display: flex;
             gap: 8px;
             padding: 4px 2px 8px;
@@ -483,6 +481,15 @@
         #open-cities { background: var(--ink); color: var(--card); }
 
         #open-cities-mobile { display: none; }
+
+        #open-pins {
+            position: fixed;
+            z-index: 600;
+            top: 16px;
+            right: 16px;
+            background: var(--pin);
+            color: #fff;
+        }
 
         #cities-modal { left: 16px; right: auto; }
 
@@ -554,9 +561,7 @@
         @media (max-width: 800px) {
             .city-bar { display: none; }
             #open-cities-mobile { display: inline-flex; align-items: center; }
-            #locate { left: auto; right: 16px; bottom: 80px; }
-            body:has(#install:not([hidden])) #open-list { bottom: 148px; }
-            body:has(#install:not([hidden])) #locate { bottom: 204px; }
+            body:has(#install:not([hidden])) #locate { bottom: 148px; }
             .maplibregl-ctrl-bottom-left { display: none; }
             .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
         }
@@ -571,8 +576,9 @@
     <nav class="city-bar" id="city-bar" aria-label="Градове">
         <button class="city-pill" id="open-cities" type="button">Още</button>
     </nav>
+    <button class="city-pill" id="open-pins" type="button">Пинове</button>
     <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span></span></button>
-    <button class="hud" id="open-list" type="button" aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
+    <button class="hud" id="open-list" type="button" hidden aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
     <button class="toast" id="toast" type="button" hidden></button>
     <button class="banner" id="banner" type="button" hidden>Картата не успя да зареди пиновете. Опитай пак.</button>
     <p class="empty" id="empty" hidden>Нищо в този изглед.</p>
