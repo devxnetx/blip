@@ -1,4 +1,3 @@
-const SOFIA_BOUNDS = L.latLngBounds([42.6577, 23.2819], [42.7377, 23.3619]);
 const CATEGORIES = {
   seeking: 'Търся',
   lost: 'Загубено',
@@ -11,15 +10,52 @@ function categoryLabel(id) {
   return CATEGORIES[id] || '';
 }
 const REVEAL_DELTA = 0.012;
-const TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const CITIES = [
+  { name: 'София', latitude: 42.6977, longitude: 23.3219 },
+  { name: 'Пловдив', latitude: 42.1354, longitude: 24.7453 },
+  { name: 'Варна', latitude: 43.2141, longitude: 27.9147 },
+  { name: 'Бургас', latitude: 42.5048, longitude: 27.4626 },
+  { name: 'Русе', latitude: 43.8356, longitude: 25.9657 },
+  { name: 'Стара Загора', latitude: 42.4258, longitude: 25.6345 },
+  { name: 'Плевен', latitude: 43.417, longitude: 24.6067 },
+  { name: 'Сливен', latitude: 42.6816, longitude: 26.3292 },
+  { name: 'Добрич', latitude: 43.5726, longitude: 27.8273 },
+  { name: 'Шумен', latitude: 43.2712, longitude: 26.9361 },
+  { name: 'Перник', latitude: 42.6052, longitude: 23.0378 },
+  { name: 'Хасково', latitude: 41.9344, longitude: 25.5554 },
+  { name: 'Ямбол', latitude: 42.4842, longitude: 26.5035 },
+  { name: 'Пазарджик', latitude: 42.1928, longitude: 24.3336 },
+  { name: 'Благоевград', latitude: 42.0119, longitude: 23.09 },
+  { name: 'Велико Търново', latitude: 43.0757, longitude: 25.6172 },
+  { name: 'Враца', latitude: 43.2102, longitude: 23.5529 },
+  { name: 'Габрово', latitude: 42.8742, longitude: 25.3187 },
+  { name: 'Видин', latitude: 43.9916, longitude: 22.8824 },
+  { name: 'Монтана', latitude: 43.4125, longitude: 23.225 },
+  { name: 'Ловеч', latitude: 43.137, longitude: 24.7142 },
+  { name: 'Кърджали', latitude: 41.6338, longitude: 25.3777 },
+  { name: 'Кюстендил', latitude: 42.2839, longitude: 22.6911 },
+  { name: 'Разград', latitude: 43.5332, longitude: 26.5242 },
+  { name: 'Силистра', latitude: 44.1147, longitude: 27.2672 },
+  { name: 'Търговище', latitude: 43.2494, longitude: 26.5727 },
+  { name: 'Смолян', latitude: 41.5774, longitude: 24.7129 },
+  { name: 'Казанлък', latitude: 42.6194, longitude: 25.393 },
+];
 
-const map = L.map('map', { maxZoom: 19, minZoom: 3, zoomControl: true });
-L.tileLayer(TILES, {
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tiles.openfreemap.org/styles/liberty',
+  center: [25.3, 42.7],
+  zoom: 6.4,
+  pitch: 48,
+  bearing: -14,
+  maxPitch: 75,
+  minZoom: 3,
   maxZoom: 19,
-  maxNativeZoom: 16,
-  attribution: 'Карта: Esri',
-}).addTo(map);
+  attributionControl: true,
+});
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-left');
 let viewTouched = false;
+let placed = false;
 map.on('dragstart', () => {
   viewTouched = true;
 });
@@ -31,12 +67,16 @@ map.on('zoomstart', (event) => {
     viewTouched = true;
   }
 });
-const zoomControl = document.querySelector('.leaflet-control-zoom');
-if (zoomControl) {
-  zoomControl.addEventListener('click', () => {
+map.on('rotatestart', (event) => {
+  if (event.originalEvent) {
     viewTouched = true;
-  });
-}
+  }
+});
+map.on('pitchstart', (event) => {
+  if (event.originalEvent) {
+    viewTouched = true;
+  }
+});
 
 const panel = document.getElementById('panel');
 const nearbyEl = document.getElementById('nearby');
@@ -245,11 +285,34 @@ function zoomRegion(region, cluster) {
   };
 }
 
+function frameMap(west, south, east, north, duration) {
+  placed = true;
+  map.fitBounds([[west, south], [east, north]], {
+    pitch: Math.max(map.getPitch(), 48),
+    bearing: map.getBearing(),
+    maxZoom: 17,
+    duration: duration ?? 700,
+  });
+}
+
 function showBounds(region) {
-  map.fitBounds([
-    [region.latitude - region.latitudeDelta / 2, region.longitude - region.longitudeDelta / 2],
-    [region.latitude + region.latitudeDelta / 2, region.longitude + region.longitudeDelta / 2],
-  ]);
+  frameMap(
+    region.longitude - region.longitudeDelta / 2,
+    region.latitude - region.latitudeDelta / 2,
+    region.longitude + region.longitudeDelta / 2,
+    region.latitude + region.latitudeDelta / 2,
+  );
+}
+
+function markerElement(html, onClick) {
+  const element = document.createElement('div');
+  element.className = 'blip-icon';
+  element.innerHTML = html;
+  element.addEventListener('click', (event) => {
+    event.stopPropagation();
+    onClick();
+  });
+  return element;
 }
 
 function drawMarkers() {
@@ -259,41 +322,36 @@ function drawMarkers() {
 
   items.clusters.forEach((cluster) => {
     const width = Math.max(46, 16 + String(cluster.count).length * 12);
-    const icon = L.divIcon({
-      className: 'blip-icon',
-      html: `<div class="count" style="width:${width}px">(${cluster.count})</div>`,
-      iconSize: [width, 46],
-      iconAnchor: [width / 2, 23],
-    });
-    const marker = L.marker([cluster.latitude, cluster.longitude], { icon, zIndexOffset: 500 });
-    marker.on('click', () => showBounds(zoomRegion(currentRegion(), cluster)));
-    marker.addTo(map);
+    const element = markerElement(
+      `<div class="count" style="width:${width}px">(${cluster.count})</div>`,
+      () => showBounds(zoomRegion(currentRegion(), cluster)),
+    );
+    const marker = new maplibregl.Marker({ element, anchor: 'center' })
+      .setLngLat([cluster.longitude, cluster.latitude])
+      .addTo(map);
     markers.push(marker);
   });
 
   items.singles.forEach((pin) => {
     const kind = categoryLabel(pin.category);
     const base = (pin.image_url ? 132 : 80) + (kind ? 18 : 0);
-    const height = base + (pin.stackOffset || 0);
     const image = safeUrl(pin.image_url)
       ? `<img src="${safeUrl(pin.image_url)}" alt="">`
       : '';
     const kindHtml = kind ? `<small>${escapeHtml(kind)}</small>` : '';
-    const icon = L.divIcon({
-      className: 'blip-icon',
-      html: `<div class="bubble-wrap" style="height:${base}px;padding-bottom:${pin.stackOffset || 0}px"><div class="bubble">${image}<span>${escapeHtml(pin.message)}</span>${kindHtml}</div><div class="tail"></div></div>`,
-      iconSize: [168, height],
-      iconAnchor: [84, height],
-    });
-    const marker = L.marker([pin.latitude, pin.longitude], { icon, zIndexOffset: (pin.stackOffset || 0) + 1 });
-    marker.on('click', () => openPin(pin));
-    marker.addTo(map);
+    const element = markerElement(
+      `<div class="bubble-wrap" style="height:${base}px;padding-bottom:${pin.stackOffset || 0}px"><div class="bubble">${image}<span>${escapeHtml(pin.message)}</span>${kindHtml}</div><div class="tail"></div></div>`,
+      () => openPin(pin),
+    );
+    const marker = new maplibregl.Marker({ element, anchor: 'bottom' })
+      .setLngLat([pin.longitude, pin.latitude])
+      .addTo(map);
     markers.push(marker);
   });
 }
 
 async function loadPins() {
-  if (!map._loaded) {
+  if (!placed) {
     return;
   }
   const id = ++requestId;
@@ -665,7 +723,7 @@ function renderNearbyList() {
       button.append(copy);
       button.addEventListener('click', () => {
         nearbyEl.hidden = true;
-        map.panTo([pin.latitude, pin.longitude]);
+        map.panTo([pin.longitude, pin.latitude]);
       });
       const actions = document.createElement('div');
       actions.className = 'pin-actions';
@@ -729,7 +787,7 @@ document.getElementById('locate').addEventListener('click', () => {
     return;
   }
   navigator.geolocation.getCurrentPosition(
-    (position) => map.panTo([position.coords.latitude, position.coords.longitude]),
+    (position) => map.panTo([position.coords.longitude, position.coords.latitude]),
     () => window.alert('Kostaa не успя да прочете къде си.'),
   );
 });
@@ -740,8 +798,78 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     closePanel();
     nearbyEl.hidden = true;
+    document.getElementById('cities-modal').hidden = true;
   }
 });
+
+function cityButton(city, className) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = className;
+  button.textContent = city.name;
+  button.addEventListener('click', () => goToCity(city));
+  return button;
+}
+
+CITIES.forEach((city) => {
+  document.getElementById('city-bar').append(cityButton(city, 'city-pill'));
+  document.getElementById('city-list').append(cityButton(city, 'city-choice'));
+});
+
+document.getElementById('open-cities').addEventListener('click', () => {
+  panel.hidden = true;
+  nearbyEl.hidden = true;
+  document.getElementById('cities-modal').hidden = false;
+});
+
+document.getElementById('cities-close').addEventListener('click', () => {
+  document.getElementById('cities-modal').hidden = true;
+});
+
+const installEl = document.getElementById('install');
+const installGo = document.getElementById('install-go');
+const installHint = document.getElementById('install-hint');
+const phoneScreen = window.matchMedia('(max-width: 800px)').matches;
+const installed = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+let installEvent = null;
+
+function showInstall() {
+  if (!phoneScreen || installed || localStorage.getItem('kostaa-install-dismissed') === '1') {
+    return;
+  }
+  installHint.hidden = !ios;
+  installGo.hidden = ios || !installEvent;
+  installEl.hidden = false;
+}
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  installEvent = event;
+  showInstall();
+});
+
+installGo.addEventListener('click', async () => {
+  if (!installEvent) {
+    return;
+  }
+  installEvent.prompt();
+  installEvent = null;
+  installEl.hidden = true;
+});
+
+document.getElementById('install-close').addEventListener('click', () => {
+  localStorage.setItem('kostaa-install-dismissed', '1');
+  installEl.hidden = true;
+});
+
+if (phoneScreen && ios) {
+  showInstall();
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 
 map.on('moveend', () => {
   drawMarkers();
@@ -805,14 +933,14 @@ async function systemNote(body, pin) {
   const note = new Notification('Нов пин наблизо', { body });
   note.onclick = () => {
     window.focus();
-    map.panTo([pin.latitude, pin.longitude]);
+    map.panTo([pin.longitude, pin.latitude]);
     note.close();
   };
 }
 
 toast.addEventListener('click', () => {
   if (toastPin) {
-    map.panTo([toastPin.latitude, toastPin.longitude]);
+    map.panTo([toastPin.longitude, toastPin.latitude]);
   }
   toast.hidden = true;
 });
@@ -877,10 +1005,21 @@ function watchNearby() {
 
 function showCity(latitude, longitude) {
   const span = 0.08;
-  map.fitBounds([
-    [latitude - span / 2, longitude - span / 2],
-    [latitude + span / 2, longitude + span / 2],
-  ]);
+  frameMap(
+    longitude - span / 2,
+    latitude - span / 2,
+    longitude + span / 2,
+    latitude + span / 2,
+    900,
+  );
+}
+
+function goToCity(city) {
+  viewTouched = true;
+  document.getElementById('cities-modal').hidden = true;
+  nearbyEl.hidden = true;
+  closePanel();
+  showCity(city.latitude, city.longitude);
 }
 
 let holdLink = /^\d+$/.test(new URLSearchParams(window.location.search).get('pin') || '');
@@ -889,10 +1028,10 @@ function revealIfFar(point) {
   if (holdLink || !point) {
     return;
   }
-  if (viewTouched && map._loaded) {
+  if (viewTouched && placed) {
     return;
   }
-  if (map._loaded) {
+  if (placed) {
     const center = map.getCenter();
     if (kmBetween(center.lat, center.lng, point.lat, point.lng) <= 1) {
       return;
@@ -986,10 +1125,13 @@ async function openLinkedPin() {
     }
     pins = [pin, ...pins.filter((item) => item.id !== pin.id)];
     const span = 0.01;
-    map.fitBounds([
-      [Number(pin.latitude) - span / 2, Number(pin.longitude) - span / 2],
-      [Number(pin.latitude) + span / 2, Number(pin.longitude) + span / 2],
-    ]);
+    frameMap(
+      Number(pin.longitude) - span / 2,
+      Number(pin.latitude) - span / 2,
+      Number(pin.longitude) + span / 2,
+      Number(pin.latitude) + span / 2,
+      0,
+    );
     openPin(pin);
     return true;
   } catch {
@@ -1028,14 +1170,14 @@ async function openOnCity() {
     ipTask,
     new Promise((resolve) => setTimeout(() => resolve(null), 1600)),
   ]);
-  if (!map._loaded) {
+  if (!placed) {
     if (ip) {
       showCity(ip.lat, ip.lng);
     }
   }
 
   const gps = await gpsDone;
-  if (map._loaded) {
+  if (placed) {
     return;
   }
   if (gps) {
@@ -1045,8 +1187,8 @@ async function openOnCity() {
   const lateIp = ip || await ipTask;
   if (lateIp) {
     showCity(lateIp.lat, lateIp.lng);
-  } else if (!map._loaded) {
-    map.fitBounds(SOFIA_BOUNDS);
+  } else if (!placed) {
+    showCity(42.6977, 23.3219);
   }
 }
 

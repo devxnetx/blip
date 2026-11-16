@@ -7,7 +7,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#1c1b19">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Kostaa">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="{{ asset('icons/icon-192.png') }}">
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.css">
     <style>
         :root {
             --paper: #e7e4de;
@@ -147,6 +154,18 @@
 
         #open-list { right: 16px; bottom: 24px; }
 
+        #open-cities {
+            display: none;
+            top: 16px;
+            left: 118px;
+            width: auto;
+            height: 40px;
+            padding: 0 14px;
+            border-radius: 999px;
+            font: inherit;
+            font-weight: 700;
+        }
+
         .bars { width: 18px; margin: 0 auto; }
 
         .bars i {
@@ -186,7 +205,8 @@
         }
 
         .panel[hidden],
-        .nearby[hidden] {
+        .nearby[hidden],
+        .install[hidden] {
             display: none !important;
         }
 
@@ -423,12 +443,103 @@
         }
         #nearby-list small { color: var(--faint); }
 
-        .leaflet-control-zoom { margin-top: 64px !important; }
+        .maplibregl-ctrl-bottom-left { bottom: 72px; }
+        .maplibregl-ctrl-attrib { font-size: 11px; }
+
+        .city-bar {
+            position: fixed;
+            z-index: 600;
+            top: 16px;
+            left: 132px;
+            right: 420px;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .city-bar::-webkit-scrollbar { display: none; }
+
+        .city-pill, .city-choice {
+            flex: none;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(246, 244, 239, 0.94);
+            color: var(--ink);
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(28, 27, 25, 0.12);
+        }
+
+        .city-pill { padding: 8px 14px; }
+
+        #city-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: auto;
+            margin-top: 16px;
+        }
+
+        .city-choice {
+            padding: 14px 16px;
+            text-align: left;
+            box-shadow: none;
+            background: transparent;
+            border-bottom: 1px solid var(--line);
+            border-radius: 0;
+        }
+
+        .install {
+            position: fixed;
+            z-index: 700;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            background: var(--card);
+            color: var(--ink);
+            border-radius: 18px;
+            padding: 16px;
+            box-shadow: 0 18px 40px rgba(28, 27, 25, 0.2);
+        }
+
+        .install p { margin: 0 0 12px; }
+
+        .install .row { gap: 8px; }
+
+        .install a, .install button {
+            border-radius: 999px;
+            padding: 10px 14px;
+            font: inherit;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        #install-go, .install a {
+            background: var(--ink);
+            color: var(--card);
+            border: 0;
+        }
+
+        #install-close {
+            background: transparent;
+            border: 0;
+            color: var(--muted);
+        }
+
+        @media (max-width: 800px) {
+            .city-bar { display: none; }
+            #open-cities { display: flex; }
+            .panel, .nearby { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <a class="home" href="{{ url('/') }}">Kost<i>aa</i></a>
+    <nav class="city-bar" id="city-bar" aria-label="Градове"></nav>
+    <button class="hud" id="open-cities" type="button">Градове</button>
     <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span></span></button>
     <button class="hud" id="open-list" type="button" aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
     <button class="toast" id="toast" type="button" hidden></button>
@@ -485,7 +596,36 @@
         <ul id="nearby-list"></ul>
     </section>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <section class="nearby" id="cities-modal" hidden>
+        <div class="row">
+            <h2>Градове</h2>
+            <button class="linkish" id="cities-close" type="button">Затвори</button>
+        </div>
+        <div id="city-list"></div>
+    </section>
+
+    <aside class="install" id="install" hidden>
+        @if (config('blip.app_store_url') || config('blip.play_store_url'))
+            <p>Има приложение за телефона. Може и да добавиш тази страница на началния екран.</p>
+            <div class="row">
+                @if (config('blip.app_store_url'))
+                    <a href="{{ config('blip.app_store_url') }}" rel="noopener">App Store</a>
+                @endif
+                @if (config('blip.play_store_url'))
+                    <a href="{{ config('blip.play_store_url') }}" rel="noopener">Google Play</a>
+                @endif
+            </div>
+        @else
+            <p>Добави Kostaa на началния екран и я отваряй като приложение.</p>
+        @endif
+        <p class="faint" id="install-hint" hidden>На iPhone: бутонът Сподели, после „Добави към началния екран“.</p>
+        <div class="row">
+            <button id="install-go" type="button">Добави</button>
+            <button id="install-close" type="button">Не сега</button>
+        </div>
+    </aside>
+
+    <script src="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.js"></script>
     <script src="{{ asset('map.js') }}?v={{ filemtime(public_path('map.js')) }}"></script>
 </body>
 </html>
