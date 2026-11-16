@@ -347,8 +347,12 @@
         .boot-word i { color: var(--pin); font-style: normal; }
 
         @media (max-width: 900px) {
+            body { overflow-x: hidden; }
             #rain { right: 0; }
-            .center { min-height: auto; padding: 72px 20px 28px; }
+            .center { width: 100%; min-height: auto; padding: 72px 16px 28px; }
+            h1 { font-size: 36px; }
+            .stores { width: 100%; }
+            .store, .view-map { min-width: 0; flex: 1 1 140px; }
             .latest {
                 position: relative;
                 top: auto;
