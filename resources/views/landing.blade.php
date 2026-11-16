@@ -133,12 +133,17 @@
             text-align: center;
         }
 
-        .copy { max-width: 640px; }
+        .copy {
+            max-width: 640px;
+            padding: 8px 18px 4px;
+            background: #d4d1cb;
+            box-shadow: 0 0 28px 22px #d4d1cb;
+        }
 
         h1 {
             margin: 0;
             font-family: "Instrument Serif", serif;
-            font-size: clamp(44px, 6vw, 72px);
+            font-size: clamp(40px, 5vw, 72px);
             font-weight: 400;
             letter-spacing: -0.04em;
             line-height: 0.95;
@@ -342,7 +347,7 @@
 
         @media (max-width: 900px) {
             #rain { right: 0; }
-            .center { min-height: 100vh; padding: 64px 20px 24px; }
+            .center { min-height: auto; padding: 72px 20px 28px; }
             .latest {
                 position: relative;
                 top: auto;
@@ -403,7 +408,7 @@
         const list = document.getElementById('latest-list');
         const empty = document.getElementById('latest-empty');
         const boot = document.getElementById('boot');
-        const lanes = [8, 28, 48, 66, 18, 40, 58, 34];
+        const lanes = [4, 18, 76, 88, 10, 82];
         let shown = [];
         let rained = false;
 
@@ -442,12 +447,12 @@
         function startRain(pins) {
             if (rained) return;
             rained = true;
-            pins.slice(0, 8).forEach((pin, index) => {
+            pins.slice(0, lanes.length).forEach((pin, index) => {
                 const drop = document.createElement('div');
                 drop.className = 'drop';
                 drop.style.left = lanes[index] + '%';
-                drop.style.animationDuration = (34 + (index % 4) * 6) + 's';
-                drop.style.animationDelay = (-index * 7) + 's';
+                drop.style.animationDuration = (46 + (index % 3) * 8) + 's';
+                drop.style.animationDelay = (-index * 9) + 's';
                 drop.appendChild(bubble(pin));
                 rain.appendChild(drop);
             });
