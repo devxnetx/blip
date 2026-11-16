@@ -483,9 +483,13 @@ async function openPin(pin) {
 }
 
 function closePanel() {
+  const wasOpen = !panel.hidden;
   selected = null;
   replies = [];
   panel.hidden = true;
+  if (wasOpen) {
+    restoreView();
+  }
 }
 
 function dropPinFromMap(id) {
@@ -727,9 +731,11 @@ function renderNearbyList() {
       button.append(copy);
       button.addEventListener('click', () => {
         nearbyEl.hidden = true;
-        if (!focusPin(pin)) {
-          map.panTo([pin.longitude, pin.latitude]);
+        if (focusPin(pin)) {
+          openPin(pin);
+          return;
         }
+        map.panTo([pin.longitude, pin.latitude]);
       });
       const actions = document.createElement('div');
       actions.className = 'pin-actions';
@@ -770,7 +776,7 @@ document.getElementById('category-filters').addEventListener('click', (event) =>
 
 document.getElementById('open-pins').addEventListener('click', () => {
   listCenter = map.getCenter();
-  panel.hidden = true;
+  closePanel();
   document.getElementById('cities-modal').hidden = true;
   nearbyEl.hidden = false;
   loadNearby(Number(document.getElementById('radius').value));
@@ -794,7 +800,10 @@ document.getElementById('locate').addEventListener('click', () => {
     return;
   }
   navigator.geolocation.getCurrentPosition(
-    (position) => map.panTo([position.coords.longitude, position.coords.latitude]),
+    (position) => {
+      forgetView();
+      map.panTo([position.coords.longitude, position.coords.latitude]);
+    },
     () => window.alert('Kostaa не успя да прочете къде си.'),
   );
 });
@@ -840,7 +849,7 @@ FEATURED.forEach((name) => {
 });
 
 function openCities() {
-  panel.hidden = true;
+  closePanel();
   nearbyEl.hidden = true;
   document.getElementById('city-search').value = '';
   renderCityChoices();
@@ -1086,6 +1095,43 @@ function showCity(latitude, longitude) {
   frame(span, 900);
 }
 
+let viewBeforePin = null;
+
+function rememberView() {
+  if (!desktopBoot || viewBeforePin) {
+    return;
+  }
+  const center = map.getCenter();
+  viewBeforePin = {
+    center: [center.lng, center.lat],
+    zoom: map.getZoom(),
+    pitch: map.getPitch(),
+    bearing: map.getBearing(),
+    viewTouched,
+  };
+}
+
+function forgetView() {
+  viewBeforePin = null;
+}
+
+function restoreView() {
+  if (!viewBeforePin) {
+    return;
+  }
+  const previous = viewBeforePin;
+  viewBeforePin = null;
+  viewTouched = previous.viewTouched;
+  map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+  map.easeTo({
+    center: previous.center,
+    zoom: previous.zoom,
+    pitch: previous.pitch,
+    bearing: previous.bearing,
+    duration: 700,
+  });
+}
+
 function focusPin(pin, options = {}) {
   if (!desktopBoot) {
     return false;
@@ -1095,6 +1141,7 @@ function focusPin(pin, options = {}) {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return false;
   }
+  rememberView();
   viewTouched = true;
   introToken += 1;
   const span = 0.006;
@@ -1123,6 +1170,7 @@ function focusPin(pin, options = {}) {
 
 function goToCity(city) {
   viewTouched = true;
+  forgetView();
   document.getElementById('cities-modal').hidden = true;
   nearbyEl.hidden = true;
   closePanel();
