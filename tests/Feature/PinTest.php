@@ -24,7 +24,7 @@ class PinTest extends TestCase
             ->assertSee('За iPhone')
             ->assertSee('За Android')
             ->assertSee('Expo')
-            ->assertSee('exp://u.expo.dev/update/01a1e4d4-a46f-7329-b742-e085945831eb', false)
+            ->assertSee('exp://jvjzxya-devxnetx-8081.exp.direct', false)
             ->assertSee('exp://u.expo.dev/update/01a1e4d4-a46f-7bac-9b48-48946b24bd2e', false)
             ->assertDontSee('https://apps.apple.com', false)
             ->assertDontSee('https://play.google.com/store', false)
