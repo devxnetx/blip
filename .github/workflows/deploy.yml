@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to the VPS
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SSH_FINGERPRINT }}
+          port: 22
+          command_timeout: 20m
+          script: |
+            set -eu
+            cd /var/www/kostaa
+            /usr/bin/php8.4 artisan down --refresh=15 || true
+            git fetch origin main
+            git reset --hard origin/main
+            export COMPOSER_ALLOW_SUPERUSER=1
+            /usr/bin/php8.4 "$(command -v composer)" install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+            /usr/bin/php8.4 artisan migrate --force
+            /usr/bin/php8.4 artisan storage:link || true
+            /usr/bin/php8.4 artisan config:clear
+            /usr/bin/php8.4 artisan view:clear
+            /usr/bin/php8.4 artisan queue:restart || true
+            /usr/bin/php8.4 artisan up || true
+            chown -R www-data:www-data storage bootstrap/cache
+            systemctl reload apache2

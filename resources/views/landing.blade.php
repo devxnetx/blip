@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Blip — бележка, която изчезва</title>
+    <title>Kostaa — бележка, която изчезва</title>
     <meta name="description" content="Остави кратка бележка там, където стоиш. Добави снимка, ако искаш. Стои на сива карта, докато таймерът изтече.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -244,7 +244,7 @@
 </head>
 <body>
     <header>
-        <div class="mark">Bl<span>i</span>p</div>
+        <div class="mark">Kost<span>aa</span></div>
         <p>Без акаунт. Пинът изтича.</p>
     </header>
     <main>

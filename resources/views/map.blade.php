@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Карта — Blip</title>
+    <title>Карта — Kostaa</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
@@ -423,7 +423,7 @@
 </head>
 <body>
     <div id="map"></div>
-    <a class="home" href="{{ url('/') }}">Bl<i>i</i>p</a>
+    <a class="home" href="{{ url('/') }}">Kost<i>aa</i></a>
     <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span></span></button>
     <button class="hud" id="open-list" type="button" aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
     <button class="toast" id="toast" type="button" hidden></button>

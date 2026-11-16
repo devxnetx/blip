@@ -730,7 +730,7 @@ document.getElementById('locate').addEventListener('click', () => {
   }
   navigator.geolocation.getCurrentPosition(
     (position) => map.panTo([position.coords.latitude, position.coords.longitude]),
-    () => window.alert('Blip не успя да прочете къде си.'),
+    () => window.alert('Kostaa не успя да прочете къде си.'),
   );
 });
 
