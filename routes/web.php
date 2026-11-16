@@ -10,3 +10,4 @@ Route::get('/', function () {
 });
 
 Route::view('/map', 'map')->name('map');
+Route::view('/testmap', 'testmap');
