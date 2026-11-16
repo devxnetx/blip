@@ -350,7 +350,9 @@
             body { overflow-x: hidden; }
             #rain { right: 0; }
             .center { width: 100%; min-height: auto; padding: 72px 16px 28px; }
-            h1 { font-size: 36px; }
+            .copy { width: 100%; max-width: 100%; padding: 0; }
+            h1 { font-size: 34px; max-width: 9em; }
+            .lede { max-width: 28ch; font-size: 16px; }
             .stores { width: 100%; }
             .store, .view-map { min-width: 0; flex: 1 1 140px; }
             .latest {
