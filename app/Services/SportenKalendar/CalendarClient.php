@@ -54,9 +54,10 @@ class CalendarClient
     }
 
     /**
+     * @param  (callable(string): void)|null  $progress
      * @return list<string>
      */
-    public function eventUrls(): array
+    public function eventUrls(?callable $progress = null): array
     {
         $events = [];
         $sitemap = $this->get('https://sportenkalendar.bg/sitemap') ?? '';
@@ -67,10 +68,22 @@ class CalendarClient
             $events[$slug] = 'https://sportenkalendar.bg/sybitie/'.$slug;
         }
 
-        preg_match_all('#https?://(?:www\.)?sportenkalendar\.bg/sportove/([a-z0-9\-]+)(?![a-z0-9\-/])#', $sitemap, $sports);
+        if ($progress !== null) {
+            $progress('sitemap lists '.count($events).' events');
+        }
 
-        foreach (array_unique($sports[1]) as $slug) {
+        preg_match_all('#https?://(?:www\.)?sportenkalendar\.bg/sportove/([a-z0-9\-]+)(?![a-z0-9\-/])#', $sitemap, $sports);
+        $slugs = array_values(array_unique($sports[1]));
+        $total = count($slugs);
+        $read = 0;
+
+        foreach ($slugs as $slug) {
+            $read++;
             $html = $this->get('https://sportenkalendar.bg/sportove/'.$slug);
+
+            if ($progress !== null && ($read === 1 || $read % 20 === 0 || $read === $total)) {
+                $progress('read '.$read.'/'.$total.' sports, '.count($events).' events');
+            }
 
             if (! is_string($html)) {
                 continue;

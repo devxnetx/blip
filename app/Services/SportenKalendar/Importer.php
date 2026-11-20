@@ -36,7 +36,7 @@ class Importer
             'hidden' => 0,
         ];
 
-        $urls = $this->pages->eventUrls();
+        $urls = $this->pages->eventUrls($progress);
 
         if ($limit !== null) {
             $urls = array_slice($urls, 0, $limit);
