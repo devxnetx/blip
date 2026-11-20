@@ -9,7 +9,7 @@
             <p class="lede">Името и редът се сменят. Кодът <code>{{ $category->slug }}</code> остава.</p>
         </div>
         <div class="actions">
-            <a href="{{ route('admin.categories.show', $category) }}">Преглед</a>
+            <a href="{{ route('admin.categories.show', $category) }}">@include('admin.icon', ['name' => 'eye']) Преглед</a>
         </div>
     </div>
 

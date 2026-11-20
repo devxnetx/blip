@@ -9,7 +9,7 @@
             <p class="lede">Това са входовете за админ панела. Хората, които пускат пинове от телефона, са в устройствата.</p>
         </div>
         <div class="actions">
-            <a class="solid" href="#new-user">Нов администратор</a>
+            <a class="solid" href="#new-user">@include('admin.icon', ['name' => 'plus']) Нов администратор</a>
         </div>
     </div>
 
@@ -26,17 +26,19 @@
                 @foreach ($users as $user)
                     <tr>
                         <td>{{ $user->name }}</td>
-                        <td>{{ $user->created_at?->format('d.m.Y H:i') }}</td>
+                        <td class="date">{{ $user->created_at?->timezone('Europe/Sofia')->format('d.m.Y H:i') }}</td>
                         <td class="actions">
-                            <a href="{{ route('admin.users.show', $user) }}">Преглед</a>
-                            <a href="{{ route('admin.users.edit', $user) }}">Редакция</a>
-                            @if (! auth()->user()->is($user))
-                                <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirm('Изтриваш ли този вход?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="danger" type="submit">Изтрий</button>
-                                </form>
-                            @endif
+                            <span class="cell-actions">
+                                <a href="{{ route('admin.users.show', $user) }}">@include('admin.icon', ['name' => 'eye']) Преглед</a>
+                                <a href="{{ route('admin.users.edit', $user) }}">@include('admin.icon', ['name' => 'edit']) Редакция</a>
+                                @if (! auth()->user()->is($user))
+                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirm('Изтриваш ли този вход?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="danger" type="submit">@include('admin.icon', ['name' => 'trash']) Изтрий</button>
+                                    </form>
+                                @endif
+                            </span>
                         </td>
                     </tr>
                 @endforeach

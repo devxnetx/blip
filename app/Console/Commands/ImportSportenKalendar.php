@@ -3,6 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\Pin;
+use App\Models\PinImport;
+use App\Models\Setting;
+use App\Services\ImportHalted;
 use App\Services\SportenKalendar\CalendarClient;
 use App\Services\SportenKalendar\Importer;
 use Illuminate\Console\Command;
@@ -17,6 +20,12 @@ class ImportSportenKalendar extends Command
 
     public function handle(Importer $importer): int
     {
+        if (! Setting::enabled('import_sporten_enabled')) {
+            $this->info('The sports calendar import is turned off.');
+
+            return self::SUCCESS;
+        }
+
         $lock = Cache::lock('pins-import-sporten', 180 * 60);
 
         if (! $lock->get()) {
@@ -25,8 +34,19 @@ class ImportSportenKalendar extends Command
             return self::SUCCESS;
         }
 
+        $import = PinImport::begin(PinImport::SOURCE_SPORTEN);
+        $counts = [
+            'upcoming' => 0,
+            'current' => 0,
+            'unassigned' => 0,
+            'skipped' => 0,
+            'hidden' => 0,
+        ];
+
         try {
             if ($this->option('fresh') && ! $this->calendarIsReachable()) {
+                $import->fail($counts, 'The sports calendar did not answer. Existing pins were left in place.');
+
                 return self::FAILURE;
             }
 
@@ -38,6 +58,7 @@ class ImportSportenKalendar extends Command
             $counts = $importer->run(function (string $line): void {
                 $this->line($line);
             }, is_numeric($limit) ? (int) $limit : null);
+            $import->complete($counts);
 
             $this->info(sprintf(
                 'Upcoming %d, on the map now %d, unassigned %d, skipped %d, hidden %d.',
@@ -49,7 +70,13 @@ class ImportSportenKalendar extends Command
             ));
 
             return self::SUCCESS;
+        } catch (ImportHalted $exception) {
+            $import->fail($exception->counts, $exception->getMessage());
+            $this->error($exception->getMessage());
+
+            return self::FAILURE;
         } catch (RuntimeException $exception) {
+            $import->fail($counts, $exception->getMessage());
             $this->error($exception->getMessage());
 
             return self::FAILURE;

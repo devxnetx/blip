@@ -13,3 +13,9 @@ Schedule::command('pins:import-sporten')
     ->timezone('Europe/Sofia')
     ->withoutOverlapping(180)
     ->appendOutputTo(storage_path('logs/sporten-import.log'));
+
+Schedule::command('pins:import-eventibg')
+    ->dailyAt('05:10')
+    ->timezone('Europe/Sofia')
+    ->withoutOverlapping(180)
+    ->appendOutputTo(storage_path('logs/eventibg-import.log'));

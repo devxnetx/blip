@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Device;
 use App\Models\Pin;
+use App\Models\PinImport;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -144,6 +146,9 @@ class AdminTest extends TestCase
             ->assertOk()
             ->assertSee('Нов пин')
             ->assertSee('Сега')
+            ->assertSee('Категория')
+            ->assertSee('Кога')
+            ->assertSee('Продължителност')
             ->assertSee('id="open-composer"', false)
             ->assertSee('id="pin-end"', false)
             ->assertDontSee('id="unassigned-form"', false)
@@ -184,7 +189,23 @@ class AdminTest extends TestCase
             ->assertSee('Стандартен')
             ->assertSee('class="count">1</span>', false)
             ->assertSee('class="on" href="'.route('admin.pins', ['kind' => 'normal']).'"', false)
+            ->assertSee('data-stat="total">1<', false)
+            ->assertSee('data-stat="active">1<', false)
+            ->assertSee('data-stat="unassigned">0<', false)
+            ->assertSee('data-stat="passed">0<', false)
+            ->assertSee('Източник')
+            ->assertSee('Връзка')
+            ->assertSee('Функции')
+            ->assertSee('Система')
+            ->assertSee('class="cell-actions"', false)
+            ->assertSee('class="date"', false)
             ->assertDontSee('Изтрий');
+
+        $this->actingAs($admin)
+            ->get('/admin/imports')
+            ->assertOk()
+            ->assertSee('Няма импорти.')
+            ->assertSee('Импорти');
 
         $this->actingAs($admin)
             ->post('/admin/pins/'.$created->json('id').'/hide')
@@ -427,7 +448,8 @@ class AdminTest extends TestCase
             ->assertSee('Концерт без сцена')
             ->assertSee('Без място')
             ->assertSee('class="count">1</span>', false)
-            ->assertSee('>Място<', false)
+            ->assertSee('class="good"', false)
+            ->assertSee('Място')
             ->assertDontSee('/map?pin='.$id, false);
 
         $placed = $this->actingAs($admin)->postJson('/admin/pins/'.$id.'/place', [
@@ -572,5 +594,86 @@ class AdminTest extends TestCase
             'kind' => 'upcoming',
             'starts_at' => '2026-12-05T10:00',
         ])->assertUnprocessable()->assertJsonValidationErrors('duration');
+    }
+
+    public function test_an_admin_can_see_where_a_pin_was_scraped_from(): void
+    {
+        $admin = User::query()->where('name', 'ZenSorcerer')->firstOrFail();
+        $pin = Pin::query()->create([
+            'device_hash' => hash('sha256', 'eventibg'),
+            'message' => 'Събор в Малево',
+            'category' => 'other',
+            'kind' => Pin::KIND_UNASSIGNED,
+            'starts_at' => now()->addDay(),
+            'duration_minutes' => 120,
+            'expires_at' => now()->addDays(2),
+            'source' => 'eventibg',
+            'external_id' => 'sabor-malevo',
+            'source_url' => 'https://eventibg.com/event/sabor-malevo',
+        ]);
+        PinImport::query()->create([
+            'source' => 'eventibg',
+            'started_at' => now()->subMinutes(3),
+            'finished_at' => now()->subMinutes(2),
+            'duration_seconds' => 75,
+            'pins_count' => 4,
+            'unassigned_count' => 1,
+            'successful' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/pins?kind=unassigned')
+            ->assertOk()
+            ->assertSee('Събор в Малево')
+            ->assertSee('EventiBG')
+            ->assertSee('https://eventibg.com/event/sabor-malevo', false)
+            ->assertSee('class="subdate"', false)
+            ->assertSee('class="good"', false)
+            ->assertSee('data-stat="unassigned">1<', false);
+
+        $this->actingAs($admin)
+            ->get('/admin/imports')
+            ->assertOk()
+            ->assertSee('Успешен')
+            ->assertSee('1 мин 15 сек')
+            ->assertSee('EventiBG');
+
+        $this->actingAs($admin)
+            ->get('/admin/pins/'.$pin->id)
+            ->assertOk()
+            ->assertSee('Събор в Малево')
+            ->assertSee('EventiBG')
+            ->assertSee('https://eventibg.com/event/sabor-malevo', false)
+            ->assertSee('Без място');
+    }
+
+    public function test_an_admin_can_turn_imports_off_and_choose_how_far_ahead_they_read(): void
+    {
+        $admin = User::query()->where('name', 'ZenSorcerer')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get('/admin/settings')
+            ->assertOk()
+            ->assertSee('Спортен календар')
+            ->assertSee('EventiBG')
+            ->assertSee('Дни напред')
+            ->assertSee('value="14"', false);
+
+        $this->actingAs($admin)
+            ->put('/admin/settings', [
+                'import_eventibg_enabled' => '1',
+                'import_days_ahead' => 7,
+            ])
+            ->assertRedirect('/admin/settings');
+
+        $this->assertFalse(Setting::enabled('import_sporten_enabled'));
+        $this->assertTrue(Setting::enabled('import_eventibg_enabled'));
+        $this->assertSame(7, Setting::daysAhead());
+
+        $this->actingAs($admin)
+            ->put('/admin/settings', [
+                'import_days_ahead' => 120,
+            ])
+            ->assertSessionHasErrors('import_days_ahead');
     }
 }

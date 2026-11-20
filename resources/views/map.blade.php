@@ -460,6 +460,19 @@
             margin: 0 0 12px;
         }
 
+        #admin-pin-form .kicker {
+            margin: 16px 0 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        #admin-pin-form .filters { margin-bottom: 0; }
+
+        #composer-durations[hidden] { display: none !important; }
+
         .filters button {
             border: 1.5px solid var(--line);
             border-radius: 999px;
@@ -843,11 +856,13 @@
             <form id="admin-pin-form">
                 <textarea id="pin-message" maxlength="80" placeholder="Кратко съобщение"></textarea>
                 <p class="count-line" id="pin-count">0/80</p>
+                <p class="kicker">Категория</p>
                 <div class="filters" id="composer-categories">
                     @foreach ($listedCategories as $slug => $name)
                         <button type="button" @class(['on' => $slug === $defaultCategory]) data-category="{{ $slug }}">{{ $name }}</button>
                     @endforeach
                 </div>
+                <p class="kicker">Кога</p>
                 <div class="filters" id="composer-when">
                     <button type="button" class="on" data-when="normal">Сега</button>
                     <button type="button" data-when="upcoming">Предстоящо</button>
@@ -861,10 +876,13 @@
                     </label>
                     <p class="faint">Вижда се веднага. Стои от началото до края.</p>
                 </div>
-                <div class="filters" id="composer-durations">
-                    <button type="button" data-duration="5m">5 мин</button>
-                    <button type="button" class="on" data-duration="1h">1 час</button>
-                    <button type="button" data-duration="24h">24 часа</button>
+                <div id="composer-durations">
+                    <p class="kicker">Продължителност</p>
+                    <div class="filters">
+                        <button type="button" data-duration="5m">5 мин</button>
+                        <button type="button" class="on" data-duration="1h">1 час</button>
+                        <button type="button" data-duration="24h">24 часа</button>
+                    </div>
                 </div>
                 <input id="pin-category" type="hidden" value="{{ $defaultCategory }}">
                 <input id="pin-kind" type="hidden" value="normal">

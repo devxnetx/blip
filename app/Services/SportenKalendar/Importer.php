@@ -5,6 +5,8 @@ namespace App\Services\SportenKalendar;
 use App\Models\Category;
 use App\Models\Device;
 use App\Models\Pin;
+use App\Models\Setting;
+use App\Services\ImportHalted;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -43,27 +45,31 @@ class Importer
         }
 
         foreach ($urls as $url) {
-            $html = $this->pages->get($url);
-            $event = is_string($html) ? $this->parser->parse($html, $url) : null;
+            try {
+                $html = $this->pages->get($url);
+                $event = is_string($html) ? $this->parser->parse($html, $url) : null;
 
-            if ($event === null) {
-                $counts['skipped']++;
-                if ($progress !== null) {
-                    $progress('skipped '.$url);
+                if ($event === null) {
+                    $counts['skipped']++;
+                    if ($progress !== null) {
+                        $progress('skipped '.$url);
+                    }
+                    continue;
                 }
-                continue;
-            }
 
-            $outcome = $this->store($event, $hash);
+                $outcome = $this->store($event, $hash);
 
-            if ($outcome === null) {
-                $counts['skipped']++;
-            } else {
-                $counts[$outcome]++;
-            }
+                if ($outcome === null) {
+                    $counts['skipped']++;
+                } else {
+                    $counts[$outcome]++;
+                }
 
-            if ($progress !== null) {
-                $progress(($outcome ?? 'skipped').' '.$event->externalId.' '.$event->title);
+                if ($progress !== null) {
+                    $progress(($outcome ?? 'skipped').' '.$event->externalId.' '.$event->title);
+                }
+            } catch (RuntimeException $exception) {
+                throw new ImportHalted($exception->getMessage(), $counts);
             }
         }
 
@@ -93,7 +99,7 @@ class Importer
             return 'skipped';
         }
 
-        if ($event->startsAt->greaterThan($now->copy()->addYear())) {
+        if ($event->startsAt->greaterThan($now->copy()->addYear()) || $event->startsAt->greaterThanOrEqualTo(Setting::importUntil())) {
             return 'skipped';
         }
 
@@ -138,6 +144,7 @@ class Importer
             'expires_at' => $expiresAt,
             'source' => self::SOURCE,
             'external_id' => $event->externalId,
+            'source_url' => $event->url,
         ];
 
         if ($existing?->placed_manually) {

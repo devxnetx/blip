@@ -9,7 +9,7 @@
             <p class="lede">Празно поле за парола оставя старата.</p>
         </div>
         <div class="actions">
-            <a href="{{ route('admin.users.show', $user) }}">Преглед</a>
+            <a href="{{ route('admin.users.show', $user) }}">@include('admin.icon', ['name' => 'eye']) Преглед</a>
         </div>
     </div>
 

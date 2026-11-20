@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\Pin;
+use App\Models\PinImport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,31 @@ class PinController extends Controller
                 Pin::KIND_UNASSIGNED => (int) ($counts[Pin::KIND_UNASSIGNED] ?? 0),
                 Pin::KIND_UPCOMING => (int) ($counts[Pin::KIND_UPCOMING] ?? 0),
             ],
+            'stats' => [
+                'total' => Pin::query()->count(),
+                'active' => Pin::query()->onMap()->count(),
+                'unassigned' => Pin::query()
+                    ->where('kind', Pin::KIND_UNASSIGNED)
+                    ->where('expires_at', '>', now())
+                    ->count(),
+                'passed' => Pin::query()->where('expires_at', '<=', now())->count(),
+            ],
+        ]);
+    }
+
+    public function imports(): View
+    {
+        return view('admin.imports.index', [
+            'imports' => PinImport::query()->orderByDesc('started_at')->orderByDesc('id')->limit(50)->get(),
+        ]);
+    }
+
+    public function show(Pin $pin): View
+    {
+        $pin->load('device');
+
+        return view('admin.pins.show', [
+            'pin' => $pin,
         ]);
     }
 

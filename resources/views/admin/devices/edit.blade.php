@@ -9,7 +9,7 @@
             <p class="lede">Името се вижда само в админ панела. Номерът на телефона не се променя.</p>
         </div>
         <div class="actions">
-            <a href="{{ route('admin.devices.show', $device) }}">Преглед</a>
+            <a href="{{ route('admin.devices.show', $device) }}">@include('admin.icon', ['name' => 'eye']) Преглед</a>
         </div>
     </div>
 

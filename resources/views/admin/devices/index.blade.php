@@ -33,7 +33,7 @@
                             <td>{{ $device->label ?: '—' }}</td>
                             <td>{{ $device->pins_count }}</td>
                             <td>{{ $device->active_pins_count }}</td>
-                            <td>{{ $device->last_seen_at?->format('d.m.Y H:i') ?: '—' }}</td>
+                            <td class="date">{{ $device->last_seen_at?->timezone('Europe/Sofia')->format('d.m.Y H:i') ?: '—' }}</td>
                             <td>
                                 @if ($device->isBanned())
                                     <span class="pill off">Забранено</span>
@@ -42,19 +42,21 @@
                                 @endif
                             </td>
                             <td class="actions">
-                                <a href="{{ route('admin.devices.show', $device) }}">Преглед</a>
-                                <a href="{{ route('admin.devices.edit', $device) }}">Редакция</a>
-                                @if ($device->isBanned())
-                                    <form method="POST" action="{{ route('admin.devices.unban', $device) }}">
-                                        @csrf
-                                        <button type="submit">Върни</button>
-                                    </form>
-                                @else
-                                    <form method="POST" action="{{ route('admin.devices.ban', $device) }}" onsubmit="return confirm('Забраняваш ли това устройство? Активните пинове изчезват от картата.')">
-                                        @csrf
-                                        <button class="danger" type="submit">Забрани</button>
-                                    </form>
-                                @endif
+                                <span class="cell-actions">
+                                    <a href="{{ route('admin.devices.show', $device) }}">@include('admin.icon', ['name' => 'eye']) Преглед</a>
+                                    <a href="{{ route('admin.devices.edit', $device) }}">@include('admin.icon', ['name' => 'edit']) Редакция</a>
+                                    @if ($device->isBanned())
+                                        <form method="POST" action="{{ route('admin.devices.unban', $device) }}">
+                                            @csrf
+                                            <button class="good" type="submit">@include('admin.icon', ['name' => 'back']) Върни</button>
+                                        </form>
+                                    @else
+                                        <form method="POST" action="{{ route('admin.devices.ban', $device) }}" onsubmit="return confirm('Забраняваш ли това устройство? Активните пинове изчезват от картата.')">
+                                            @csrf
+                                            <button class="danger" type="submit">@include('admin.icon', ['name' => 'ban']) Забрани</button>
+                                        </form>
+                                    @endif
+                                </span>
                             </td>
                         </tr>
                     @endforeach

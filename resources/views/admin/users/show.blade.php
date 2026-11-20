@@ -9,12 +9,12 @@
             <p class="lede">Администратор от {{ $user->created_at?->format('d.m.Y H:i') }}.</p>
         </div>
         <div class="actions">
-            <a href="{{ route('admin.users.edit', $user) }}">Редакция</a>
+            <a href="{{ route('admin.users.edit', $user) }}">@include('admin.icon', ['name' => 'edit']) Редакция</a>
             @if (! auth()->user()->is($user))
                 <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirm('Изтриваш ли този вход?')">
                     @csrf
                     @method('DELETE')
-                    <button class="danger" type="submit">Изтрий</button>
+                    <button class="danger" type="submit">@include('admin.icon', ['name' => 'trash']) Изтрий</button>
                 </form>
             @endif
         </div>

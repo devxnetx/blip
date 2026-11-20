@@ -9,7 +9,7 @@
             <p class="lede">Името се вижда на картата и в телефона. Кодът се създава от името и после не се сменя, за да останат старите пинове вързани.</p>
         </div>
         <div class="actions">
-            <a class="solid" href="#new-category">Нова категория</a>
+            <a class="solid" href="#new-category">@include('admin.icon', ['name' => 'plus']) Нова категория</a>
         </div>
     </div>
 
@@ -32,15 +32,17 @@
                         <td>{{ $category->position }}</td>
                         <td>{{ $category->pins_count }}</td>
                         <td class="actions">
-                            <a href="{{ route('admin.categories.show', $category) }}">Преглед</a>
-                            <a href="{{ route('admin.categories.edit', $category) }}">Редакция</a>
-                            @if ($category->pins_count === 0)
-                                <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" onsubmit="return confirm('Изтриваш ли тази категория?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="danger" type="submit">Изтрий</button>
-                                </form>
-                            @endif
+                            <span class="cell-actions">
+                                <a href="{{ route('admin.categories.show', $category) }}">@include('admin.icon', ['name' => 'eye']) Преглед</a>
+                                <a href="{{ route('admin.categories.edit', $category) }}">@include('admin.icon', ['name' => 'edit']) Редакция</a>
+                                @if ($category->pins_count === 0)
+                                    <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" onsubmit="return confirm('Изтриваш ли тази категория?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="danger" type="submit">@include('admin.icon', ['name' => 'trash']) Изтрий</button>
+                                    </form>
+                                @endif
+                            </span>
                         </td>
                     </tr>
                 @endforeach

@@ -15,5 +15,6 @@ class ParsedEvent
         public Carbon $endsAt,
         public ?string $address,
         public ?string $imageUrl,
+        public string $url,
     ) {}
 }

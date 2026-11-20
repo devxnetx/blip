@@ -13,12 +13,12 @@
             @endif
         </div>
         <div class="actions">
-            <a href="{{ route('admin.categories.edit', $category) }}">Редакция</a>
+            <a href="{{ route('admin.categories.edit', $category) }}">@include('admin.icon', ['name' => 'edit']) Редакция</a>
             @if ($category->pins_count === 0)
                 <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" onsubmit="return confirm('Изтриваш ли тази категория?')">
                     @csrf
                     @method('DELETE')
-                    <button class="danger" type="submit">Изтрий</button>
+                    <button class="danger" type="submit">@include('admin.icon', ['name' => 'trash']) Изтрий</button>
                 </form>
             @endif
         </div>
@@ -57,7 +57,7 @@
                                     —
                                 @endif
                             </td>
-                            <td>{{ $pin->created_at?->format('d.m.Y H:i') }}</td>
+                            <td class="date">{{ $pin->created_at?->timezone('Europe/Sofia')->format('d.m.Y H:i') }}</td>
                             <td>
                                 @if ($pin->expires_at->isFuture())
                                     <span class="pill">Активен</span>

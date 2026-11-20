@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
-#[Fillable(['device_hash', 'message', 'category', 'kind', 'latitude', 'longitude', 'image_path', 'starts_at', 'duration_minutes', 'expires_at', 'source', 'external_id', 'placed_manually', 'suppressed_at'])]
+#[Fillable(['device_hash', 'message', 'category', 'kind', 'latitude', 'longitude', 'image_path', 'starts_at', 'duration_minutes', 'expires_at', 'source', 'external_id', 'source_url', 'placed_manually', 'suppressed_at'])]
 class Pin extends Model
 {
     public const DURATIONS = [
@@ -268,6 +268,15 @@ class Pin extends Model
         $this->longitude = $longitude;
         $this->placed_manually = true;
         $this->save();
+    }
+
+    public function sourceLabel(): ?string
+    {
+        if ($this->source === null || $this->source === '') {
+            return null;
+        }
+
+        return PinImport::LABELS[$this->source] ?? $this->source;
     }
 
     public function isPublic(): bool

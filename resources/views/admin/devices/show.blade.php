@@ -9,16 +9,16 @@
             <p class="lede">Номерът е даден на този телефон. Отпечатъкът е скритият му идентификатор. Пиновете остават тук и след като изтекат.</p>
         </div>
         <div class="actions">
-            <a href="{{ route('admin.devices.edit', $device) }}">Редакция</a>
+            <a href="{{ route('admin.devices.edit', $device) }}">@include('admin.icon', ['name' => 'edit']) Редакция</a>
             @if ($device->isBanned())
                 <form method="POST" action="{{ route('admin.devices.unban', $device) }}">
                     @csrf
-                    <button class="solid" type="submit">Върни</button>
+                    <button class="good" type="submit">@include('admin.icon', ['name' => 'back']) Върни</button>
                 </form>
             @else
                 <form method="POST" action="{{ route('admin.devices.ban', $device) }}" onsubmit="return confirm('Забраняваш ли това устройство? Активните пинове изчезват от картата.')">
                     @csrf
-                    <button class="danger" type="submit">Забрани</button>
+                    <button class="danger" type="submit">@include('admin.icon', ['name' => 'ban']) Забрани</button>
                 </form>
             @endif
         </div>
@@ -59,7 +59,7 @@
                             <td>{{ $pin->message }}</td>
                             <td>{{ \App\Models\Category::label($pin->category) }}</td>
                             <td>{{ number_format($pin->latitude, 5, '.', '') }}, {{ number_format($pin->longitude, 5, '.', '') }}</td>
-                            <td>{{ $pin->created_at?->format('d.m.Y H:i') }}</td>
+                            <td class="date">{{ $pin->created_at?->timezone('Europe/Sofia')->format('d.m.Y H:i') }}</td>
                             <td>
                                 @if ($pin->expires_at->isFuture())
                                     <span class="pill">Активен</span>
@@ -68,13 +68,15 @@
                                 @endif
                             </td>
                             <td class="actions">
-                                @if ($pin->expires_at->isFuture())
-                                    <a href="{{ route('map', ['pin' => $pin->id]) }}">Преглед</a>
-                                    <form method="POST" action="{{ route('admin.pins.hide', $pin) }}" onsubmit="return confirm('Скриваш ли пина от картата? Той остава в историята.')">
-                                        @csrf
-                                        <button type="submit">Скрий</button>
-                                    </form>
-                                @endif
+                                <span class="cell-actions">
+                                    @if ($pin->expires_at->isFuture())
+                                        <a href="{{ route('map', ['pin' => $pin->id]) }}">@include('admin.icon', ['name' => 'map']) Преглед</a>
+                                        <form method="POST" action="{{ route('admin.pins.hide', $pin) }}" onsubmit="return confirm('Скриваш ли пина от картата? Той остава в историята.')">
+                                            @csrf
+                                            <button class="danger" type="submit">@include('admin.icon', ['name' => 'hide']) Скрий</button>
+                                        </form>
+                                    @endif
+                                </span>
                             </td>
                         </tr>
                     @endforeach

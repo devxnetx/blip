@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Device;
 use App\Models\Pin;
+use App\Models\PinImport;
+use App\Models\Setting;
 use App\Services\SportenKalendar\CalendarClient;
 use App\Services\SportenKalendar\EventPageParser;
 use App\Services\SportenKalendar\NominatimGeocoder;
@@ -51,6 +53,7 @@ class SportenImportTest extends TestCase
         $this->assertSame($street->device_hash, $sameHall->device_hash);
         $this->assertSame('badminton', $street->category);
         $this->assertSame('pins/sporten-11.jpg', $street->image_path);
+        $this->assertSame('https://sportenkalendar.bg/sybitie/future-street-11', $street->source_url);
         $this->assertTrue(Storage::disk('public')->exists('pins/sporten-11.jpg'));
         $this->assertTrue($street->starts_at->isFuture());
         $this->assertTrue($street->expires_at->greaterThan($street->starts_at));
@@ -75,6 +78,12 @@ class SportenImportTest extends TestCase
 
         $device = Device::query()->where('device_hash', hash('sha256', 'kostaa-import:sportenkalendar'))->firstOrFail();
         $this->assertSame('Спортен календар', $device->label);
+
+        $run = PinImport::query()->where('source', 'sportenkalendar')->firstOrFail();
+        $this->assertTrue($run->successful);
+        $this->assertSame(4, $run->pins_count);
+        $this->assertSame(2, $run->unassigned_count);
+        $this->assertNotNull($run->finished_at);
 
         $map = $this->get('/map');
         $map->assertOk()
@@ -254,6 +263,17 @@ class SportenImportTest extends TestCase
         $this->assertSame('Цар Иван Шишман 60', $hall['street']);
         $this->assertSame('Стара Загора', $hall['city']);
         $this->assertNull(NominatimGeocoder::structuredQuery('Люлин планина, Бонсови поляни'));
+    }
+
+    public function test_events_past_the_chosen_window_are_left_out(): void
+    {
+        Storage::fake('public');
+        $this->fakeCalendar();
+        Setting::put('import_days_ahead', '1');
+
+        $this->artisan('pins:import-sporten')->assertSuccessful();
+
+        $this->assertNull(Pin::query()->where('external_id', '11')->first());
     }
 
     public function test_import_is_scheduled_daily(): void
