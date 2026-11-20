@@ -13,16 +13,15 @@ class NominatimGeocoder
     /**
      * @return array{latitude: float, longitude: float}|null
      */
-    public function locate(string $address): ?array
+    public function locate(?string $address, ?string $venue = null): ?array
     {
-        $this->answered = false;
-        $query = $this->clean($address);
+        $attempts = self::lookupAttempts($address, $venue);
 
-        if ($query === '') {
+        if ($attempts === []) {
             return null;
         }
 
-        $key = 'nominatim:v2:'.md5($query);
+        $key = 'nominatim:v3:'.md5((string) json_encode($attempts, JSON_UNESCAPED_UNICODE));
         $cached = Cache::get($key);
 
         if ($cached === 'miss') {
@@ -36,30 +35,75 @@ class NominatimGeocoder
             ];
         }
 
-        $structured = self::structuredQuery($query);
+        $answered = false;
         $point = null;
 
-        if ($structured !== null) {
-            $point = $this->search($structured);
-        }
+        foreach ($attempts as $params) {
+            $point = $this->search($params);
 
-        if ($point === null) {
-            $lookup = $query;
-
-            if (! preg_match('/българия|bulgaria/ui', $lookup)) {
-                $lookup .= ', България';
+            if ($this->answered) {
+                $answered = true;
             }
 
-            $point = $this->search([
-                'q' => $lookup,
-            ]);
+            if ($point !== null) {
+                break;
+            }
         }
 
-        if ($this->answered) {
+        if ($answered) {
             Cache::put($key, $point ?? 'miss', now()->addDays($point === null ? 3 : 30));
         }
 
         return $point;
+    }
+
+    /**
+     * Street first, then the hall name, then a named park. A city by itself stays one free-text query.
+     *
+     * @return list<array<string, string>>
+     */
+    public static function lookupAttempts(?string $address, ?string $venue = null): array
+    {
+        $address = self::normalize((string) $address);
+        $venue = self::normalize((string) $venue);
+        $attempts = [];
+        $seen = [];
+        $structured = $address !== '' ? self::structuredQuery($address) : null;
+
+        if ($structured !== null) {
+            $attempts[] = $structured;
+        }
+
+        $city = $structured['city'] ?? self::cityName($address);
+        $places = $venue !== '' ? [$venue] : [];
+
+        foreach (self::placeNames($address) as $place) {
+            $places[] = $place;
+        }
+
+        foreach ($places as $place) {
+            $query = self::placeQuery($place, $city);
+
+            if ($query === null || isset($seen[$query])) {
+                continue;
+            }
+
+            $seen[$query] = true;
+            $attempts[] = [
+                'q' => $query,
+                '_city' => $city ?? '',
+            ];
+        }
+
+        if ($places === [] && $structured === null && $address !== '') {
+            $query = self::placeQuery($address, null);
+
+            if ($query !== null) {
+                $attempts[] = ['q' => $query, '_city' => ''];
+            }
+        }
+
+        return $attempts;
     }
 
     /**
@@ -68,6 +112,9 @@ class NominatimGeocoder
      */
     private function search(array $params): ?array
     {
+        $this->answered = false;
+        $expectedCity = $params['_city'] ?? null;
+        unset($params['_city']);
         $this->pause();
 
         try {
@@ -94,7 +141,14 @@ class NominatimGeocoder
             return null;
         }
 
-        return self::pointFromPayload($response->json(), '');
+        $payload = $response->json();
+        $city = is_string($expectedCity) && $expectedCity !== '' ? $expectedCity : ($params['city'] ?? null);
+
+        if (! self::cityAgrees($payload, is_string($city) ? $city : null)) {
+            return null;
+        }
+
+        return self::pointFromPayload($payload, '');
     }
 
     /**
@@ -136,7 +190,7 @@ class NominatimGeocoder
                 continue;
             }
 
-            if (preg_match('/зала|стадион|комплекс|хотел|планина|поляна/ui', $part)) {
+            if (preg_match('/зала|стадион|комплекс|хотел|планина|поляна|парк(?!инг)|арена|басейн|игрище|дворец/ui', $part)) {
                 continue;
             }
 
@@ -177,6 +231,8 @@ class NominatimGeocoder
         }
 
         $address = is_array($row['address'] ?? null) ? $row['address'] : [];
+        $category = (string) ($row['category'] ?? '');
+        $type = (string) ($row['type'] ?? '');
         $specific = isset($address['house_number'])
             || isset($address['road'])
             || isset($address['amenity'])
@@ -184,7 +240,9 @@ class NominatimGeocoder
             || isset($address['leisure'])
             || isset($address['tourism'])
             || isset($address['historic'])
-            || isset($address['man_made']);
+            || isset($address['man_made'])
+            || isset($address['park'])
+            || ($category === 'leisure' && in_array($type, ['park', 'sports_centre', 'stadium', 'pitch', 'swimming_pool', 'track', 'sports_hall'], true));
 
         if (! $specific) {
             return null;
@@ -196,13 +254,118 @@ class NominatimGeocoder
         ];
     }
 
-    private function clean(string $address): string
+    public static function normalize(string $address): string
     {
         $address = html_entity_decode($address, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $address = str_replace(['„', '“', '”', '"', '«', '»', '“'], ' ', $address);
+        $address = str_replace(['„', '“', '”', '"', '«', '»'], ' ', $address);
         $address = trim((string) preg_replace('/\s+/u', ' ', $address));
 
         return trim($address, " ,");
+    }
+
+    private static function cityName(string $address): ?string
+    {
+        foreach (self::chunks($address) as $part) {
+            if (self::isStreet($part) || self::isPlace($part)) {
+                continue;
+            }
+
+            $part = trim((string) preg_replace('/^(?:гр\.|град|с\.|село)\s+/ui', '', $part), " .");
+
+            if ($part !== '') {
+                return $part;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function placeNames(string $address): array
+    {
+        $names = [];
+
+        foreach (self::chunks($address) as $part) {
+            if (self::isPlace($part)) {
+                $names[] = $part;
+            }
+        }
+
+        return $names;
+    }
+
+    private static function placeQuery(string $place, ?string $city): ?string
+    {
+        $place = self::normalize($place);
+
+        if ($place === '') {
+            return null;
+        }
+
+        if ($city !== null && $city !== '' && ! preg_match('/'.preg_quote($city, '/').'/ui', $place)) {
+            $place .= ', '.$city;
+        }
+
+        if (! preg_match('/българия|bulgaria/ui', $place)) {
+            $place .= ', България';
+        }
+
+        return $place;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function chunks(string $address): array
+    {
+        $parts = preg_split('/\s*,\s*/u', $address) ?: [];
+
+        return array_values(array_filter(array_map(
+            fn (string $part): string => trim($part),
+            $parts,
+        ), fn (string $part): bool => $part !== ''));
+    }
+
+    private static function isStreet(string $part): bool
+    {
+        return preg_match('/(?:^|\s)(?:ул\.|ул(?=\s)|улица|бул\.|булевард|пл\.|площад)\s*\S/ui', $part) === 1;
+    }
+
+    private static function isPlace(string $part): bool
+    {
+        return preg_match('/зала|стадион|комплекс|хотел|парк(?!инг)|арена|басейн|игрище|дворец/ui', $part) === 1;
+    }
+
+    public static function cityAgrees(mixed $payload, ?string $city): bool
+    {
+        if ($city === null || $city === '') {
+            return true;
+        }
+
+        if (! is_array($payload) || ! isset($payload[0]) || ! is_array($payload[0])) {
+            return true;
+        }
+
+        $address = is_array($payload[0]['address'] ?? null) ? $payload[0]['address'] : [];
+        $found = null;
+
+        foreach (['city', 'town', 'village', 'municipality'] as $key) {
+            if (isset($address[$key]) && is_string($address[$key]) && $address[$key] !== '') {
+                $found = $address[$key];
+                break;
+            }
+        }
+
+        if ($found === null) {
+            return true;
+        }
+
+        $found = mb_strtolower($found);
+        $city = mb_strtolower($city);
+
+        return $found === $city || str_contains($found, $city) || str_contains($city, $found);
     }
 
     private function pause(): void

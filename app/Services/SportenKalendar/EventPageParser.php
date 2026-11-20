@@ -61,6 +61,15 @@ class EventPageParser
             $address = null;
         }
 
+        $venue = null;
+
+        if (preg_match('/Място на провеждане:\s*<\/strong>\s*(?:<a\b[^>]*>)?\s*([^<]+)/u', $html, $venueMatch)) {
+            $venue = $this->clean($venueMatch[1]);
+            if ($venue === '') {
+                $venue = null;
+            }
+        }
+
         $imageUrl = null;
 
         if (preg_match('/property="og:image"\s+content="([^"]+)"/', $html, $imageMatch)) {
@@ -82,6 +91,7 @@ class EventPageParser
             $imageUrl,
             $url,
             $this->description($html, $title),
+            $venue,
         );
     }
 

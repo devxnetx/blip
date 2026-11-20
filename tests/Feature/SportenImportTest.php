@@ -227,6 +227,7 @@ class SportenImportTest extends TestCase
             .'<p><strong>Начало:</strong> '.$start.' от 09:00 ч.</p>'
             .'<p><strong>Край:</strong> '.$end.' до 16:00 ч.</p>'
             .'<p class="single-event-top-category"><a href="/sportove/badminton">Бадминтон</a></p>'
+            .'<p><strong>Място на провеждане: </strong> <a href="/zali/sportna-zala-beroe">Спортна зала &quot;Берое&quot;</a></p>'
             .'<p><strong>Адрес: </strong> Стара Загора, ул.&quot;Цар Иван Шишман&quot; № 60</p>'
             .'<div class="single-event-info-text-block"><p>Двудневен турнир за ветерани.</p></div>';
 
@@ -238,6 +239,7 @@ class SportenImportTest extends TestCase
         $this->assertSame('badminton', $event->sportSlug);
         $this->assertSame('Бадминтон', $event->sportName);
         $this->assertStringContainsString('Шишман', (string) $event->address);
+        $this->assertSame('Спортна зала "Берое"', $event->venue);
         $this->assertSame('https://sportenkalendar.bg/uploads/events/badge.jpg', $event->imageUrl);
         $this->assertSame('Двудневен турнир за ветерани.', $event->description);
         $this->assertTrue($event->endsAt->greaterThan($event->startsAt));
@@ -269,6 +271,107 @@ class SportenImportTest extends TestCase
         $this->assertSame('Цар Иван Шишман 60', $hall['street']);
         $this->assertSame('Стара Загора', $hall['city']);
         $this->assertNull(NominatimGeocoder::structuredQuery('Люлин планина, Бонсови поляни'));
+
+        $park = NominatimGeocoder::pointFromPayload([[
+            'lat' => '42.4865072',
+            'lon' => '26.4968841',
+            'category' => 'leisure',
+            'type' => 'park',
+            'address' => ['park' => 'Градски парк', 'city' => 'Ямбол'],
+        ]], 'Ямбол');
+        $this->assertSame(42.4865072, $park['latitude']);
+
+        $yambol = NominatimGeocoder::lookupAttempts('Ямбол, Градски парк, Ямбол', 'Спортна зала "Диана"');
+        $this->assertSame('Спортна зала Диана, Ямбол, България', $yambol[0]['q']);
+        $this->assertSame('Градски парк, Ямбол, България', $yambol[1]['q']);
+        $this->assertCount(2, $yambol);
+
+        $mountain = NominatimGeocoder::lookupAttempts('Люлин планина, Бонсови поляни');
+        $this->assertSame([['q' => 'Люлин планина, Бонсови поляни, България', '_city' => '']], $mountain);
+    }
+
+    public function test_a_named_hall_is_pinned_when_the_address_has_no_street(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        $start = now('Europe/Sofia')->addDays(2)->format('d-m-Y');
+        $end = now('Europe/Sofia')->addDays(2)->format('d-m-Y');
+        $jpeg = $this->jpegBytes();
+        $pages = [
+            'https://sportenkalendar.bg/sitemap' => '<loc>https://sportenkalendar.bg/sybitie/dp-ambol-8119</loc>'
+                .'<loc>https://sportenkalendar.bg/sybitie/park-only-20</loc>',
+            'https://sportenkalendar.bg/sybitie/dp-ambol-8119' => $this->eventPage(
+                'Държавно първенство по брейк',
+                $start,
+                $end,
+                'Ямбол, Градски парк, Ямбол',
+                'Спортна зала "Диана"',
+            ),
+            'https://sportenkalendar.bg/sybitie/park-only-20' => $this->eventPage(
+                'Тренировка в парка',
+                $start,
+                $end,
+                'Ямбол, Градски парк, Ямбол',
+            ),
+        ];
+
+        Http::fake(function (Request $request) use ($pages, $jpeg) {
+            $url = $request->url();
+
+            if (str_contains($url, 'nominatim.openstreetmap.org')) {
+                $query = (string) ($request->data()['q'] ?? '');
+
+                if (str_contains($query, 'Диана')) {
+                    return Http::response([[
+                        'lat' => '42.4872787',
+                        'lon' => '26.4997273',
+                        'category' => 'leisure',
+                        'type' => 'sports_centre',
+                        'address' => ['leisure' => 'Спортна зала Диана', 'road' => 'Иван Параскевов', 'city' => 'Ямбол'],
+                    ]]);
+                }
+
+                if (str_contains($query, 'парк')) {
+                    return Http::response([[
+                        'lat' => '42.4865072',
+                        'lon' => '26.4968841',
+                        'category' => 'leisure',
+                        'type' => 'park',
+                        'address' => ['park' => 'Градски парк', 'city' => 'Ямбол'],
+                    ]]);
+                }
+
+                return Http::response([[
+                    'lat' => '42.484',
+                    'lon' => '26.503',
+                    'address' => ['city' => 'Ямбол', 'country' => 'България'],
+                ]]);
+            }
+
+            if (str_contains($url, '/uploads/events/')) {
+                return Http::response($jpeg, 200, ['Content-Type' => 'image/jpeg']);
+            }
+
+            foreach ($pages as $page => $body) {
+                if ($url === $page) {
+                    return Http::response($body);
+                }
+            }
+
+            return Http::response('missing', 404);
+        });
+
+        $this->artisan('pins:import-sporten')->assertSuccessful();
+
+        $hall = Pin::query()->where('external_id', '8119')->firstOrFail();
+        $this->assertSame(Pin::KIND_UPCOMING, $hall->kind);
+        $this->assertEqualsWithDelta(42.4872787, $hall->latitude, 0.00001);
+        $this->assertEqualsWithDelta(26.4997273, $hall->longitude, 0.00001);
+
+        $park = Pin::query()->where('external_id', '20')->firstOrFail();
+        $this->assertSame(Pin::KIND_UPCOMING, $park->kind);
+        $this->assertEqualsWithDelta(42.4865072, $park->latitude, 0.00001);
+        $this->assertEqualsWithDelta(26.4968841, $park->longitude, 0.00001);
     }
 
     public function test_events_past_the_chosen_window_are_left_out(): void
@@ -351,8 +454,11 @@ class SportenImportTest extends TestCase
         });
     }
 
-    private function eventPage(string $title, string $start, string $end, ?string $address): string
+    private function eventPage(string $title, string $start, string $end, ?string $address, ?string $venue = null): string
     {
+        $venueHtml = $venue === null
+            ? ''
+            : '<p><strong>Място на провеждане: </strong> <a href="/zali/hall">'.htmlspecialchars($venue, ENT_QUOTES).'</a></p>';
         $addressHtml = $address === null
             ? ''
             : '<p><strong>Адрес: </strong> '.htmlspecialchars($address, ENT_QUOTES).'</p>';
@@ -363,6 +469,7 @@ class SportenImportTest extends TestCase
             .'<p><strong>Начало:</strong> '.$start.' от 09:00 ч.</p>'
             .'<p><strong>Край:</strong> '.$end.' до 16:00 ч.</p>'
             .'<a href="/sportove/badminton">Бадминтон</a>'
+            .$venueHtml
             .$addressHtml
             .'<div class="single-event-info-text-block"><p>Мачът е в залата на Берое.</p></div>'
             .'</body></html>';

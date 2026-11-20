@@ -113,8 +113,8 @@ class Importer
                 'latitude' => $existing->latitude,
                 'longitude' => $existing->longitude,
             ];
-        } elseif (is_string($event->address) && $event->address !== '') {
-            $point = $this->geocoder->locate($event->address);
+        } elseif ($this->hasPlace($event)) {
+            $point = $this->geocoder->locate($event->address, $event->venue);
         }
 
         if ($point === null && $existing !== null && $existing->latitude !== null && $existing->longitude !== null && ! $existing->placed_manually) {
@@ -176,6 +176,12 @@ class Importer
         }
 
         return $outcome;
+    }
+
+    private function hasPlace(ParsedEvent $event): bool
+    {
+        return (is_string($event->address) && $event->address !== '')
+            || (is_string($event->venue) && $event->venue !== '');
     }
 
     private function sportCategory(): void
