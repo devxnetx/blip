@@ -374,7 +374,7 @@
             margin-right: 6px;
         }
 
-        .pin-split .story { margin-top: 0; }
+        .pin-split .story { margin: 0; }
 
         .pin-scroll {
             flex: 1;
@@ -394,16 +394,15 @@
 
         .pin-split {
             display: flex;
-            align-items: flex-start;
-            gap: 14px;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .pin-split:not(:has(img:not([hidden]), .story:not([hidden]))) { display: none; }
 
         #panel-photo {
-            width: 148px;
-            height: 148px;
-            flex: none;
+            width: 100%;
+            height: 200px;
             object-fit: cover;
             border-radius: 14px;
             background: var(--line);
@@ -831,7 +830,7 @@
             }
             .maplibregl-ctrl-bottom-left { display: none; }
             .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
-            #panel-photo { width: 112px; height: 112px; }
+
         }
     </style>
 </head>
