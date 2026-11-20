@@ -14,10 +14,32 @@ use Illuminate\View\View;
 
 class PinController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $kind = $request->string('kind')->toString();
+
+        if (! in_array($kind, [Pin::KIND_NORMAL, Pin::KIND_UNASSIGNED, Pin::KIND_UPCOMING], true)) {
+            $kind = Pin::KIND_NORMAL;
+        }
+
+        $counts = Pin::query()
+            ->selectRaw('kind, count(*) as total')
+            ->groupBy('kind')
+            ->pluck('total', 'kind');
+
         return view('admin.pins.index', [
-            'pins' => Pin::query()->with('device')->latest()->paginate(40),
+            'pins' => Pin::query()
+                ->with('device')
+                ->where('kind', $kind)
+                ->latest()
+                ->paginate(40)
+                ->withQueryString(),
+            'kind' => $kind,
+            'counts' => [
+                Pin::KIND_NORMAL => (int) ($counts[Pin::KIND_NORMAL] ?? 0),
+                Pin::KIND_UNASSIGNED => (int) ($counts[Pin::KIND_UNASSIGNED] ?? 0),
+                Pin::KIND_UPCOMING => (int) ($counts[Pin::KIND_UPCOMING] ?? 0),
+            ],
         ]);
     }
 
@@ -27,9 +49,10 @@ class PinController extends Controller
             'message' => ['required', 'string', 'max:80'],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
-            'duration' => ['required', 'in:5m,1h,24h'],
+            'duration' => ['nullable', 'in:5m,1h,24h'],
             'kind' => ['nullable', 'in:'.Pin::KIND_NORMAL.','.Pin::KIND_UPCOMING],
             'starts_at' => ['nullable', 'string', 'max:40'],
+            'ends_at' => ['nullable', 'string', 'max:40'],
             'category' => ['required', 'string', 'max:40', Rule::exists('categories', 'slug')],
         ], [
             'message.required' => 'Напиши кратко съобщение.',
@@ -59,9 +82,25 @@ class PinController extends Controller
         }
 
         $kind = $data['kind'] ?? Pin::KIND_NORMAL;
-        $startsAt = $kind === Pin::KIND_UPCOMING
-            ? Pin::parseStartsAt($data['starts_at'] ?? null)
-            : null;
+        $endsAt = trim((string) ($data['ends_at'] ?? ''));
+
+        if ($kind === Pin::KIND_UPCOMING && $endsAt !== '') {
+            $schedule = Pin::rangedSchedule(
+                Pin::parseStartsAt($data['starts_at'] ?? null),
+                Pin::parseStartsAt($endsAt, 'ends_at'),
+            );
+        } else {
+            if (($data['duration'] ?? '') === '') {
+                throw ValidationException::withMessages([
+                    'duration' => 'Избери колко да стои пинът.',
+                ]);
+            }
+
+            $startsAt = $kind === Pin::KIND_UPCOMING
+                ? Pin::parseStartsAt($data['starts_at'] ?? null)
+                : null;
+            $schedule = Pin::locatedSchedule($kind, $startsAt, $data['duration']);
+        }
 
         $pin = Pin::query()->create([
             'device_hash' => $hash,
@@ -69,7 +108,7 @@ class PinController extends Controller
             'category' => $data['category'],
             'latitude' => $data['latitude'],
             'longitude' => $data['longitude'],
-            ...Pin::locatedSchedule($kind, $startsAt, $data['duration']),
+            ...$schedule,
         ]);
 
         return response()->json($pin->toApi(false), 201);

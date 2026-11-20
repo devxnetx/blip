@@ -13,6 +13,19 @@
         </div>
     </div>
 
+    <div class="filters">
+        @foreach ([
+            \App\Models\Pin::KIND_NORMAL => 'Стандартен',
+            \App\Models\Pin::KIND_UNASSIGNED => 'Без място',
+            \App\Models\Pin::KIND_UPCOMING => 'Предстоящо',
+        ] as $slug => $label)
+            <a @class(['on' => $kind === $slug]) href="{{ route('admin.pins', ['kind' => $slug]) }}">
+                {{ $label }}
+                <span class="count">{{ $counts[$slug] }}</span>
+            </a>
+        @endforeach
+    </div>
+
     <div class="card wrap">
         @if ($pins->isEmpty())
             <p>Няма пинове.</p>
@@ -25,7 +38,7 @@
                         <th>Устройство</th>
                         <th>Създаден</th>
                         <th>Статус</th>
-                        <th class="actions"></th>
+                        <th class="actions">Действия</th>
                     </tr>
                 </thead>
                 <tbody>

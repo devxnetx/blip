@@ -130,7 +130,7 @@
             max-width: calc(100% - 140px);
         }
 
-        body.admin .top-left { max-width: calc(100% - 250px); }
+        body.admin .top-left { max-width: calc(100% - 380px); }
 
         .top-right {
             position: fixed;
@@ -393,7 +393,26 @@
             color: var(--ink);
         }
 
-        .when[hidden] { display: none !important; }
+        .when[hidden],
+        .filters[hidden],
+        .range[hidden] { display: none !important; }
+
+        .range {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .range label.when {
+            flex: 1 1 140px;
+            margin-top: 0;
+        }
+
+        .range .faint {
+            flex: 1 1 100%;
+            margin: 0;
+        }
 
         .count-line { margin: 4px 0 0; text-align: right; color: var(--faint); font-size: 12px; }
 
@@ -709,6 +728,14 @@
             }
             body:has(#install:not([hidden])) #locate { bottom: 148px; }
             body.admin:has(#install:not([hidden])) #open-cities-mobile { bottom: 236px; }
+            body.admin .top-left { max-width: calc(100% - 16px); }
+            body.admin .top-right {
+                top: 62px;
+                left: 16px;
+                right: 16px;
+                justify-content: flex-end;
+                flex-wrap: wrap;
+            }
             .maplibregl-ctrl-bottom-left { display: none; }
             .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
         }
@@ -727,7 +754,6 @@
         <button class="city-pill" id="open-cities-mobile" type="button">Градове</button>
         @auth
             <a class="city-pill" href="{{ route('admin.devices') }}">Админ</a>
-            <button class="city-pill" id="open-composer" type="button">Нов пин</button>
         @endauth
     </div>
     <nav class="city-bar" id="city-bar" aria-label="Градове">
@@ -735,6 +761,7 @@
     </nav>
     <div class="top-right">
         @auth
+            <button class="city-pill" id="open-composer" type="button">Нов пин</button>
             <button class="city-pill" id="open-unassigned" type="button">Без място</button>
         @endauth
         <button class="city-pill" id="open-pins" type="button">Пинове</button>
@@ -825,9 +852,15 @@
                     <button type="button" class="on" data-when="normal">Сега</button>
                     <button type="button" data-when="upcoming">Предстоящо</button>
                 </div>
-                <label class="when" id="pin-start-label" for="pin-start" hidden>Кога започва</label>
-                <input class="when" id="pin-start" type="datetime-local" hidden>
-                <p class="when faint" id="pin-start-hint" hidden>Вижда се веднага. Изчезва след избраното време от началото.</p>
+                <div class="range" id="pin-range" hidden>
+                    <label class="when" for="pin-start">От
+                        <input class="when" id="pin-start" type="datetime-local">
+                    </label>
+                    <label class="when" for="pin-end">До
+                        <input class="when" id="pin-end" type="datetime-local">
+                    </label>
+                    <p class="faint">Вижда се веднага. Стои от началото до края.</p>
+                </div>
                 <div class="filters" id="composer-durations">
                     <button type="button" data-duration="5m">5 мин</button>
                     <button type="button" class="on" data-duration="1h">1 час</button>
@@ -852,27 +885,7 @@
             </div>
             <p class="muted" id="unassigned-hint">Избери събитие, после кликни върху картата.</p>
             <ul id="unassigned-list"></ul>
-            <form id="unassigned-form">
-                <textarea id="unassigned-message" maxlength="80" placeholder="Кратко съобщение"></textarea>
-                <p class="count-line" id="unassigned-count">0/80</p>
-                <div class="filters" id="unassigned-categories">
-                    @foreach ($listedCategories as $slug => $name)
-                        <button type="button" @class(['on' => $slug === $defaultCategory]) data-category="{{ $slug }}">{{ $name }}</button>
-                    @endforeach
-                </div>
-                <label class="when" for="unassigned-start">Дата, по избор</label>
-                <input class="when" id="unassigned-start" type="datetime-local">
-                <div class="filters" id="unassigned-durations">
-                    <button type="button" data-duration="5m">5 мин</button>
-                    <button type="button" class="on" data-duration="1h">1 час</button>
-                    <button type="button" data-duration="24h">24 часа</button>
-                </div>
-                <input id="unassigned-category" type="hidden" value="{{ $defaultCategory }}">
-                <input id="unassigned-duration" type="hidden" value="1h">
-                <p class="faint">Без дата пинът започва, когато му дадеш място.</p>
-                <button class="primary" id="unassigned-send" type="submit">Добави</button>
-                <p class="faint" id="unassigned-error" hidden></p>
-            </form>
+            <p class="faint" id="unassigned-error" hidden></p>
         </section>
     @endauth
 

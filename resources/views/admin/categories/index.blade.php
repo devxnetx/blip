@@ -21,7 +21,7 @@
                     <th>Код</th>
                     <th>Ред</th>
                     <th>Пинове</th>
-                    <th class="actions"></th>
+                    <th class="actions">Действия</th>
                 </tr>
             </thead>
             <tbody>

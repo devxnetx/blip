@@ -1489,9 +1489,8 @@ if (composer && openComposer) {
   );
   document.getElementById('composer-when').addEventListener('click', () => {
     const upcoming = document.getElementById('pin-kind').value === 'upcoming';
-    document.getElementById('pin-start').hidden = !upcoming;
-    document.getElementById('pin-start-label').hidden = !upcoming;
-    document.getElementById('pin-start-hint').hidden = !upcoming;
+    document.getElementById('pin-range').hidden = !upcoming;
+    document.getElementById('composer-durations').hidden = upcoming;
   });
 
   document.getElementById('pick-spot').addEventListener('click', () => {
@@ -1526,14 +1525,15 @@ if (composer && openComposer) {
     const longitude = document.getElementById('pin-lng').value;
     const kind = document.getElementById('pin-kind').value || 'normal';
     const startsAt = document.getElementById('pin-start').value;
+    const endsAt = document.getElementById('pin-end').value;
     if (!message) {
       pinError.hidden = false;
       pinError.textContent = 'Напиши кратко съобщение.';
       return;
     }
-    if (kind === 'upcoming' && !startsAt) {
+    if (kind === 'upcoming' && (!startsAt || !endsAt)) {
       pinError.hidden = false;
-      pinError.textContent = 'Избери кога започва.';
+      pinError.textContent = 'Избери от кога до кога.';
       return;
     }
     if (!latitude || !longitude) {
@@ -1548,12 +1548,14 @@ if (composer && openComposer) {
         message,
         latitude: Number(latitude),
         longitude: Number(longitude),
-        duration: document.getElementById('pin-duration').value,
         category: document.getElementById('pin-category').value,
         kind,
       };
       if (kind === 'upcoming') {
         payload.starts_at = startsAt;
+        payload.ends_at = endsAt;
+      } else {
+        payload.duration = document.getElementById('pin-duration').value;
       }
       const response = await fetch('/admin/pins', {
         method: 'POST',
@@ -1580,6 +1582,7 @@ if (composer && openComposer) {
       document.getElementById('pin-lat').value = '';
       document.getElementById('pin-lng').value = '';
       document.getElementById('pin-start').value = '';
+      document.getElementById('pin-end').value = '';
       document.getElementById('pin-spot').textContent = 'Няма избрано място.';
       pinError.hidden = true;
       composer.hidden = true;
@@ -1596,7 +1599,6 @@ if (composer && openComposer) {
 const unassignedEl = document.getElementById('unassigned');
 const openUnassigned = document.getElementById('open-unassigned');
 if (unassignedEl && openUnassigned) {
-  const unassignedMessage = document.getElementById('unassigned-message');
   const unassignedError = document.getElementById('unassigned-error');
   let placingLock = false;
 
@@ -1672,68 +1674,6 @@ if (unassignedEl && openUnassigned) {
 
   document.getElementById('unassigned-close').addEventListener('click', () => {
     closeUnassigned();
-  });
-
-  unassignedMessage.addEventListener('input', () => {
-    document.getElementById('unassigned-count').textContent = `${unassignedMessage.value.trim().length}/80`;
-  });
-
-  chooseFilter(
-    document.getElementById('unassigned-categories'),
-    document.getElementById('unassigned-category'),
-    'category',
-  );
-  chooseFilter(
-    document.getElementById('unassigned-durations'),
-    document.getElementById('unassigned-duration'),
-    'duration',
-  );
-
-  document.getElementById('unassigned-form').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const message = unassignedMessage.value.trim();
-    if (!message) {
-      unassignedError.hidden = false;
-      unassignedError.textContent = 'Напиши кратко съобщение.';
-      return;
-    }
-    const send = document.getElementById('unassigned-send');
-    send.disabled = true;
-    try {
-      const payload = {
-        message,
-        duration: document.getElementById('unassigned-duration').value,
-        category: document.getElementById('unassigned-category').value,
-      };
-      const startsAt = document.getElementById('unassigned-start').value;
-      if (startsAt) {
-        payload.starts_at = startsAt;
-      }
-      const response = await fetch('/admin/pins/unassigned', {
-        method: 'POST',
-        headers: { ...adminHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (response.status === 401 || response.status === 419) {
-        window.alert('Влез пак като администратор.');
-        return;
-      }
-      if (!response.ok) {
-        throw new Error(await readError(response));
-      }
-      const created = await response.json();
-      unassignedRows = [created, ...unassignedRows.filter((item) => item.id !== created.id)];
-      unassignedMessage.value = '';
-      document.getElementById('unassigned-count').textContent = '0/80';
-      document.getElementById('unassigned-start').value = '';
-      unassignedError.hidden = true;
-      renderUnassigned();
-    } catch (err) {
-      unassignedError.hidden = false;
-      unassignedError.textContent = err.message || 'Събитието не е добавено.';
-    } finally {
-      send.disabled = false;
-    }
   });
 
   map.on('click', async (event) => {

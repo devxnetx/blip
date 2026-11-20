@@ -50,7 +50,7 @@
                         <th>Място</th>
                         <th>Създаден</th>
                         <th>Статус</th>
-                        <th class="actions"></th>
+                        <th class="actions">Действия</th>
                     </tr>
                 </thead>
                 <tbody>

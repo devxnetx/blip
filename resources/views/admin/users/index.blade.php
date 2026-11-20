@@ -19,7 +19,7 @@
                 <tr>
                     <th>Име</th>
                     <th>Създаден</th>
-                    <th class="actions"></th>
+                    <th class="actions">Действия</th>
                 </tr>
             </thead>
             <tbody>

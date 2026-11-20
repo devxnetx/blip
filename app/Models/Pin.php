@@ -72,7 +72,7 @@ class Pin extends Model
         return 2 * $earth * asin(min(1, sqrt($a)));
     }
 
-    public static function parseStartsAt(?string $value): ?Carbon
+    public static function parseStartsAt(?string $value, string $field = 'starts_at'): ?Carbon
     {
         if ($value === null || trim($value) === '') {
             return null;
@@ -88,7 +88,7 @@ class Pin extends Model
             return Carbon::parse($value, 'Europe/Sofia')->utc();
         } catch (\Throwable) {
             throw ValidationException::withMessages([
-                'starts_at' => 'Датата не е разпозната.',
+                $field => 'Датата не е разпозната.',
             ]);
         }
     }
@@ -142,6 +142,58 @@ class Pin extends Model
             'starts_at' => null,
             'duration_minutes' => $minutes,
             'expires_at' => now()->addMinutes($minutes),
+        ];
+    }
+
+    /**
+     * @return array{kind: string, starts_at: Carbon, duration_minutes: int, expires_at: Carbon}
+     */
+    public static function rangedSchedule(?Carbon $startsAt, ?Carbon $endsAt): array
+    {
+        if ($startsAt === null) {
+            throw ValidationException::withMessages([
+                'starts_at' => 'Избери от кога.',
+            ]);
+        }
+        if ($endsAt === null) {
+            throw ValidationException::withMessages([
+                'ends_at' => 'Избери до кога.',
+            ]);
+        }
+        if ($startsAt->lte(now())) {
+            throw ValidationException::withMessages([
+                'starts_at' => 'Избери бъдеща дата.',
+            ]);
+        }
+        if ($startsAt->gt(now()->addYear())) {
+            throw ValidationException::withMessages([
+                'starts_at' => 'Датата може да е най-много след една година.',
+            ]);
+        }
+        if ($endsAt->lte($startsAt)) {
+            throw ValidationException::withMessages([
+                'ends_at' => 'Краят трябва да е след началото.',
+            ]);
+        }
+
+        $minutes = (int) round(abs($startsAt->diffInMinutes($endsAt)));
+
+        if ($minutes < 1) {
+            throw ValidationException::withMessages([
+                'ends_at' => 'Интервалът трябва да е поне една минута.',
+            ]);
+        }
+        if ($minutes > 65535) {
+            throw ValidationException::withMessages([
+                'ends_at' => 'Интервалът може да е най-много 45 дни.',
+            ]);
+        }
+
+        return [
+            'kind' => self::KIND_UPCOMING,
+            'starts_at' => $startsAt,
+            'duration_minutes' => $minutes,
+            'expires_at' => $endsAt,
         ];
     }
 

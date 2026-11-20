@@ -92,14 +92,15 @@
 
         .lede { margin: 8px 0 0; color: var(--muted); max-width: 62ch; }
 
-        .actions {
+        .page-head .actions, td.actions {
             display: flex;
             justify-content: flex-end;
             align-items: center;
             gap: 8px;
             flex-wrap: nowrap;
-            margin-left: auto;
         }
+
+        .page-head .actions { margin-left: auto; }
 
         .actions form { margin: 0; }
 
@@ -144,7 +145,37 @@
         }
 
         th { color: var(--muted); font-size: 13px; font-weight: 700; }
-        td.actions, th.actions { text-align: right; white-space: nowrap; }
+        th.actions, td.actions { text-align: right; white-space: nowrap; }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 16px;
+        }
+
+        .filters a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1.5px solid var(--line);
+            border-radius: 999px;
+            color: var(--muted);
+            font-weight: 700;
+            text-decoration: none;
+            padding: 6px 12px;
+        }
+
+        .filters a.on {
+            border-color: var(--ink);
+            background: var(--ink);
+            color: var(--card);
+        }
+
+        .filters .count {
+            min-width: 1.2em;
+            text-align: center;
+        }
 
         .wrap { overflow: auto; }
 

@@ -143,6 +143,10 @@ class AdminTest extends TestCase
             ->get('/map')
             ->assertOk()
             ->assertSee('Нов пин')
+            ->assertSee('Сега')
+            ->assertSee('id="open-composer"', false)
+            ->assertSee('id="pin-end"', false)
+            ->assertDontSee('id="unassigned-form"', false)
             ->assertSee('Избери на картата')
             ->assertSee('Пусни пин')
             ->assertSee('Забрани устройството')
@@ -176,6 +180,10 @@ class AdminTest extends TestCase
             ->assertSee('Безплатно')
             ->assertSee('Скрий')
             ->assertSee('Нов пин')
+            ->assertSee('Действия')
+            ->assertSee('Стандартен')
+            ->assertSee('class="count">1</span>', false)
+            ->assertSee('class="on" href="'.route('admin.pins', ['kind' => 'normal']).'"', false)
             ->assertDontSee('Изтрий');
 
         $this->actingAs($admin)
@@ -411,8 +419,14 @@ class AdminTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/pins')
             ->assertOk()
+            ->assertDontSee('Концерт без сцена');
+
+        $this->actingAs($admin)
+            ->get('/admin/pins?kind=unassigned')
+            ->assertOk()
             ->assertSee('Концерт без сцена')
             ->assertSee('Без място')
+            ->assertSee('class="count">1</span>', false)
             ->assertSee('>Място<', false)
             ->assertDontSee('/map?pin='.$id, false);
 
@@ -519,5 +533,44 @@ class AdminTest extends TestCase
             'duration' => '1h',
             'category' => 'other',
         ])->assertCreated();
+    }
+
+    public function test_an_admin_upcoming_pin_can_span_two_datetimes(): void
+    {
+        $admin = User::query()->where('name', 'ZenSorcerer')->firstOrFail();
+
+        $created = $this->actingAs($admin)->postJson('/admin/pins', [
+            'message' => 'От събота до неделя',
+            'latitude' => 42.15,
+            'longitude' => 24.75,
+            'category' => 'other',
+            'kind' => 'upcoming',
+            'starts_at' => '2026-12-05T10:00',
+            'ends_at' => '2026-12-06T18:30',
+        ])->assertCreated()->assertJsonPath('kind', 'upcoming');
+
+        $pin = Pin::query()->findOrFail($created->json('id'));
+        $this->assertSame('2026-12-05 08:00:00', $pin->starts_at->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-12-06 16:30:00', $pin->expires_at->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame(1950, $pin->duration_minutes);
+
+        $this->actingAs($admin)->postJson('/admin/pins', [
+            'message' => 'Обърнат интервал',
+            'latitude' => 42.16,
+            'longitude' => 24.76,
+            'category' => 'other',
+            'kind' => 'upcoming',
+            'starts_at' => '2026-12-06T18:30',
+            'ends_at' => '2026-12-05T10:00',
+        ])->assertUnprocessable()->assertJsonValidationErrors('ends_at');
+
+        $this->actingAs($admin)->postJson('/admin/pins', [
+            'message' => 'Без край',
+            'latitude' => 42.17,
+            'longitude' => 24.77,
+            'category' => 'other',
+            'kind' => 'upcoming',
+            'starts_at' => '2026-12-05T10:00',
+        ])->assertUnprocessable()->assertJsonValidationErrors('duration');
     }
 }
