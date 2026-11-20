@@ -29,6 +29,7 @@ class Importer
     {
         $hash = hash('sha256', 'kostaa-import:sportenkalendar');
         Device::record($hash, 'Спортен календар');
+        $this->sportCategory();
 
         $counts = [
             'upcoming' => 0,
@@ -137,7 +138,7 @@ class Importer
         $attributes = [
             'device_hash' => $existing->device_hash ?? $deviceHash,
             'message' => $event->title,
-            'category' => $this->categorySlug($event),
+            'category' => 'sport',
             'kind' => $existing?->placed_manually ? $existing->kind : $kind,
             'starts_at' => $event->startsAt,
             'duration_minutes' => $minutes,
@@ -177,42 +178,20 @@ class Importer
         return $outcome;
     }
 
-    private function categorySlug(ParsedEvent $event): ?string
+    private function sportCategory(): void
     {
-        if ($event->sportName === null || $event->sportName === '') {
-            return null;
+        $category = Category::query()->firstOrCreate(
+            ['slug' => 'sport'],
+            [
+                'name' => 'Спорт',
+                'position' => ((int) Category::query()->max('position')) + 1,
+                'listed' => true,
+            ],
+        );
+
+        if (! $category->listed) {
+            $category->forceFill(['listed' => true])->save();
         }
-
-        if (is_string($event->sportSlug)) {
-            $bySlug = Category::query()->where('slug', $event->sportSlug)->first();
-
-            if ($bySlug !== null) {
-                return $bySlug->slug;
-            }
-        }
-
-        $byName = Category::query()->where('name', $event->sportName)->first();
-
-        if ($byName !== null) {
-            return $byName->slug;
-        }
-
-        $slug = is_string($event->sportSlug) && preg_match('/^[a-z0-9\-]{1,40}$/', $event->sportSlug)
-            ? $event->sportSlug
-            : Category::uniqueSlug($event->sportName);
-
-        if (Category::query()->where('slug', $slug)->exists()) {
-            $slug = Category::uniqueSlug($event->sportName);
-        }
-
-        $position = ((int) Category::query()->max('position')) + 1;
-
-        return Category::query()->create([
-            'slug' => $slug,
-            'name' => $event->sportName,
-            'position' => $position,
-            'listed' => false,
-        ])->slug;
     }
 
     private function image(ParsedEvent $event, ?Pin $existing): ?string

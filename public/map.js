@@ -150,12 +150,24 @@ function timeLeft(expiresAt, now = Date.now()) {
     return 'Изтече';
   }
   const minutes = Math.max(1, Math.ceil(ms / 60000));
-  if (minutes < 60) {
-    return `още ${minutes} мин`;
-  }
-  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
   const rest = minutes % 60;
-  return rest === 0 ? `още ${hours} ч` : `още ${hours} ч ${rest} мин`;
+  if (days === 0) {
+    if (hours === 0) {
+      return `още ${rest} мин`;
+    }
+    return rest === 0 ? `още ${hours} ч` : `още ${hours} ч ${rest} мин`;
+  }
+  const dayLabel = days === 1 ? '1 ден' : `${days} дни`;
+  if (hours === 0 && rest === 0) {
+    return `още ${dayLabel}`;
+  }
+  if (hours === 0) {
+    return `още ${dayLabel} и ${rest} мин`;
+  }
+  const hourLabel = hours === 1 ? '1 час' : `${hours} часа`;
+  return `още ${dayLabel} и ${hourLabel}`;
 }
 
 function formatWhen(iso) {

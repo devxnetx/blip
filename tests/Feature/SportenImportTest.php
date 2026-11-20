@@ -51,7 +51,7 @@ class SportenImportTest extends TestCase
         $this->assertSame($street->latitude, $sameHall->latitude);
         $this->assertSame($street->longitude, $sameHall->longitude);
         $this->assertSame($street->device_hash, $sameHall->device_hash);
-        $this->assertSame('badminton', $street->category);
+        $this->assertSame('sport', $street->category);
         $this->assertSame('pins/sporten-11.jpg', $street->image_path);
         $this->assertSame('https://sportenkalendar.bg/sybitie/future-street-11', $street->source_url);
         $this->assertSame('Мачът е в залата на Берое.', $street->description);
@@ -74,9 +74,10 @@ class SportenImportTest extends TestCase
         $this->assertSame(2, Pin::query()->onMap()->count());
         $this->assertSame(1, Pin::query()->where('external_id', '11')->count());
 
-        $sport = Category::query()->where('slug', 'badminton')->firstOrFail();
-        $this->assertFalse($sport->listed);
-        $this->assertSame('Бадминтон', $sport->name);
+        $sport = Category::query()->where('slug', 'sport')->firstOrFail();
+        $this->assertTrue($sport->listed);
+        $this->assertSame('Спорт', $sport->name);
+        $this->assertNull(Category::query()->where('slug', 'badminton')->first());
 
         $device = Device::query()->where('device_hash', hash('sha256', 'kostaa-import:sportenkalendar'))->firstOrFail();
         $this->assertSame('Спортен календар', $device->label);
@@ -89,10 +90,11 @@ class SportenImportTest extends TestCase
 
         $map = $this->get('/map');
         $map->assertOk()
-            ->assertDontSee('data-category="badminton"', false)
-            ->assertSee('badminton', false);
+            ->assertSee('data-category="sport"', false)
+            ->assertDontSee('data-category="badminton"', false);
 
         $ids = collect($this->getJson('/api/categories')->json('categories'))->pluck('id');
+        $this->assertTrue($ids->contains('sport'));
         $this->assertFalse($ids->contains('badminton'));
         $this->assertTrue($ids->contains('other'));
     }
