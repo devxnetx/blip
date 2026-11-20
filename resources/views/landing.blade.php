@@ -332,7 +332,7 @@
         </div>
     </div>
     <script>
-        const categories = { seeking: 'Търся', lost: 'Загубено', warning: 'Внимание', free: 'Безплатно', other: 'Друго' };
+        const categories = @json($categories, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
         const rainLeft = document.getElementById('rain-left');
         const rainRight = document.getElementById('rain-right');
         const boot = document.getElementById('boot');
@@ -348,8 +348,20 @@
             return days === 1 ? 'преди 1 ден' : 'преди ' + days + ' дни';
         }
 
+        function upcomingLabel(pin) {
+            if (!pin || pin.kind !== 'upcoming' || !pin.starts_at) return '';
+            if (new Date(pin.starts_at).getTime() <= Date.now()) return '';
+            const formatted = new Intl.DateTimeFormat('bg-BG', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+            }).format(new Date(pin.starts_at));
+            return 'Предстоящо · ' + formatted;
+        }
+
         function meta(pin) {
-            return [categories[pin.category] || '', timeAgo(pin.created_at)].filter(Boolean).join(' · ');
+            return [categories[pin.category] || '', upcomingLabel(pin) || timeAgo(pin.created_at)].filter(Boolean).join(' · ');
         }
 
         function bubble(pin) {

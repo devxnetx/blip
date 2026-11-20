@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PinController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/pins', [PinController::class, 'index']);
 Route::get('/pins/latest', [PinController::class, 'latest']);
 Route::get('/pins/{pin}', [PinController::class, 'show']);

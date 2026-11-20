@@ -3,8 +3,12 @@
 @section('title', 'Устройства')
 
 @section('content')
-    <h1>Устройства</h1>
-    <p class="lede">При първото отваряне приложението записва свой номер в телефона и го праща с всеки пин. Тук това е устройство. Забрана спира новите пинове от този телефон и скрива активните. Изтриване на приложението прави нов номер.</p>
+    <div class="page-head">
+        <div>
+            <h1>Устройства</h1>
+            <p class="lede">При първото отваряне приложението записва свой номер в телефона и го праща с всеки пин. Тук това е устройство. Забрана спира новите пинове от този телефон и скрива активните. Изтриване на приложението прави нов номер.</p>
+        </div>
+    </div>
 
     <div class="card wrap">
         @if ($devices->isEmpty())
@@ -19,12 +23,13 @@
                         <th>Активни</th>
                         <th>Последно</th>
                         <th>Статус</th>
+                        <th class="actions"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($devices as $device)
                         <tr>
-                            <td><a href="{{ route('admin.devices.show', $device) }}">#{{ $device->id }}</a></td>
+                            <td>#{{ $device->id }}</td>
                             <td>{{ $device->label ?: '—' }}</td>
                             <td>{{ $device->pins_count }}</td>
                             <td>{{ $device->active_pins_count }}</td>
@@ -34,6 +39,21 @@
                                     <span class="pill off">Забранено</span>
                                 @else
                                     <span class="pill">Активно</span>
+                                @endif
+                            </td>
+                            <td class="actions">
+                                <a href="{{ route('admin.devices.show', $device) }}">Преглед</a>
+                                <a href="{{ route('admin.devices.edit', $device) }}">Редакция</a>
+                                @if ($device->isBanned())
+                                    <form method="POST" action="{{ route('admin.devices.unban', $device) }}">
+                                        @csrf
+                                        <button type="submit">Върни</button>
+                                    </form>
+                                @else
+                                    <form method="POST" action="{{ route('admin.devices.ban', $device) }}" onsubmit="return confirm('Забраняваш ли това устройство? Активните пинове изчезват от картата.')">
+                                        @csrf
+                                        <button class="danger" type="submit">Забрани</button>
+                                    </form>
                                 @endif
                             </td>
                         </tr>

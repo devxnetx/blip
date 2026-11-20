@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DeviceController extends Controller
@@ -36,6 +37,29 @@ class DeviceController extends Controller
             'device' => $device,
             'pins' => $device->pins()->latest()->paginate(40),
         ]);
+    }
+
+    public function edit(Device $device): View
+    {
+        return view('admin.devices.edit', [
+            'device' => $device,
+        ]);
+    }
+
+    public function update(Request $request, Device $device): RedirectResponse
+    {
+        $data = $request->validate([
+            'label' => ['nullable', 'string', 'max:40'],
+        ], [
+            'label.max' => 'Името може да е до 40 знака.',
+        ]);
+
+        $label = trim((string) ($data['label'] ?? ''));
+        $device->forceFill(['label' => $label === '' ? null : $label])->save();
+
+        return redirect()
+            ->route('admin.devices.show', $device)
+            ->with('status', 'Името е записано.');
     }
 
     public function ban(Device $device): RedirectResponse

@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class PinController extends Controller
@@ -36,7 +37,7 @@ class PinController extends Controller
         $deviceHash = $this->optionalDeviceHash($request);
 
         $pins = Pin::query()
-            ->where('expires_at', '>', now())
+            ->onMap()
             ->whereBetween('latitude', [$bounds['south'], $bounds['north']])
             ->whereBetween('longitude', [$bounds['west'], $bounds['east']])
             ->latest()
@@ -74,7 +75,7 @@ class PinController extends Controller
         Pin::pruneExpired();
 
         $pins = Pin::query()
-            ->where('expires_at', '>', now())
+            ->onMap()
             ->latest()
             ->limit(15)
             ->get()
@@ -120,12 +121,15 @@ class PinController extends Controller
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'duration' => ['required', 'in:5m,1h,24h'],
-            'category' => ['nullable', 'in:'.implode(',', array_keys(Pin::CATEGORIES))],
+            'kind' => ['nullable', 'in:'.Pin::KIND_NORMAL.','.Pin::KIND_UPCOMING],
+            'starts_at' => ['nullable', 'string', 'max:40'],
+            'category' => ['nullable', 'string', 'max:40', Rule::exists('categories', 'slug')],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ], [
             'message.required' => 'Напиши кратко съобщение.',
             'message.max' => 'Съобщението може да е до 80 знака.',
-            'category.in' => 'Избери една от категориите.',
+            'kind.in' => 'Този вид пин не се пуска от телефона.',
+            'category.exists' => 'Избери една от категориите.',
             'image.uploaded' => 'Снимката не се качи.',
             'image.image' => 'Файлът трябва да е снимка.',
             'image.mimes' => 'Файлът трябва да е снимка.',
@@ -150,6 +154,11 @@ class PinController extends Controller
             ? $request->file('image')->store('pins', 'public')
             : null;
 
+        $kind = $data['kind'] ?? Pin::KIND_NORMAL;
+        $startsAt = $kind === Pin::KIND_UPCOMING
+            ? Pin::parseStartsAt($data['starts_at'] ?? null)
+            : null;
+
         $pin = Pin::query()->create([
             'device_hash' => $deviceHash,
             'message' => $message,
@@ -157,7 +166,7 @@ class PinController extends Controller
             'latitude' => $data['latitude'],
             'longitude' => $data['longitude'],
             'image_path' => $path,
-            'expires_at' => now()->addMinutes(Pin::DURATIONS[$data['duration']]),
+            ...Pin::locatedSchedule($kind, $startsAt, $data['duration']),
         ]);
 
         return response()->json($pin->toApi(true), 201);
@@ -301,7 +310,7 @@ class PinController extends Controller
 
     private function ensureActive(Pin $pin): void
     {
-        if ($pin->expires_at->lte(now())) {
+        if (! $pin->isPublic()) {
             abort(404);
         }
     }

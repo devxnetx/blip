@@ -130,6 +130,18 @@
             max-width: calc(100% - 140px);
         }
 
+        body.admin .top-left { max-width: calc(100% - 250px); }
+
+        .top-right {
+            position: fixed;
+            z-index: 600;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .home {
             position: static;
             color: var(--ink);
@@ -360,6 +372,29 @@
             resize: vertical;
         }
 
+        .when {
+            display: block;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        label.when {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        input.when {
+            border: 0;
+            border-radius: 14px;
+            background: #fff;
+            padding: 12px 14px;
+            font: inherit;
+            color: var(--ink);
+        }
+
+        .when[hidden] { display: none !important; }
+
         .count-line { margin: 4px 0 0; text-align: right; color: var(--faint); font-size: 12px; }
 
         .primary, .dark {
@@ -543,13 +578,54 @@
 
         #open-cities-mobile { display: none; }
 
+        body.admin .city-bar {
+            top: auto;
+            bottom: 16px;
+            left: 16px;
+            right: 80px;
+        }
+
+        body.admin .maplibregl-ctrl-bottom-left { bottom: 68px; }
+
         #open-pins {
-            position: fixed;
-            z-index: 600;
-            top: 16px;
-            right: 16px;
             background: var(--pin);
             color: #fff;
+        }
+
+        #open-unassigned {
+            background: var(--ink);
+            color: #fff;
+        }
+
+        #unassigned:not([hidden]) { overflow: auto; }
+
+        #unassigned-list {
+            list-style: none;
+            margin: 16px 0 0;
+            padding: 0;
+        }
+
+        #unassigned-list button {
+            width: 100%;
+            text-align: left;
+            border: 0;
+            border-bottom: 1px solid var(--line);
+            background: transparent;
+            padding: 12px 0;
+            font: inherit;
+            color: var(--ink);
+            cursor: pointer;
+        }
+
+        #unassigned-list button.on strong { color: var(--pin); }
+
+        #unassigned-list strong,
+        #unassigned-list small { display: block; }
+
+        #unassigned-list small {
+            margin-top: 2px;
+            color: var(--faint);
+            font-size: 13px;
         }
 
         #cities-modal { left: 16px; right: auto; }
@@ -625,13 +701,20 @@
             #boot { display: none !important; }
             .city-bar { display: none; }
             #open-cities-mobile { display: inline-flex; align-items: center; }
+            body.admin #open-cities-mobile {
+                position: fixed;
+                z-index: 600;
+                left: 16px;
+                bottom: 24px;
+            }
             body:has(#install:not([hidden])) #locate { bottom: 148px; }
+            body.admin:has(#install:not([hidden])) #open-cities-mobile { bottom: 236px; }
             .maplibregl-ctrl-bottom-left { display: none; }
             .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
         }
     </style>
 </head>
-<body>
+<body @class(['admin' => auth()->check()])>
     <div id="boot">
         <div>
             <div class="boot-pin" aria-hidden="true"><span></span></div>
@@ -650,7 +733,12 @@
     <nav class="city-bar" id="city-bar" aria-label="Градове">
         <button class="city-pill" id="open-cities" type="button">Още</button>
     </nav>
-    <button class="city-pill" id="open-pins" type="button">Пинове</button>
+    <div class="top-right">
+        @auth
+            <button class="city-pill" id="open-unassigned" type="button">Без място</button>
+        @endauth
+        <button class="city-pill" id="open-pins" type="button">Пинове</button>
+    </div>
     <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span></span></button>
     <button class="hud" id="open-list" type="button" hidden aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
     <button class="toast" id="toast" type="button" hidden></button>
@@ -700,11 +788,9 @@
         <input id="radius" type="range" min="1" max="30" step="1" value="5" aria-label="Радиус в километри">
         <div class="filters" id="category-filters">
             <button type="button" class="on" data-category="">Всички</button>
-            <button type="button" data-category="seeking">Търся</button>
-            <button type="button" data-category="lost">Загубено</button>
-            <button type="button" data-category="warning">Внимание</button>
-            <button type="button" data-category="free">Безплатно</button>
-            <button type="button" data-category="other">Друго</button>
+            @foreach ($listedCategories as $slug => $name)
+                <button type="button" data-category="{{ $slug }}">{{ $name }}</button>
+            @endforeach
         </div>
         <p class="faint" id="nearby-status"></p>
         <ul id="nearby-list"></ul>
@@ -731,18 +817,24 @@
                 <textarea id="pin-message" maxlength="80" placeholder="Кратко съобщение"></textarea>
                 <p class="count-line" id="pin-count">0/80</p>
                 <div class="filters" id="composer-categories">
-                    <button type="button" data-category="seeking">Търся</button>
-                    <button type="button" data-category="lost">Загубено</button>
-                    <button type="button" data-category="warning">Внимание</button>
-                    <button type="button" data-category="free">Безплатно</button>
-                    <button type="button" class="on" data-category="other">Друго</button>
+                    @foreach ($listedCategories as $slug => $name)
+                        <button type="button" @class(['on' => $slug === $defaultCategory]) data-category="{{ $slug }}">{{ $name }}</button>
+                    @endforeach
                 </div>
+                <div class="filters" id="composer-when">
+                    <button type="button" class="on" data-when="normal">Сега</button>
+                    <button type="button" data-when="upcoming">Предстоящо</button>
+                </div>
+                <label class="when" id="pin-start-label" for="pin-start" hidden>Кога започва</label>
+                <input class="when" id="pin-start" type="datetime-local" hidden>
+                <p class="when faint" id="pin-start-hint" hidden>Вижда се веднага. Изчезва след избраното време от началото.</p>
                 <div class="filters" id="composer-durations">
                     <button type="button" data-duration="5m">5 мин</button>
                     <button type="button" class="on" data-duration="1h">1 час</button>
                     <button type="button" data-duration="24h">24 часа</button>
                 </div>
-                <input id="pin-category" type="hidden" value="other">
+                <input id="pin-category" type="hidden" value="{{ $defaultCategory }}">
+                <input id="pin-kind" type="hidden" value="normal">
                 <input id="pin-duration" type="hidden" value="1h">
                 <input id="pin-lat" type="hidden">
                 <input id="pin-lng" type="hidden">
@@ -750,6 +842,36 @@
                 <button class="dark" id="pick-spot" type="button">Избери на картата</button>
                 <button class="primary" id="pin-send" type="submit">Пусни пин</button>
                 <p class="faint" id="pin-error" hidden></p>
+            </form>
+        </section>
+
+        <section class="nearby" id="unassigned" hidden>
+            <div class="row">
+                <h2>Без място</h2>
+                <button class="linkish" id="unassigned-close" type="button">Затвори</button>
+            </div>
+            <p class="muted" id="unassigned-hint">Избери събитие, после кликни върху картата.</p>
+            <ul id="unassigned-list"></ul>
+            <form id="unassigned-form">
+                <textarea id="unassigned-message" maxlength="80" placeholder="Кратко съобщение"></textarea>
+                <p class="count-line" id="unassigned-count">0/80</p>
+                <div class="filters" id="unassigned-categories">
+                    @foreach ($listedCategories as $slug => $name)
+                        <button type="button" @class(['on' => $slug === $defaultCategory]) data-category="{{ $slug }}">{{ $name }}</button>
+                    @endforeach
+                </div>
+                <label class="when" for="unassigned-start">Дата, по избор</label>
+                <input class="when" id="unassigned-start" type="datetime-local">
+                <div class="filters" id="unassigned-durations">
+                    <button type="button" data-duration="5m">5 мин</button>
+                    <button type="button" class="on" data-duration="1h">1 час</button>
+                    <button type="button" data-duration="24h">24 часа</button>
+                </div>
+                <input id="unassigned-category" type="hidden" value="{{ $defaultCategory }}">
+                <input id="unassigned-duration" type="hidden" value="1h">
+                <p class="faint">Без дата пинът започва, когато му дадеш място.</p>
+                <button class="primary" id="unassigned-send" type="submit">Добави</button>
+                <p class="faint" id="unassigned-error" hidden></p>
             </form>
         </section>
     @endauth
@@ -775,6 +897,7 @@
         </div>
     </aside>
 
+    <script>window.KOSTAA_CATEGORIES = @json($categories, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);</script>
     <script src="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.js"></script>
     <script src="{{ asset('map.js') }}?v={{ filemtime(public_path('map.js')) }}"></script>
 </body>

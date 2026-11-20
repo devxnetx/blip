@@ -114,7 +114,11 @@ class PinTest extends TestCase
             ->assertDontSee('Пин тук')
             ->assertDontSee('Пусни пин')
             ->assertDontSee('Забрани устройството')
-            ->assertDontSee('Избери на картата');
+            ->assertDontSee('Избери на картата')
+            ->assertDontSee('Без място')
+            ->assertDontSee('Предстоящо')
+            ->assertDontSee('id="open-unassigned"', false)
+            ->assertDontSee('id="unassigned"', false);
     }
 
     public function test_an_expired_pin_keeps_its_note_and_drops_the_photo_when_the_map_loads(): void
@@ -159,6 +163,8 @@ class PinTest extends TestCase
         $created->assertCreated()
             ->assertJsonPath('message', 'Lost keys here')
             ->assertJsonPath('mine', true)
+            ->assertJsonPath('kind', 'normal')
+            ->assertJsonPath('starts_at', null)
             ->assertJsonPath('image_url', null);
 
         $this->withHeader('X-Device-Id', $device)->getJson('/api/pins?'.http_build_query([
@@ -354,5 +360,99 @@ class PinTest extends TestCase
         $this->travel(2)->hours();
 
         $this->getJson('/api/pins/'.$id)->assertNotFound();
+    }
+
+    public function test_an_upcoming_pin_is_visible_until_its_window_ends(): void
+    {
+        $device = (string) Str::uuid();
+        $start = now()->addDays(3)->startOfSecond();
+
+        $created = $this->withHeader('X-Device-Id', $device)->postJson('/api/pins', [
+            'message' => 'Концерт в парка',
+            'latitude' => 42.4258,
+            'longitude' => 25.6345,
+            'duration' => '1h',
+            'kind' => 'upcoming',
+            'starts_at' => $start->toIso8601String(),
+        ]);
+
+        $created->assertCreated()
+            ->assertJsonPath('kind', 'upcoming')
+            ->assertJsonPath('message', 'Концерт в парка');
+
+        $pin = Pin::query()->first();
+        $this->assertTrue($pin->starts_at->equalTo($start));
+        $this->assertTrue($pin->expires_at->equalTo($start->copy()->addHour()));
+
+        $bounds = [
+            'north' => 42.5,
+            'south' => 42.3,
+            'east' => 25.8,
+            'west' => 25.5,
+        ];
+
+        $this->getJson('/api/pins?'.http_build_query($bounds))
+            ->assertOk()
+            ->assertJsonPath('pins.0.kind', 'upcoming')
+            ->assertJsonPath('pins.0.id', $pin->id);
+
+        $this->getJson('/api/pins/latest')
+            ->assertOk()
+            ->assertJsonPath('pins.0.id', $pin->id);
+
+        $this->travelTo($start->copy()->addMinutes(30));
+
+        $this->getJson('/api/pins?'.http_build_query($bounds))
+            ->assertOk()
+            ->assertJsonCount(1, 'pins');
+
+        $this->travelTo($start->copy()->addHours(2));
+
+        $this->getJson('/api/pins?'.http_build_query($bounds))
+            ->assertOk()
+            ->assertJsonCount(0, 'pins');
+
+        $this->getJson('/api/pins/'.$pin->id)->assertNotFound();
+    }
+
+    public function test_an_upcoming_pin_needs_a_future_date_within_a_year(): void
+    {
+        $device = (string) Str::uuid();
+
+        $this->withHeader('X-Device-Id', $device)->postJson('/api/pins', [
+            'message' => 'Без дата',
+            'latitude' => 42.4,
+            'longitude' => 25.6,
+            'duration' => '1h',
+            'kind' => 'upcoming',
+        ])->assertUnprocessable()->assertJsonValidationErrors('starts_at');
+
+        $this->withHeader('X-Device-Id', $device)->postJson('/api/pins', [
+            'message' => 'Минало',
+            'latitude' => 42.4,
+            'longitude' => 25.6,
+            'duration' => '1h',
+            'kind' => 'upcoming',
+            'starts_at' => now()->subHour()->toIso8601String(),
+        ])->assertUnprocessable()->assertJsonValidationErrors('starts_at');
+
+        $this->withHeader('X-Device-Id', $device)->postJson('/api/pins', [
+            'message' => 'Далече',
+            'latitude' => 42.4,
+            'longitude' => 25.6,
+            'duration' => '1h',
+            'kind' => 'upcoming',
+            'starts_at' => now()->addYears(2)->toIso8601String(),
+        ])->assertUnprocessable()->assertJsonValidationErrors('starts_at');
+
+        $this->withHeader('X-Device-Id', $device)->postJson('/api/pins', [
+            'message' => 'Без място',
+            'latitude' => 42.4,
+            'longitude' => 25.6,
+            'duration' => '1h',
+            'kind' => 'unassigned',
+        ])->assertUnprocessable()->assertJsonValidationErrors('kind');
+
+        $this->assertSame(0, Pin::query()->count());
     }
 }

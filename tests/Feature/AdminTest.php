@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Device;
 use App\Models\Pin;
 use App\Models\User;
@@ -19,7 +20,10 @@ class AdminTest extends TestCase
         $this->get('/admin/devices')->assertRedirect('/admin/login');
         $this->get('/admin/users')->assertRedirect('/admin/login');
         $this->get('/admin/pins')->assertRedirect('/admin/login');
+        $this->get('/admin/categories')->assertRedirect('/admin/login');
         $this->postJson('/admin/pins/1/ban')->assertUnauthorized();
+        $this->getJson('/admin/pins/unassigned')->assertUnauthorized();
+        $this->postJson('/admin/pins/unassigned', [])->assertUnauthorized();
 
         $this->get('/admin/login')
             ->assertOk()
@@ -85,7 +89,11 @@ class AdminTest extends TestCase
             ->assertOk()
             ->assertSee('Active street note')
             ->assertSee('Old street note')
-            ->assertSee('Изтекъл')
+            ->assertSee('Скрит')
+            ->assertSee('Преглед')
+            ->assertSee('Редакция')
+            ->assertSee('aside class="side"', false)
+            ->assertDontSee('Изтрий')
             ->assertSee('#'.$device->id, false);
 
         $this->actingAs($admin)
@@ -165,7 +173,53 @@ class AdminTest extends TestCase
             ->get('/admin/pins')
             ->assertOk()
             ->assertSee('Admin placed this')
-            ->assertSee('Безплатно');
+            ->assertSee('Безплатно')
+            ->assertSee('Скрий')
+            ->assertSee('Нов пин')
+            ->assertDontSee('Изтрий');
+
+        $this->actingAs($admin)
+            ->post('/admin/pins/'.$created->json('id').'/hide')
+            ->assertRedirect();
+
+        $this->getJson('/api/pins?'.http_build_query([
+            'north' => 42.5,
+            'south' => 42.4,
+            'east' => 25.7,
+            'west' => 25.6,
+        ]))->assertOk()->assertJsonCount(0, 'pins');
+
+        $this->assertNotNull(Pin::query()->find($created->json('id')));
+    }
+
+    public function test_an_admin_can_rename_a_device(): void
+    {
+        $deviceId = (string) Str::uuid();
+
+        $this->withHeader('X-Device-Id', $deviceId)->post('/api/pins', [
+            'message' => 'Named later',
+            'latitude' => 42.2,
+            'longitude' => 24.7,
+            'duration' => '1h',
+            'category' => 'other',
+        ])->assertCreated();
+
+        $device = Device::query()->where('device_hash', hash('sha256', $deviceId))->firstOrFail();
+        $admin = User::query()->where('name', 'devxnetx')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put('/admin/devices/'.$device->id, ['label' => 'Телефонът на Борис'])
+            ->assertRedirect('/admin/devices/'.$device->id);
+
+        $this->assertSame('Телефонът на Борис', $device->fresh()->label);
+
+        $this->actingAs($admin)
+            ->get('/admin/users')
+            ->assertOk()
+            ->assertSee('Преглед')
+            ->assertSee('Редакция')
+            ->assertSee('Изтрий')
+            ->assertSee('aside class="side"', false);
     }
 
     public function test_an_admin_can_add_another_admin_and_not_delete_themselves(): void
@@ -197,5 +251,273 @@ class AdminTest extends TestCase
             ->assertRedirect();
 
         $this->assertNull(User::query()->find($admin->id));
+    }
+
+    public function test_an_admin_can_manage_categories_and_the_map_uses_them(): void
+    {
+        $admin = User::query()->where('name', 'devxnetx')->firstOrFail();
+
+        $this->getJson('/api/categories')
+            ->assertOk()
+            ->assertJsonPath('categories.0.id', 'seeking')
+            ->assertJsonPath('categories.0.label', 'Търся')
+            ->assertJsonPath('categories.4.id', 'other');
+
+        $this->actingAs($admin)
+            ->get('/admin/categories')
+            ->assertOk()
+            ->assertSee('Категории')
+            ->assertSee('Нова категория')
+            ->assertSee('Търся')
+            ->assertSee('Преглед')
+            ->assertSee('Редакция')
+            ->assertSee('Изтрий');
+
+        $this->actingAs($admin)->post('/admin/categories', [
+            'name' => 'Паркинг',
+        ])->assertRedirect();
+
+        $category = Category::query()->where('name', 'Паркинг')->firstOrFail();
+        $slug = $category->slug;
+        $this->assertNotSame('', $slug);
+
+        $this->actingAs($admin)
+            ->get('/map')
+            ->assertOk()
+            ->assertSee('Паркинг')
+            ->assertSee('data-category="'.$slug.'"', false);
+
+        $this->actingAs($admin)
+            ->put('/admin/categories/'.$category->id, [
+                'name' => 'Свободен паркинг',
+                'position' => 1,
+            ])->assertRedirect('/admin/categories/'.$category->id);
+
+        $category->refresh();
+        $this->assertSame('Свободен паркинг', $category->name);
+        $this->assertSame($slug, $category->slug);
+        $this->assertSame(1, $category->position);
+
+        $this->withHeader('X-Device-Id', (string) Str::uuid())
+            ->post('/api/pins', [
+                'message' => 'Има място',
+                'latitude' => 42.7,
+                'longitude' => 23.3,
+                'duration' => '1h',
+                'category' => $slug,
+            ])->assertCreated();
+
+        $this->actingAs($admin)
+            ->get('/admin/categories/'.$category->id)
+            ->assertOk()
+            ->assertSee('Има място')
+            ->assertSee('не може да се изтрие')
+            ->assertDontSee('Изтрий');
+
+        $this->actingAs($admin)
+            ->delete('/admin/categories/'.$category->id)
+            ->assertRedirect()
+            ->assertSessionHasErrors('category');
+
+        $this->assertNotNull(Category::query()->find($category->id));
+
+        $this->actingAs($admin)
+            ->get('/admin/pins')
+            ->assertOk()
+            ->assertSee('Свободен паркинг');
+
+        $this->get('/map')
+            ->assertOk()
+            ->assertSee('Свободен паркинг');
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Свободен паркинг', false);
+
+        $unused = Category::query()->create([
+            'slug' => 'unused-cat',
+            'name' => 'Празна',
+            'position' => 9,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/categories/'.$unused->id)
+            ->assertOk()
+            ->assertSee('Изтрий');
+
+        $this->actingAs($admin)
+            ->delete('/admin/categories/'.$unused->id)
+            ->assertRedirect('/admin/categories');
+
+        $this->assertNull(Category::query()->find($unused->id));
+        $this->get('/map')->assertOk()->assertDontSee('Празна');
+    }
+
+    public function test_an_admin_keeps_an_event_off_the_map_until_it_has_a_place(): void
+    {
+        $admin = User::query()->where('name', 'ZenSorcerer')->firstOrFail();
+        $bounds = [
+            'north' => 42.6,
+            'south' => 42.2,
+            'east' => 25.9,
+            'west' => 25.4,
+        ];
+
+        $this->actingAs($admin)
+            ->get('/map')
+            ->assertOk()
+            ->assertSee('Без място')
+            ->assertSee('Предстоящо')
+            ->assertSee('id="open-unassigned"', false)
+            ->assertSee('id="unassigned"', false);
+
+        auth()->logout();
+
+        $this->get('/map')
+            ->assertOk()
+            ->assertDontSee('Без място')
+            ->assertDontSee('id="open-unassigned"', false);
+
+        $start = now()->addDays(2)->startOfSecond();
+
+        $created = $this->actingAs($admin)->postJson('/admin/pins/unassigned', [
+            'message' => 'Концерт без сцена',
+            'category' => 'other',
+            'duration' => '24h',
+            'starts_at' => $start->toIso8601String(),
+        ])->assertCreated()
+            ->assertJsonPath('kind', 'unassigned')
+            ->assertJsonPath('latitude', null)
+            ->assertJsonPath('longitude', null);
+
+        $id = $created->json('id');
+
+        $this->getJson('/api/pins?'.http_build_query($bounds))
+            ->assertOk()
+            ->assertJsonMissing(['id' => $id]);
+
+        $this->getJson('/api/pins/latest')
+            ->assertOk()
+            ->assertJsonMissing(['message' => 'Концерт без сцена']);
+
+        $this->getJson('/api/pins/'.$id)->assertNotFound();
+
+        $this->actingAs($admin)
+            ->getJson('/admin/pins/unassigned')
+            ->assertOk()
+            ->assertJsonPath('pins.0.id', $id)
+            ->assertJsonPath('pins.0.message', 'Концерт без сцена');
+
+        $this->actingAs($admin)
+            ->get('/admin/pins')
+            ->assertOk()
+            ->assertSee('Концерт без сцена')
+            ->assertSee('Без място')
+            ->assertSee('>Място<', false)
+            ->assertDontSee('/map?pin='.$id, false);
+
+        $placed = $this->actingAs($admin)->postJson('/admin/pins/'.$id.'/place', [
+            'latitude' => 42.4258,
+            'longitude' => 25.6345,
+        ])->assertOk()
+            ->assertJsonPath('kind', 'upcoming')
+            ->assertJsonPath('latitude', 42.4258);
+
+        $pin = Pin::query()->findOrFail($id);
+        $this->assertTrue($pin->expires_at->equalTo($start->copy()->addDay()));
+
+        $this->getJson('/api/pins?'.http_build_query($bounds))
+            ->assertOk()
+            ->assertJsonPath('pins.0.id', $placed->json('id'));
+
+        $this->actingAs($admin)->postJson('/admin/pins/unassigned', [
+            'message' => 'Стар концерт',
+            'category' => 'other',
+            'duration' => '5m',
+            'starts_at' => now()->subHours(2)->toIso8601String(),
+        ])->assertUnprocessable()->assertJsonValidationErrors('starts_at');
+
+        $started = now()->subMinutes(10)->startOfSecond();
+        $open = $this->actingAs($admin)->postJson('/admin/pins/unassigned', [
+            'message' => 'Вече е започнал',
+            'category' => 'other',
+            'duration' => '1h',
+            'starts_at' => $started->toIso8601String(),
+        ])->assertCreated();
+
+        $this->actingAs($admin)->postJson('/admin/pins/'.$open->json('id').'/place', [
+            'latitude' => 42.5,
+            'longitude' => 25.7,
+        ])->assertOk()->assertJsonPath('kind', 'normal');
+
+        $plain = $this->actingAs($admin)->postJson('/admin/pins/unassigned', [
+            'message' => 'Без дата',
+            'category' => 'free',
+            'duration' => '1h',
+        ])->assertCreated()
+            ->assertJsonPath('kind', 'unassigned')
+            ->assertJsonPath('starts_at', null);
+
+        $this->actingAs($admin)->postJson('/admin/pins/'.$plain->json('id').'/place', [
+            'latitude' => 42.14,
+            'longitude' => 24.75,
+        ])->assertOk()
+            ->assertJsonPath('kind', 'normal')
+            ->assertJsonPath('starts_at', null);
+
+        $this->actingAs($admin)->postJson('/admin/pins/'.$plain->json('id').'/place', [
+            'latitude' => 42.2,
+            'longitude' => 24.8,
+        ])->assertUnprocessable()->assertJsonValidationErrors('pin');
+
+        $blocked = $this->actingAs($admin)->postJson('/admin/pins/unassigned', [
+            'message' => 'Същото място',
+            'category' => 'warning',
+            'duration' => '1h',
+        ])->assertCreated();
+
+        $this->actingAs($admin)->postJson('/admin/pins/'.$blocked->json('id').'/place', [
+            'latitude' => 42.4258,
+            'longitude' => 25.6345,
+        ])->assertUnprocessable()->assertJsonValidationErrors('spot');
+
+        $local = $this->actingAs($admin)->postJson('/admin/pins', [
+            'message' => 'Вечер в София',
+            'latitude' => 42.7,
+            'longitude' => 23.3,
+            'duration' => '1h',
+            'category' => 'other',
+            'kind' => 'upcoming',
+            'starts_at' => '2026-12-01T18:30',
+        ])->assertCreated()->assertJsonPath('kind', 'upcoming');
+
+        $evening = Pin::query()->findOrFail($local->json('id'));
+        $this->assertSame('2026-12-01 16:30:00', $evening->starts_at->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-12-01 17:30:00', $evening->expires_at->utc()->format('Y-m-d H:i:s'));
+
+        $ended = Pin::query()->create([
+            'device_hash' => Device::hashForAdmin($admin->id),
+            'message' => 'Изтекло',
+            'category' => 'other',
+            'kind' => Pin::KIND_UNASSIGNED,
+            'starts_at' => now()->subHours(3),
+            'duration_minutes' => 60,
+            'expires_at' => now()->subHours(2),
+        ]);
+
+        $this->actingAs($admin)->postJson('/admin/pins/'.$ended->id.'/place', [
+            'latitude' => 43.21,
+            'longitude' => 27.91,
+        ])->assertUnprocessable()->assertJsonValidationErrors('pin');
+
+        $this->assertNull($ended->fresh()->latitude);
+
+        $this->actingAs($admin)->postJson('/admin/pins', [
+            'message' => 'До незакачения',
+            'latitude' => 43.2141,
+            'longitude' => 27.9147,
+            'duration' => '1h',
+            'category' => 'other',
+        ])->assertCreated();
     }
 }

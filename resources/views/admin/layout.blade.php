@@ -30,13 +30,20 @@
 
         a { color: inherit; }
 
-        header {
+        .shell { display: flex; min-height: 100vh; }
+
+        .side {
+            width: 240px;
+            flex: none;
             display: flex;
-            align-items: center;
+            flex-direction: column;
             gap: 18px;
-            padding: 16px 22px;
+            padding: 22px 14px;
             background: var(--card);
-            border-bottom: 1px solid var(--line);
+            border-right: 1px solid var(--line);
+            position: sticky;
+            top: 0;
+            height: 100vh;
         }
 
         .mark {
@@ -45,47 +52,71 @@
             font-size: 22px;
             letter-spacing: -0.04em;
             text-decoration: none;
+            padding: 0 12px;
         }
 
         .mark i { color: var(--pin); font-style: normal; }
 
-        nav { display: flex; gap: 8px; flex-wrap: wrap; }
+        .side nav { display: flex; flex-direction: column; gap: 4px; }
 
-        nav a, header button, .button {
+        .side nav a, .side button, .button {
             border: 0;
-            border-radius: 999px;
+            border-radius: 12px;
             background: transparent;
             color: var(--ink);
             font: inherit;
             font-weight: 700;
             text-decoration: none;
-            padding: 8px 12px;
+            text-align: left;
+            padding: 10px 12px;
             cursor: pointer;
         }
 
-        nav a.on, .button.solid {
-            background: var(--ink);
-            color: var(--card);
+        .side nav a.on { background: var(--ink); color: var(--card); }
+
+        .side-foot { margin-top: auto; }
+        .who { display: block; padding: 0 12px 8px; color: var(--muted); font-weight: 700; }
+        .side-foot button { width: 100%; }
+
+        main { flex: 1; min-width: 0; padding: 28px 32px 64px; }
+
+        .page-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 22px;
         }
 
-        .button.danger { background: var(--pin); color: #fff; }
+        h1 { margin: 0; font-size: 32px; letter-spacing: -0.03em; }
 
-        .card form .button { display: block; margin-top: 16px; }
+        .lede { margin: 8px 0 0; color: var(--muted); max-width: 62ch; }
 
-        .session {
-            margin-left: auto;
+        .actions {
             display: flex;
+            justify-content: flex-end;
             align-items: center;
             gap: 8px;
+            flex-wrap: nowrap;
+            margin-left: auto;
         }
 
-        .who { font-weight: 700; }
+        .actions form { margin: 0; }
 
-        main { width: min(1100px, calc(100% - 32px)); margin: 28px auto 64px; }
+        .actions a, .actions button {
+            border: 0;
+            border-radius: 999px;
+            background: #fff;
+            color: var(--ink);
+            font: inherit;
+            font-weight: 700;
+            text-decoration: none;
+            padding: 8px 14px;
+            cursor: pointer;
+        }
 
-        h1 { margin: 0 0 8px; font-size: 32px; letter-spacing: -0.03em; }
-
-        .lede { margin: 0 0 22px; color: var(--muted); max-width: 62ch; }
+        .actions .solid, .button.solid { background: var(--ink); color: var(--card); }
+        .actions .danger, .button.danger { background: var(--pin); color: #fff; }
 
         .card {
             background: var(--card);
@@ -109,10 +140,11 @@
             text-align: left;
             padding: 12px 8px;
             border-bottom: 1px solid var(--line);
-            vertical-align: top;
+            vertical-align: middle;
         }
 
         th { color: var(--muted); font-size: 13px; font-weight: 700; }
+        td.actions, th.actions { text-align: right; white-space: nowrap; }
 
         .wrap { overflow: auto; }
 
@@ -140,45 +172,88 @@
             color: var(--ink);
         }
 
-        .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .form-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+        .form-actions button {
+            border: 0;
+            border-radius: 999px;
+            background: var(--ink);
+            color: var(--card);
+            font: inherit;
+            font-weight: 700;
+            padding: 10px 16px;
+            cursor: pointer;
+        }
 
         .meta { color: var(--muted); margin: 4px 0; }
 
         code { font-size: 13px; word-break: break-all; }
 
-        .pager { display: flex; gap: 14px; align-items: center; }
+        .pager {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 16px;
+        }
+
+        .pager a, .pager span {
+            display: inline-block;
+            border-radius: 999px;
+            background: #fff;
+            color: var(--ink);
+            font-weight: 700;
+            text-decoration: none;
+            padding: 8px 14px;
+            min-width: 42px;
+            text-align: center;
+        }
+
+        .pager .on { background: var(--ink); color: var(--card); }
+        .pager .off { color: var(--faint); }
+        .pager .gap { background: transparent; min-width: 0; padding: 8px 2px; color: var(--muted); }
 
         .facts { display: flex; gap: 18px; flex-wrap: wrap; margin: 0 0 8px; }
         .facts div { min-width: 120px; }
         .facts b { display: block; font-size: 20px; }
         .facts span { color: var(--muted); font-size: 13px; }
+
+        @media (max-width: 800px) {
+            .shell { flex-direction: column; }
+            .side { width: auto; height: auto; position: static; border-right: 0; border-bottom: 1px solid var(--line); }
+            main { padding: 20px 16px 48px; }
+            .page-head { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
-    <header>
-        <a class="mark" href="{{ route('admin.devices') }}"><i>KO</i>staa</a>
-        <nav>
-            <a href="{{ route('admin.devices') }}" @class(['on' => request()->routeIs('admin.devices', 'admin.devices.show')])>Устройства</a>
-            <a href="{{ route('admin.users') }}" @class(['on' => request()->routeIs('admin.users')])>Потребители</a>
-            <a href="{{ route('admin.pins') }}" @class(['on' => request()->routeIs('admin.pins')])>Пинове</a>
-            <a href="{{ route('map') }}">Карта</a>
-        </nav>
-        <div class="session">
-            <span class="who">{{ auth()->user()->name }}</span>
-            <form method="POST" action="{{ route('admin.logout') }}">
-                @csrf
-                <button type="submit">Изход</button>
-            </form>
-        </div>
-    </header>
-    <main>
-        @if (session('status'))
-            <p class="status">{{ session('status') }}</p>
-        @endif
-        @if ($errors->any())
-            <p class="error">{{ $errors->first() }}</p>
-        @endif
-        @yield('content')
-    </main>
+    <div class="shell">
+        <aside class="side">
+            <a class="mark" href="{{ route('admin.devices') }}"><i>KO</i>staa</a>
+            <nav>
+                <a href="{{ route('admin.devices') }}" @class(['on' => request()->routeIs('admin.devices*')])>Устройства</a>
+                <a href="{{ route('admin.users') }}" @class(['on' => request()->routeIs('admin.users*')])>Потребители</a>
+                <a href="{{ route('admin.pins') }}" @class(['on' => request()->routeIs('admin.pins*')])>Пинове</a>
+                <a href="{{ route('admin.categories') }}" @class(['on' => request()->routeIs('admin.categories*')])>Категории</a>
+                <a href="{{ route('map') }}">Карта</a>
+            </nav>
+            <div class="side-foot">
+                <span class="who">{{ auth()->user()->name }}</span>
+                <form method="POST" action="{{ route('admin.logout') }}">
+                    @csrf
+                    <button type="submit">Изход</button>
+                </form>
+            </div>
+        </aside>
+        <main>
+            @if (session('status'))
+                <p class="status">{{ session('status') }}</p>
+            @endif
+            @if ($errors->any())
+                <p class="error">{{ $errors->first() }}</p>
+            @endif
+            @yield('content')
+        </main>
+    </div>
 </body>
 </html>

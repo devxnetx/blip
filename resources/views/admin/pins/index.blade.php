@@ -3,8 +3,15 @@
 @section('title', 'Пинове')
 
 @section('content')
-    <h1>Пинове</h1>
-    <p class="lede">Всички пинове, включително изтеклите. От картата забраната е върху устройството, което е пуснало пина.</p>
+    <div class="page-head">
+        <div>
+            <h1>Пинове</h1>
+            <p class="lede">Пин не се трие. «Скрий» го маха от картата и го оставя в историята, както когато времето му изтече.</p>
+        </div>
+        <div class="actions">
+            <a class="solid" href="{{ route('map') }}">Нов пин</a>
+        </div>
+    </div>
 
     <div class="card wrap">
         @if ($pins->isEmpty())
@@ -18,18 +25,14 @@
                         <th>Устройство</th>
                         <th>Създаден</th>
                         <th>Статус</th>
+                        <th class="actions"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($pins as $pin)
                         <tr>
-                            <td>
-                                {{ $pin->message }}
-                                @if ($pin->expires_at->isFuture())
-                                    <div><a href="{{ route('map', ['pin' => $pin->id]) }}">На картата</a></div>
-                                @endif
-                            </td>
-                            <td>{{ \App\Models\Pin::CATEGORIES[$pin->category] ?? '—' }}</td>
+                            <td>{{ $pin->message }}</td>
+                            <td>{{ \App\Models\Category::label($pin->category) }}</td>
                             <td>
                                 @if ($pin->device)
                                     <a href="{{ route('admin.devices.show', $pin->device) }}">#{{ $pin->device->id }}</a>
@@ -45,10 +48,34 @@
                             </td>
                             <td>{{ $pin->created_at?->format('d.m.Y H:i') }}</td>
                             <td>
-                                @if ($pin->expires_at->isFuture())
-                                    <span class="pill">Активен</span>
+                                @if (! $pin->expires_at->isFuture())
+                                    <span class="pill off">Скрит</span>
+                                @elseif ($pin->kind === \App\Models\Pin::KIND_UNASSIGNED)
+                                    <span class="pill">Без място</span>
+                                @elseif ($pin->kind === \App\Models\Pin::KIND_UPCOMING)
+                                    <span class="pill">Предстоящо</span>
                                 @else
-                                    <span class="pill off">Изтекъл</span>
+                                    <span class="pill">Активен</span>
+                                @endif
+                                @if ($pin->starts_at)
+                                    <div>{{ $pin->starts_at->timezone('Europe/Sofia')->format('d.m.Y H:i') }}</div>
+                                @endif
+                            </td>
+                            <td class="actions">
+                                @if ($pin->expires_at->isFuture())
+                                    @if ($pin->kind === \App\Models\Pin::KIND_UNASSIGNED)
+                                        <a href="{{ route('map') }}">Място</a>
+                                    @else
+                                        <a href="{{ route('map', ['pin' => $pin->id]) }}">Преглед</a>
+                                    @endif
+                                    <form method="POST" action="{{ route('admin.pins.hide', $pin) }}" onsubmit="return confirm('Скриваш ли пина от картата? Той остава в историята.')">
+                                        @csrf
+                                        <button type="submit">Скрий</button>
+                                    </form>
+                                @else
+                                    @if ($pin->device)
+                                        <a href="{{ route('admin.devices.show', $pin->device) }}">Преглед</a>
+                                    @endif
                                 @endif
                             </td>
                         </tr>

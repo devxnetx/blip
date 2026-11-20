@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
 use App\Models\Device;
 use App\Models\Pin;
 use App\Models\Reply;
 use App\Models\Report;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -32,5 +34,17 @@ class AppServiceProvider extends ServiceProvider
         Pin::created($record);
         Reply::created($record);
         Report::created($record);
+
+        View::composer(['map', 'landing'], function ($view): void {
+            $categories = Category::options();
+            $listed = Category::listedOptions();
+            $view->with([
+                'categories' => $categories,
+                'listedCategories' => $listed,
+                'defaultCategory' => array_key_exists('other', $listed)
+                    ? 'other'
+                    : (array_key_first($listed) ?: 'other'),
+            ]);
+        });
     }
 }
