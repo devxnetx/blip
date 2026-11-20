@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Карта — Kostaa</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -124,7 +125,9 @@
             left: 16px;
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 8px;
+            max-width: calc(100% - 140px);
         }
 
         .home {
@@ -551,6 +554,8 @@
 
         #cities-modal { left: 16px; right: auto; }
 
+        #pin-spot { margin: 8px 0 0; font-weight: 700; }
+
         #city-search {
             width: 100%;
             margin-top: 16px;
@@ -637,6 +642,10 @@
     <div class="top-left">
         <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
         <button class="city-pill" id="open-cities-mobile" type="button">Градове</button>
+        @auth
+            <a class="city-pill" href="{{ route('admin.devices') }}">Админ</a>
+            <button class="city-pill" id="open-composer" type="button">Нов пин</button>
+        @endauth
     </div>
     <nav class="city-bar" id="city-bar" aria-label="Градове">
         <button class="city-pill" id="open-cities" type="button">Още</button>
@@ -656,6 +665,9 @@
         <p class="muted" id="panel-category" hidden></p>
         <img id="panel-photo" alt="" hidden>
         <p class="muted" id="panel-time"></p>
+        @auth
+            <button class="dark" id="ban-device" type="button">Забрани устройството</button>
+        @endauth
         <div class="share-row">
             <button id="copy-link" type="button">Копирай връзката към пина</button>
             <button id="share-link" type="button">Сподели</button>
@@ -707,6 +719,40 @@
         <p class="faint" id="city-empty" hidden>Няма такъв град.</p>
         <div id="city-list"></div>
     </section>
+
+    @auth
+        <section class="nearby" id="composer" hidden>
+            <div class="row">
+                <h2>Нов пин</h2>
+                <button class="linkish" id="composer-close" type="button">Затвори</button>
+            </div>
+            <p class="muted">Пиновете от телефона си остават. Този пин се пуска от администратор.</p>
+            <form id="admin-pin-form">
+                <textarea id="pin-message" maxlength="80" placeholder="Кратко съобщение"></textarea>
+                <p class="count-line" id="pin-count">0/80</p>
+                <div class="filters" id="composer-categories">
+                    <button type="button" data-category="seeking">Търся</button>
+                    <button type="button" data-category="lost">Загубено</button>
+                    <button type="button" data-category="warning">Внимание</button>
+                    <button type="button" data-category="free">Безплатно</button>
+                    <button type="button" class="on" data-category="other">Друго</button>
+                </div>
+                <div class="filters" id="composer-durations">
+                    <button type="button" data-duration="5m">5 мин</button>
+                    <button type="button" class="on" data-duration="1h">1 час</button>
+                    <button type="button" data-duration="24h">24 часа</button>
+                </div>
+                <input id="pin-category" type="hidden" value="other">
+                <input id="pin-duration" type="hidden" value="1h">
+                <input id="pin-lat" type="hidden">
+                <input id="pin-lng" type="hidden">
+                <p id="pin-spot">Няма избрано място.</p>
+                <button class="dark" id="pick-spot" type="button">Избери на картата</button>
+                <button class="primary" id="pin-send" type="submit">Пусни пин</button>
+                <p class="faint" id="pin-error" hidden></p>
+            </form>
+        </section>
+    @endauth
 
     <aside class="install" id="install" hidden>
         @if (config('blip.app_store_url') || config('blip.play_store_url'))

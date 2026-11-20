@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Device;
 use App\Models\Pin;
 use App\Models\Reply;
 use App\Models\Report;
@@ -106,6 +107,13 @@ class PinController extends Controller
     public function store(Request $request): JsonResponse
     {
         $deviceHash = $this->deviceHash($request);
+        $device = Device::record($deviceHash);
+
+        if ($device->isBanned()) {
+            throw ValidationException::withMessages([
+                'device' => 'Това устройство не може да пуска пинове.',
+            ]);
+        }
 
         $data = $request->validate([
             'message' => ['required', 'string', 'max:80'],

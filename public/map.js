@@ -95,6 +95,8 @@ let nearbyRequest = 0;
 let nearbyRows = [];
 let listCategory = '';
 let loadTimer = 0;
+let picking = false;
+let draftMarker = null;
 
 function deviceId() {
   const key = 'blip-device-id';
@@ -311,6 +313,9 @@ function markerElement(html, onClick) {
   element.innerHTML = html;
   element.addEventListener('click', (event) => {
     event.stopPropagation();
+    if (picking) {
+      return;
+    }
     onClick();
   });
   return element;
@@ -1312,3 +1317,189 @@ setInterval(() => loadPins(), 20000);
 setInterval(watchNearby, 20000);
 openOnCity();
 watchNearby();
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : '';
+}
+
+function adminHeaders() {
+  return {
+    ...headers(),
+    Accept: 'application/json',
+    'X-CSRF-TOKEN': csrfToken(),
+  };
+}
+
+const banButton = document.getElementById('ban-device');
+if (banButton) {
+  banButton.addEventListener('click', async () => {
+    if (!selected || !window.confirm('Забраняваш ли това устройство? Активните му пинове изчезват от картата и то не може да пуска нови.')) {
+      return;
+    }
+    try {
+      const response = await fetch(`/admin/pins/${selected.id}/ban`, {
+        method: 'POST',
+        headers: adminHeaders(),
+      });
+      if (response.status === 401 || response.status === 419) {
+        window.alert('Влез пак като администратор.');
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+      const body = await response.json();
+      const hidden = new Set(body.hidden_pin_ids || []);
+      pins = pins.filter((pin) => !hidden.has(pin.id));
+      empty.hidden = pins.length !== 0;
+      closePanel();
+      drawMarkers();
+    } catch (err) {
+      window.alert(err.message || 'Устройството не можа да бъде забранено.');
+    }
+  });
+}
+
+function stopPicking() {
+  picking = false;
+  map.getCanvas().style.cursor = '';
+  const button = document.getElementById('pick-spot');
+  if (button) {
+    button.textContent = 'Избери на картата';
+  }
+}
+
+function chooseFilter(box, input, key) {
+  box.addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (!button || !button.dataset[key]) {
+      return;
+    }
+    input.value = button.dataset[key];
+    box.querySelectorAll('button').forEach((item) => {
+      item.classList.toggle('on', item === button);
+    });
+  });
+}
+
+const composer = document.getElementById('composer');
+const openComposer = document.getElementById('open-composer');
+if (composer && openComposer) {
+  const pinMessage = document.getElementById('pin-message');
+  const pinError = document.getElementById('pin-error');
+
+  openComposer.addEventListener('click', () => {
+    panel.hidden = true;
+    nearbyEl.hidden = true;
+    const cities = document.getElementById('cities-modal');
+    if (cities) {
+      cities.hidden = true;
+    }
+    composer.hidden = false;
+  });
+
+  document.getElementById('composer-close').addEventListener('click', () => {
+    composer.hidden = true;
+    stopPicking();
+  });
+
+  pinMessage.addEventListener('input', () => {
+    document.getElementById('pin-count').textContent = `${pinMessage.value.trim().length}/80`;
+  });
+
+  chooseFilter(
+    document.getElementById('composer-categories'),
+    document.getElementById('pin-category'),
+    'category',
+  );
+  chooseFilter(
+    document.getElementById('composer-durations'),
+    document.getElementById('pin-duration'),
+    'duration',
+  );
+
+  document.getElementById('pick-spot').addEventListener('click', () => {
+    picking = true;
+    map.getCanvas().style.cursor = 'crosshair';
+    document.getElementById('pick-spot').textContent = 'Кликни върху картата';
+  });
+
+  map.on('click', (event) => {
+    if (!picking) {
+      return;
+    }
+    const latitude = event.lngLat.lat;
+    const longitude = event.lngLat.lng;
+    document.getElementById('pin-lat').value = latitude.toFixed(6);
+    document.getElementById('pin-lng').value = longitude.toFixed(6);
+    document.getElementById('pin-spot').textContent = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+    if (draftMarker) {
+      draftMarker.remove();
+    }
+    draftMarker = new maplibregl.Marker({ color: '#c2410c' })
+      .setLngLat([longitude, latitude])
+      .addTo(map);
+    stopPicking();
+  });
+
+  document.getElementById('admin-pin-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const message = pinMessage.value.trim();
+    const latitude = document.getElementById('pin-lat').value;
+    const longitude = document.getElementById('pin-lng').value;
+    if (!message) {
+      pinError.hidden = false;
+      pinError.textContent = 'Напиши кратко съобщение.';
+      return;
+    }
+    if (!latitude || !longitude) {
+      pinError.hidden = false;
+      pinError.textContent = 'Избери място на картата.';
+      return;
+    }
+    const send = document.getElementById('pin-send');
+    send.disabled = true;
+    try {
+      const response = await fetch('/admin/pins', {
+        method: 'POST',
+        headers: { ...adminHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          duration: document.getElementById('pin-duration').value,
+          category: document.getElementById('pin-category').value,
+        }),
+      });
+      if (response.status === 401 || response.status === 419) {
+        window.alert('Влез пак като администратор.');
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+      const created = await response.json();
+      pins = [created, ...pins.filter((item) => item.id !== created.id)];
+      empty.hidden = true;
+      drawMarkers();
+      if (draftMarker) {
+        draftMarker.remove();
+        draftMarker = null;
+      }
+      pinMessage.value = '';
+      document.getElementById('pin-count').textContent = '0/80';
+      document.getElementById('pin-lat').value = '';
+      document.getElementById('pin-lng').value = '';
+      document.getElementById('pin-spot').textContent = 'Няма избрано място.';
+      pinError.hidden = true;
+      composer.hidden = true;
+      stopPicking();
+    } catch (err) {
+      pinError.hidden = false;
+      pinError.textContent = err.message || 'Пинът не е пуснат.';
+    } finally {
+      send.disabled = false;
+    }
+  });
+}

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
@@ -62,6 +63,11 @@ class Pin extends Model
         ];
     }
 
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class, 'device_hash', 'device_hash');
+    }
+
     public function replies(): HasMany
     {
         return $this->hasMany(Reply::class);
@@ -112,12 +118,13 @@ class Pin extends Model
     {
         $pins = static::query()
             ->where('expires_at', '<=', now())
+            ->whereNotNull('image_path')
             ->limit(100)
             ->get();
 
         foreach ($pins as $pin) {
             $pin->deleteImage();
-            $pin->delete();
+            $pin->forceFill(['image_path' => null])->save();
         }
 
         return $pins->count();

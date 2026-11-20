@@ -112,10 +112,12 @@ class PinTest extends TestCase
             ->assertSee('Копирай връзката към пина')
             ->assertSee('Сподели')
             ->assertDontSee('Пин тук')
-            ->assertDontSee('Пусни пин');
+            ->assertDontSee('Пусни пин')
+            ->assertDontSee('Забрани устройството')
+            ->assertDontSee('Избери на картата');
     }
 
-    public function test_an_expired_pin_and_its_photo_are_removed_when_the_map_loads(): void
+    public function test_an_expired_pin_keeps_its_note_and_drops_the_photo_when_the_map_loads(): void
     {
         Storage::fake('public');
         Storage::disk('public')->put('pins/old.jpg', 'photo');
@@ -139,7 +141,8 @@ class PinTest extends TestCase
             ->assertJsonCount(0, 'pins');
 
         Storage::disk('public')->assertMissing('pins/old.jpg');
-        $this->assertSame(0, Pin::query()->count());
+        $this->assertSame(1, Pin::query()->count());
+        $this->assertNull(Pin::query()->first()->image_path);
     }
 
     public function test_a_pin_shows_inside_the_map_bounds_until_it_expires(): void
