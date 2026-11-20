@@ -28,7 +28,7 @@
             <i aria-hidden="true"></i>
             <span>EventiBG</span>
         </label>
-        <p class="meta">Всяка нощ в 05:10, българско време. Снимките от този сайт не се взимат.</p>
+        <p class="meta">Всяка нощ в 05:10, българско време. Снимката на събитието се записва.</p>
 
         <label for="import-days">Дни напред</label>
         <input id="import-days" name="import_days_ahead" type="number" min="1" max="90" value="{{ old('import_days_ahead', $days) }}" required>

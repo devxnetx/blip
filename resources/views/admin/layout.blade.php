@@ -375,11 +375,11 @@
                 <a href="{{ route('admin.pins') }}" @class(['on' => request()->routeIs('admin.pins*')])>@include('admin.icon', ['name' => 'pin']) Пинове</a>
                 <a href="{{ route('admin.devices') }}" @class(['on' => request()->routeIs('admin.devices*')])>@include('admin.icon', ['name' => 'device']) Устройства</a>
                 <a href="{{ route('admin.categories') }}" @class(['on' => request()->routeIs('admin.categories*')])>@include('admin.icon', ['name' => 'tag']) Категории</a>
-                <a href="{{ route('admin.settings') }}" @class(['on' => request()->routeIs('admin.settings*')])>@include('admin.icon', ['name' => 'sliders']) Настройки</a>
                 <a href="{{ route('map') }}">@include('admin.icon', ['name' => 'map']) Карта</a>
                 <p class="nav-label">Система</p>
                 <a href="{{ route('admin.users') }}" @class(['on' => request()->routeIs('admin.users*')])>@include('admin.icon', ['name' => 'users']) Потребители</a>
                 <a href="{{ route('admin.imports') }}" @class(['on' => request()->routeIs('admin.imports')])>@include('admin.icon', ['name' => 'clock']) Импорти</a>
+                <a href="{{ route('admin.settings') }}" @class(['on' => request()->routeIs('admin.settings*')])>@include('admin.icon', ['name' => 'sliders']) Настройки</a>
             </nav>
             <div class="side-foot">
                 <span class="who">{{ auth()->user()->name }}</span>

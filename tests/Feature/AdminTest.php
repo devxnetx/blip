@@ -656,6 +656,9 @@ class AdminTest extends TestCase
             ->assertOk()
             ->assertSee('Спортен календар')
             ->assertSee('EventiBG')
+            ->assertSee('Снимката на събитието се записва.')
+            ->assertDontSee('Снимките от този сайт не се взимат.')
+            ->assertSeeInOrder(['Функции', 'Карта', 'Система', 'Импорти', 'Настройки'])
             ->assertSee('Дни напред')
             ->assertSee('value="14"', false);
 
