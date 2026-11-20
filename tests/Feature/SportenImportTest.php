@@ -270,6 +270,9 @@ class SportenImportTest extends TestCase
         $hall = NominatimGeocoder::structuredQuery('Стара Загора, Градска спортна зала , ул."Цар Иван Шишман" № 60');
         $this->assertSame('Цар Иван Шишман 60', $hall['street']);
         $this->assertSame('Стара Загора', $hall['city']);
+        $byala = NominatimGeocoder::structuredQuery('Бяла (Русе), ул. "Цар Освободител" 36');
+        $this->assertSame('Цар Освободител 36', $byala['street']);
+        $this->assertSame('Бяла (Русе)', $byala['city']);
         $this->assertNull(NominatimGeocoder::structuredQuery('Люлин планина, Бонсови поляни'));
 
         $park = NominatimGeocoder::pointFromPayload([[

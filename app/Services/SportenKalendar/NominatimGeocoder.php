@@ -171,17 +171,17 @@ class NominatimGeocoder
             }
 
             if (preg_match('/(?:^|\s)(?:ул\.|ул(?=\s)|улица|бул\.|булевард|пл\.|площад)\s*(.+)/ui', $part, $match)) {
-                $rest = trim($match[1], " \t\"'«».");
+                $rest = self::trimEdge($match[1]);
 
                 if (preg_match('/№\s*(\d+[а-яa-z]?)/ui', $rest, $numberMatch)) {
                     $number = $numberMatch[1];
-                    $rest = trim((string) preg_replace('/№\s*\d+[а-яa-z]?/ui', '', $rest));
+                    $rest = self::trimEdge((string) preg_replace('/№\s*\d+[а-яa-z]?/ui', '', $rest));
                 } elseif (preg_match('/^(.*?)(?:\s+)(\d+[а-яa-z]?)$/u', $rest, $numberMatch)) {
-                    $rest = trim($numberMatch[1]);
+                    $rest = self::trimEdge($numberMatch[1]);
                     $number = $numberMatch[2];
                 }
 
-                $rest = trim($rest, " \t\"'«».");
+                $rest = self::trimEdge($rest);
 
                 if ($rest !== '') {
                     $street = $rest;
@@ -326,6 +326,13 @@ class NominatimGeocoder
             fn (string $part): string => trim($part),
             $parts,
         ), fn (string $part): bool => $part !== ''));
+    }
+
+    private static function trimEdge(string $value): string
+    {
+        $value = preg_replace('/^[\s"\'«»\.]+|[\s"\'«»\.]+$/u', '', $value);
+
+        return trim(is_string($value) ? $value : '');
     }
 
     private static function isStreet(string $part): bool
