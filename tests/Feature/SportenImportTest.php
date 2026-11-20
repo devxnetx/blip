@@ -249,6 +249,11 @@ class SportenImportTest extends TestCase
         $this->assertSame(42.4321, $street['latitude']);
         $this->assertNull($city);
         $this->assertNull($abroad);
+
+        $hall = NominatimGeocoder::structuredQuery('Стара Загора, Градска спортна зала , ул."Цар Иван Шишман" № 60');
+        $this->assertSame('Цар Иван Шишман 60', $hall['street']);
+        $this->assertSame('Стара Загора', $hall['city']);
+        $this->assertNull(NominatimGeocoder::structuredQuery('Люлин планина, Бонсови поляни'));
     }
 
     public function test_import_is_scheduled_daily(): void
@@ -289,7 +294,9 @@ class SportenImportTest extends TestCase
             if (str_contains($url, 'nominatim.openstreetmap.org')) {
                 $query = (string) ($request->data()['q'] ?? '');
 
-                if (str_contains($query, 'Шишман')) {
+                $street = (string) ($request->data()['street'] ?? '');
+
+                if (str_contains($query, 'Шишман') || str_contains($street, 'Шишман')) {
                     return Http::response([[
                         'lat' => '42.4321',
                         'lon' => '25.6412',

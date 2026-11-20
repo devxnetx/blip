@@ -8,18 +8,21 @@ use RuntimeException;
 
 class NominatimGeocoder
 {
+    private bool $answered = false;
+
     /**
      * @return array{latitude: float, longitude: float}|null
      */
     public function locate(string $address): ?array
     {
+        $this->answered = false;
         $query = $this->clean($address);
 
         if ($query === '') {
             return null;
         }
 
-        $key = 'nominatim:'.md5($query);
+        $key = 'nominatim:v2:'.md5($query);
         $cached = Cache::get($key);
 
         if ($cached === 'miss') {
@@ -33,20 +36,45 @@ class NominatimGeocoder
             ];
         }
 
-        $lookup = $query;
+        $structured = self::structuredQuery($query);
+        $point = null;
 
-        if (! preg_match('/българия|bulgaria/ui', $lookup)) {
-            $lookup .= ', България';
+        if ($structured !== null) {
+            $point = $this->search($structured);
         }
 
+        if ($point === null) {
+            $lookup = $query;
+
+            if (! preg_match('/българия|bulgaria/ui', $lookup)) {
+                $lookup .= ', България';
+            }
+
+            $point = $this->search([
+                'q' => $lookup,
+            ]);
+        }
+
+        if ($this->answered) {
+            Cache::put($key, $point ?? 'miss', now()->addDays($point === null ? 3 : 30));
+        }
+
+        return $point;
+    }
+
+    /**
+     * @param  array<string, string>  $params
+     * @return array{latitude: float, longitude: float}|null
+     */
+    private function search(array $params): ?array
+    {
         $this->pause();
 
         try {
             $response = Http::withHeaders([
                 'User-Agent' => 'KostaaBot/1.0 (+https://kostaa.space)',
                 'Accept' => 'application/json',
-            ])->connectTimeout(10)->timeout(25)->get('https://nominatim.openstreetmap.org/search', [
-                'q' => $lookup,
+            ])->connectTimeout(10)->timeout(25)->get('https://nominatim.openstreetmap.org/search', $params + [
                 'format' => 'jsonv2',
                 'limit' => 1,
                 'countrycodes' => 'bg',
@@ -60,10 +88,71 @@ class NominatimGeocoder
             throw new RuntimeException('The address lookup asked us to slow down. The import stopped.');
         }
 
-        $point = $response->successful() ? self::pointFromPayload($response->json(), $query) : null;
-        Cache::put($key, $point ?? 'miss', now()->addDays($point === null ? 3 : 30));
+        $this->answered = true;
 
-        return $point;
+        if (! $response->successful()) {
+            return null;
+        }
+
+        return self::pointFromPayload($response->json(), '');
+    }
+
+    /**
+     * A street plus a city. Nominatim misses the full sidebar sentence.
+     *
+     * @return array{street: string, city: string}|null
+     */
+    public static function structuredQuery(string $address): ?array
+    {
+        $parts = preg_split('/\s*,\s*/u', $address) ?: [];
+        $street = null;
+        $number = null;
+        $cities = [];
+
+        foreach ($parts as $part) {
+            $part = trim($part);
+
+            if ($part === '') {
+                continue;
+            }
+
+            if (preg_match('/(?:^|\s)(?:ул\.|ул(?=\s)|улица|бул\.|булевард|пл\.|площад)\s*(.+)/ui', $part, $match)) {
+                $rest = trim($match[1], " \t\"'«».");
+
+                if (preg_match('/№\s*(\d+[а-яa-z]?)/ui', $rest, $numberMatch)) {
+                    $number = $numberMatch[1];
+                    $rest = trim((string) preg_replace('/№\s*\d+[а-яa-z]?/ui', '', $rest));
+                } elseif (preg_match('/^(.*?)(?:\s+)(\d+[а-яa-z]?)$/u', $rest, $numberMatch)) {
+                    $rest = trim($numberMatch[1]);
+                    $number = $numberMatch[2];
+                }
+
+                $rest = trim($rest, " \t\"'«».");
+
+                if ($rest !== '') {
+                    $street = $rest;
+                }
+
+                continue;
+            }
+
+            if (preg_match('/зала|стадион|комплекс|хотел|планина|поляна/ui', $part)) {
+                continue;
+            }
+
+            $cities[] = $part;
+        }
+
+        if ($street === null || $cities === []) {
+            return null;
+        }
+
+        $line = $street.($number !== null ? ' '.$number : '');
+
+        return [
+            'street' => $line,
+            'city' => $cities[0],
+        ];
     }
 
     /**
