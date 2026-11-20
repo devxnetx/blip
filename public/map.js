@@ -434,21 +434,24 @@ function drawMarkers() {
   items.singles.forEach((pin) => {
     const kind = categoryLabel(pin.category);
     const when = upcomingLabel(pin);
-    const content = pinStackHeight(pin);
-    const height = content + (pin.stackOffset || 0);
     const image = safeUrl(pin.image_url)
       ? `<img src="${safeUrl(pin.image_url)}" alt="">`
       : '';
     const kindHtml = kind ? `<small>${escapeHtml(kind)}</small>` : '';
     const whenHtml = when ? `<small>${escapeHtml(when)}</small>` : '';
     const element = markerElement(
-      `<div class="bubble-wrap" style="height:${height}px;padding-bottom:${pin.stackOffset || 0}px"><div class="bubble">${image}<div class="meta"><span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div></div><div class="tail"></div></div>`,
+      `<div class="bubble-wrap"><div class="bubble">${image}<div class="meta"><span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div></div><div class="tail"></div></div>`,
       () => {
         focusPin(pin, { padPanel: true });
         openPin(pin);
       },
     );
-    const marker = new maplibregl.Marker({ element, anchor: 'bottom' })
+    element.style.zIndex = String(1000 + (pin.stackOffset || 0));
+    const marker = new maplibregl.Marker({
+      element,
+      anchor: 'bottom',
+      offset: [0, -(pin.stackOffset || 0)],
+    })
       .setLngLat([pin.longitude, pin.latitude])
       .addTo(map);
     markers.push(marker);
