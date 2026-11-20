@@ -69,5 +69,8 @@
             @endif
         </p>
         <p class="meta">Създаден {{ $pin->created_at?->timezone('Europe/Sofia')->format('d.m.Y H:i') }}</p>
+        @if ($pin->description)
+            <p class="story">{{ $pin->description }}</p>
+        @endif
     </div>
 @endsection

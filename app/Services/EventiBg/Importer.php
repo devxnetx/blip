@@ -2,10 +2,13 @@
 
 namespace App\Services\EventiBg;
 
+use App\Models\Category;
 use App\Models\Device;
 use App\Models\Pin;
 use App\Models\Setting;
 use App\Services\ImportHalted;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 class Importer
@@ -34,6 +37,7 @@ class Importer
             'hidden' => 0,
         ];
         $seen = [];
+        $this->eventCategory();
 
         foreach ($this->pages->dayUrls($days) as $url) {
             try {
@@ -119,7 +123,8 @@ class Importer
         $attributes = [
             'device_hash' => $existing->device_hash ?? $deviceHash,
             'message' => $event->title,
-            'category' => 'other',
+            'description' => $event->description,
+            'category' => 'event',
             'kind' => $existing?->placed_manually ? $existing->kind : $kind,
             'starts_at' => $event->startsAt,
             'duration_minutes' => $minutes,
@@ -145,6 +150,12 @@ class Importer
             $outcome = 'unassigned';
         }
 
+        $imagePath = $this->image($event, $existing);
+
+        if ($imagePath !== null) {
+            $attributes['image_path'] = $imagePath;
+        }
+
         if ($existing === null) {
             Pin::query()->create($attributes);
         } else {
@@ -152,5 +163,85 @@ class Importer
         }
 
         return $outcome;
+    }
+
+    private function eventCategory(): void
+    {
+        Category::query()->firstOrCreate(
+            ['slug' => 'event'],
+            [
+                'name' => 'Събитие',
+                'position' => ((int) Category::query()->max('position')) + 1,
+                'listed' => false,
+            ],
+        );
+    }
+
+    private function image(ParsedEvent $event, ?Pin $existing): ?string
+    {
+        if ($event->imageUrl === null) {
+            return null;
+        }
+
+        $key = 'eventibg-image:'.$event->slug;
+
+        if ($existing?->image_path && Cache::get($key) === $event->imageUrl && Storage::disk('public')->exists($existing->image_path)) {
+            return $existing->image_path;
+        }
+
+        try {
+            $bytes = $this->pages->image($event->imageUrl);
+        } catch (RuntimeException $exception) {
+            if (str_contains($exception->getMessage(), 'slow down')) {
+                throw $exception;
+            }
+
+            return null;
+        }
+
+        if (! is_string($bytes) || strlen($bytes) < 32 || strlen($bytes) > 5_000_000) {
+            return null;
+        }
+
+        $image = @imagecreatefromstring($bytes);
+
+        if ($image === false) {
+            return null;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $max = 1200;
+
+        if ($width > $max || $height > $max) {
+            $scale = min($max / $width, $max / $height);
+            $resized = imagescale($image, max(1, (int) round($width * $scale)), max(1, (int) round($height * $scale)));
+            imagedestroy($image);
+            $image = $resized;
+        }
+
+        if ($image === false) {
+            return null;
+        }
+
+        ob_start();
+        imagejpeg($image, null, 82);
+        $jpeg = ob_get_clean();
+        imagedestroy($image);
+
+        if (! is_string($jpeg) || $jpeg === '') {
+            return null;
+        }
+
+        $path = 'pins/eventibg-'.$event->slug.'.jpg';
+
+        if ($existing?->image_path && $existing->image_path !== $path) {
+            $existing->deleteImage();
+        }
+
+        Storage::disk('public')->put($path, $jpeg);
+        Cache::put($key, $event->imageUrl, now()->addDays(14));
+
+        return $path;
     }
 }

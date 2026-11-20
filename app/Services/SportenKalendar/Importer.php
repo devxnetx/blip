@@ -145,6 +145,7 @@ class Importer
             'source' => self::SOURCE,
             'external_id' => $event->externalId,
             'source_url' => $event->url,
+            'description' => $event->description,
         ];
 
         if ($existing?->placed_manually) {

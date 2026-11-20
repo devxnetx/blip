@@ -318,6 +318,13 @@
         h2 { margin: 0; font-size: 22px; }
 
         .muted { color: var(--muted); }
+        .story {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+        }
         .faint { color: var(--faint); }
 
         #panel-photo {
@@ -793,6 +800,7 @@
         <p class="muted" id="panel-category" hidden></p>
         <img id="panel-photo" alt="" hidden>
         <p class="muted" id="panel-time"></p>
+        <p class="story" id="panel-description" hidden></p>
         @auth
             <button class="dark" id="ban-device" type="button">Забрани устройството</button>
         @endauth

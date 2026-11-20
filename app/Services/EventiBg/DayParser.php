@@ -91,6 +91,8 @@ class DayParser
             $startsAt,
             $endsAt,
             'https://eventibg.com/event/'.$slug,
+            $this->description($row['description'] ?? null),
+            $this->imageUrl($row['image'] ?? null),
         );
     }
 
@@ -113,6 +115,44 @@ class DayParser
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function description(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $text = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = str_replace("\xc2\xa0", ' ', $text);
+        $lines = preg_split("/\n/u", $text) ?: [];
+        $lines = array_map(fn (string $line): string => trim((string) preg_replace('/[ \t]+/u', ' ', $line)), $lines);
+        $text = trim((string) preg_replace("/\n{3,}/u", "\n\n", implode("\n", $lines)));
+
+        if ($text === '') {
+            return null;
+        }
+
+        return mb_substr($text, 0, 4000);
+    }
+
+    private function imageUrl(mixed $value): ?string
+    {
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        $path = parse_url($value, PHP_URL_PATH);
+
+        if (! is_string($path)) {
+            $path = $value;
+        }
+
+        if (! preg_match('#^/uploads/events/[A-Za-z0-9._-]+\.(jpe?g|png|webp)$#', $path)) {
+            return null;
+        }
+
+        return 'https://eventibg.com'.$path;
     }
 
     private function coordinate(mixed $value, float $min, float $max): ?float

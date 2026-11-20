@@ -470,6 +470,9 @@ function renderPanel() {
   const photo = document.getElementById('panel-photo');
   photo.hidden = !safeUrl(selected.image_url);
   photo.src = photo.hidden ? '' : selected.image_url;
+  const story = document.getElementById('panel-description');
+  story.hidden = !selected.description;
+  story.textContent = selected.description || '';
 
   const replyBox = document.getElementById('panel-replies');
   replyBox.replaceChildren();
@@ -496,11 +499,12 @@ function renderPanel() {
     replyBox.append(block);
   });
 
-  document.getElementById('panel-sent').hidden = selected.mine || !selected.replied;
-  document.getElementById('reply-form').hidden = selected.mine || selected.replied;
-  document.getElementById('report').hidden = selected.mine || selected.reported;
-  document.getElementById('reported').hidden = selected.mine || !selected.reported;
-  document.getElementById('remove').hidden = !selected.mine;
+  const imported = Boolean(selected.imported);
+  document.getElementById('panel-sent').hidden = imported || selected.mine || !selected.replied;
+  document.getElementById('reply-form').hidden = imported || selected.mine || selected.replied;
+  document.getElementById('report').hidden = imported || selected.mine || selected.reported;
+  document.getElementById('reported').hidden = imported || selected.mine || !selected.reported;
+  document.getElementById('remove').hidden = !selected.mine || imported;
 }
 
 async function openPin(pin) {
@@ -515,6 +519,10 @@ async function openPin(pin) {
   nearbyEl.hidden = true;
   panel.hidden = false;
   renderPanel();
+
+  if (pin.imported) {
+    return;
+  }
 
   try {
     const response = await fetch(`/api/pins/${pin.id}/replies`, { headers: headers() });

@@ -54,6 +54,8 @@ class SportenImportTest extends TestCase
         $this->assertSame('badminton', $street->category);
         $this->assertSame('pins/sporten-11.jpg', $street->image_path);
         $this->assertSame('https://sportenkalendar.bg/sybitie/future-street-11', $street->source_url);
+        $this->assertSame('Мачът е в залата на Берое.', $street->description);
+        $this->assertTrue($street->isImported());
         $this->assertTrue(Storage::disk('public')->exists('pins/sporten-11.jpg'));
         $this->assertTrue($street->starts_at->isFuture());
         $this->assertTrue($street->expires_at->greaterThan($street->starts_at));
@@ -223,7 +225,8 @@ class SportenImportTest extends TestCase
             .'<p><strong>Начало:</strong> '.$start.' от 09:00 ч.</p>'
             .'<p><strong>Край:</strong> '.$end.' до 16:00 ч.</p>'
             .'<p class="single-event-top-category"><a href="/sportove/badminton">Бадминтон</a></p>'
-            .'<p><strong>Адрес: </strong> Стара Загора, ул.&quot;Цар Иван Шишман&quot; № 60</p>';
+            .'<p><strong>Адрес: </strong> Стара Загора, ул.&quot;Цар Иван Шишман&quot; № 60</p>'
+            .'<div class="single-event-info-text-block"><p>Двудневен турнир за ветерани.</p></div>';
 
         $event = (new EventPageParser)->parse($html, 'https://sportenkalendar.bg/sybitie/d-rzaven-licen-sampionat-veterani-7766');
 
@@ -234,6 +237,7 @@ class SportenImportTest extends TestCase
         $this->assertSame('Бадминтон', $event->sportName);
         $this->assertStringContainsString('Шишман', (string) $event->address);
         $this->assertSame('https://sportenkalendar.bg/uploads/events/badge.jpg', $event->imageUrl);
+        $this->assertSame('Двудневен турнир за ветерани.', $event->description);
         $this->assertTrue($event->endsAt->greaterThan($event->startsAt));
     }
 
@@ -358,6 +362,7 @@ class SportenImportTest extends TestCase
             .'<p><strong>Край:</strong> '.$end.' до 16:00 ч.</p>'
             .'<a href="/sportove/badminton">Бадминтон</a>'
             .$addressHtml
+            .'<div class="single-event-info-text-block"><p>Мачът е в залата на Берое.</p></div>'
             .'</body></html>';
     }
 

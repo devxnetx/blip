@@ -271,6 +271,7 @@
         }
 
         .meta { color: var(--muted); margin: 4px 0; }
+        .story { margin: 14px 0 0; white-space: pre-wrap; line-height: 1.45; }
 
         code { font-size: 13px; word-break: break-all; }
 

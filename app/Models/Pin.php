@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
-#[Fillable(['device_hash', 'message', 'category', 'kind', 'latitude', 'longitude', 'image_path', 'starts_at', 'duration_minutes', 'expires_at', 'source', 'external_id', 'source_url', 'placed_manually', 'suppressed_at'])]
+#[Fillable(['device_hash', 'message', 'description', 'category', 'kind', 'latitude', 'longitude', 'image_path', 'starts_at', 'duration_minutes', 'expires_at', 'source', 'external_id', 'source_url', 'placed_manually', 'suppressed_at'])]
 class Pin extends Model
 {
     public const DURATIONS = [
@@ -333,7 +333,9 @@ class Pin extends Model
         return [
             'id' => $this->id,
             'message' => $this->message,
+            'description' => $this->description,
             'category' => $this->category,
+            'imported' => $this->isImported(),
             'kind' => $this->kind,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
@@ -346,6 +348,11 @@ class Pin extends Model
             'replied' => $replied,
             'reported' => $reported,
         ];
+    }
+
+    public function isImported(): bool
+    {
+        return is_string($this->source) && $this->source !== '';
     }
 
     public function imageUrl(): ?string

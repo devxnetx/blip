@@ -16,5 +16,6 @@ class ParsedEvent
         public ?string $address,
         public ?string $imageUrl,
         public string $url,
+        public ?string $description = null,
     ) {}
 }

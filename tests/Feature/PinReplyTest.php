@@ -136,6 +136,47 @@ class PinReplyTest extends TestCase
         Storage::disk('public')->assertMissing($image);
     }
 
+    public function test_an_imported_pin_has_no_replies_or_reports(): void
+    {
+        $pin = Pin::query()->create([
+            'device_hash' => hash('sha256', 'kostaa-import:eventibg'),
+            'message' => 'Събор',
+            'description' => 'Цяла седмица на площада.',
+            'category' => 'event',
+            'source' => 'eventibg',
+            'external_id' => 'sabor',
+            'latitude' => 42.7,
+            'longitude' => 23.3,
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $device = (string) Str::uuid();
+
+        $this->getJson('/api/pins/'.$pin->id)
+            ->assertOk()
+            ->assertJsonPath('pin.imported', true)
+            ->assertJsonPath('pin.description', 'Цяла седмица на площада.')
+            ->assertJsonPath('pin.category', 'event');
+
+        $this->withHeader('X-Device-Id', $device)
+            ->getJson('/api/pins/'.$pin->id.'/replies')
+            ->assertOk()
+            ->assertJsonCount(0, 'replies');
+
+        $this->withHeader('X-Device-Id', $device)
+            ->postJson('/api/pins/'.$pin->id.'/replies', ['message' => 'Идвам'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('reply');
+
+        $this->withHeader('X-Device-Id', $device)
+            ->postJson('/api/pins/'.$pin->id.'/report')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('report');
+
+        $this->assertSame(0, Reply::query()->count());
+        $this->assertSame(0, Report::query()->count());
+    }
+
     public function test_an_expired_pin_cannot_be_replied_to_or_reported(): void
     {
         $pin = Pin::query()->create([

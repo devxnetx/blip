@@ -33,11 +33,13 @@ class EventibgImportTest extends TestCase
         $this->assertEqualsWithDelta(42.15, $upcoming->latitude, 0.00001);
         $this->assertEqualsWithDelta(24.75, $upcoming->longitude, 0.00001);
         $this->assertSame('https://eventibg.com/event/sabor-malevo', $upcoming->source_url);
-        $this->assertSame('other', $upcoming->category);
+        $this->assertSame('event', $upcoming->category);
+        $this->assertSame('note ]; still an event', $upcoming->description);
+        $this->assertSame('pins/eventibg-sabor-malevo.jpg', $upcoming->image_path);
+        $this->assertTrue($upcoming->isImported());
         $this->assertSame('18:00', $upcoming->starts_at->timezone('Europe/Sofia')->format('H:i'));
         $this->assertSame('22:00', $upcoming->expires_at->timezone('Europe/Sofia')->format('H:i'));
         $this->assertTrue($upcoming->isPublic());
-        $this->assertNull($upcoming->image_path);
 
         $sameTown = Pin::query()->where('external_id', 'koleda-plovdiv')->firstOrFail();
         $this->assertSame($upcoming->latitude, $sameTown->latitude);
@@ -66,7 +68,13 @@ class EventibgImportTest extends TestCase
         $this->assertSame(1, $run->unassigned_count);
         $this->assertNotNull($run->finished_at);
 
-        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '/uploads/'));
+        Http::assertSent(function (Request $request) {
+            $agent = $request->header('User-Agent')[0] ?? '';
+
+            return str_contains($request->url(), '/uploads/events/nope.jpg')
+                && str_contains($agent, 'Mozilla')
+                && ! str_contains($agent, 'KostaaBot');
+        });
     }
 
     public function test_a_second_run_updates_the_same_event_and_keeps_admin_choices(): void
@@ -114,6 +122,12 @@ class EventibgImportTest extends TestCase
         Http::preventStrayRequests();
         $hits = 0;
         Http::fake(function (Request $request) use (&$hits) {
+            $path = parse_url($request->url(), PHP_URL_PATH) ?? '';
+
+            if (str_starts_with($path, '/uploads/')) {
+                return Http::response('missing', 404);
+            }
+
             $hits++;
             if ($hits > 1) {
                 return Http::response('slow', 503);
@@ -185,6 +199,8 @@ class EventibgImportTest extends TestCase
 
         $this->assertCount(2, $events);
         $this->assertSame('parvi', $events[0]->slug);
+        $this->assertSame('wait ]; still here', $events[0]->description);
+        $this->assertSame('https://eventibg.com/uploads/events/nope.jpg', $events[0]->imageUrl);
         $this->assertSame('2026-12-05 18:00:00', $events[0]->startsAt->utc()->format('Y-m-d H:i:s'));
         $this->assertSame('2026-12-06 10:00:00', $events[0]->endsAt->utc()->format('Y-m-d H:i:s'));
         $this->assertSame('vtori', $events[1]->slug);
@@ -230,6 +246,10 @@ class EventibgImportTest extends TestCase
     private function response(Request $request, string $title)
     {
         $path = parse_url($request->url(), PHP_URL_PATH) ?? '';
+
+        if (str_starts_with($path, '/uploads/events/')) {
+            return Http::response($this->jpegBytes(), 200, ['Content-Type' => 'image/jpeg']);
+        }
 
         if (! preg_match('#^/event/\d{2}/\d{2}/\d{4}$#', $path)) {
             return Http::response('missing', 404);
@@ -277,5 +297,15 @@ class EventibgImportTest extends TestCase
             'description' => 'note ]; still an event',
             'image' => '/uploads/events/nope.jpg',
         ];
+    }
+
+    private function jpegBytes(): string
+    {
+        $image = imagecreatetruecolor(8, 8);
+        ob_start();
+        imagejpeg($image, null, 80);
+        imagedestroy($image);
+
+        return (string) ob_get_clean();
     }
 }

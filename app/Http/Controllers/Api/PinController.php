@@ -188,6 +188,10 @@ class PinController extends Controller
     {
         $this->ensureActive($pin);
 
+        if ($pin->isImported()) {
+            return response()->json(['replies' => []]);
+        }
+
         $hash = $this->optionalDeviceHash($request);
         $owner = is_string($hash) && hash_equals($pin->device_hash, $hash);
         $replies = $pin->replies()
@@ -213,6 +217,12 @@ class PinController extends Controller
     {
         $deviceHash = $this->deviceHash($request);
         $this->ensureActive($pin);
+
+        if ($pin->isImported()) {
+            throw ValidationException::withMessages([
+                'reply' => 'На системен пин не се отговаря.',
+            ]);
+        }
 
         if (hash_equals($pin->device_hash, $deviceHash)) {
             throw ValidationException::withMessages([
@@ -262,6 +272,12 @@ class PinController extends Controller
     {
         $deviceHash = $this->deviceHash($request);
         $this->ensureActive($pin);
+
+        if ($pin->isImported()) {
+            throw ValidationException::withMessages([
+                'report' => 'Системен пин не се докладва.',
+            ]);
+        }
 
         if (hash_equals($pin->device_hash, $deviceHash)) {
             throw ValidationException::withMessages([

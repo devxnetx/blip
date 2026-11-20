@@ -81,6 +81,7 @@ class EventPageParser
             $address,
             $imageUrl,
             $url,
+            $this->description($html, $title),
         );
     }
 
@@ -108,6 +109,28 @@ class EventPageParser
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function description(string $html, string $title): ?string
+    {
+        if (! preg_match('/single-event-info-text-block"[^>]*>(.*?)<\/div>/su', $html, $match)) {
+            return null;
+        }
+
+        $text = preg_replace('/<br\s*\/?>/i', "\n", $match[1]) ?? $match[1];
+        $text = preg_replace('/<\/p>/i', "\n", $text) ?? $text;
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = str_replace("\xc2\xa0", ' ', $text);
+        $lines = preg_split("/\n/u", $text) ?: [];
+        $lines = array_map(fn (string $line): string => trim((string) preg_replace('/[ \t]+/u', ' ', $line)), $lines);
+        $text = trim((string) preg_replace("/\n{3,}/u", "\n\n", implode("\n", $lines)));
+
+        if ($text === '' || $text === $title) {
+            return null;
+        }
+
+        return mb_substr($text, 0, 4000);
     }
 
     private function clean(string $value): string
