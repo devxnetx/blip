@@ -47,27 +47,32 @@
             flex-direction: column;
             justify-content: flex-end;
             align-items: center;
-            width: 168px;
+            width: 240px;
             cursor: pointer;
         }
 
         .bubble {
-            max-width: 168px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            max-width: 240px;
             background: var(--ink);
             color: var(--card);
             border-radius: 14px;
-            padding: 8px 10px;
+            padding: 8px;
         }
 
         .bubble img {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
+            width: 72px;
+            height: 72px;
+            flex: none;
+            border-radius: 10px;
             object-fit: cover;
             display: block;
-            margin-bottom: 6px;
             background: #3a3834;
         }
+
+        .bubble .meta { min-width: 0; flex: 1; }
 
         .bubble span {
             display: -webkit-box;
@@ -109,7 +114,7 @@
             cursor: pointer;
         }
 
-        #panel-message { flex: 1; }
+        #panel-message { flex: 1; min-width: 0; }
 
         #nearby-list button span { display: flex; flex-direction: column; min-width: 0; }
 
@@ -286,7 +291,13 @@
 
         .boot-word i { color: var(--pin); font-style: normal; }
 
-        .panel { z-index: 650; overflow: auto; }
+        .panel { z-index: 650; }
+
+        .panel:not([hidden]) {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
         .nearby:not([hidden]) {
             display: flex;
@@ -327,12 +338,74 @@
         }
         .faint { color: var(--faint); }
 
+        .pin-head { flex: none; }
+
+        .pin-head .row { align-items: flex-start; gap: 8px; }
+
+        .pin-head h2 { font-size: 18px; line-height: 1.3; }
+
+        #panel-close {
+            flex: none;
+            width: 28px;
+            height: 28px;
+            margin: -2px 0 0;
+            padding: 0;
+            border: 0;
+            background: none;
+            color: var(--ink);
+            font-size: 22px;
+            line-height: 26px;
+            cursor: pointer;
+        }
+
+        .pin-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 6px;
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        #panel-category:not([hidden]) + #panel-time:not([hidden])::before {
+            content: "·";
+            margin-right: 6px;
+        }
+
+        .pin-split .story { margin-top: 0; }
+
+        .pin-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            margin-top: 14px;
+        }
+
+        .pin-foot {
+            flex: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--line);
+        }
+
+        .pin-foot .share-row { margin-top: 0; }
+
+        .pin-split {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .pin-split:not(:has(img:not([hidden]), .story:not([hidden]))) { display: none; }
+
         #panel-photo {
-            width: 100%;
-            height: 220px;
+            width: 148px;
+            height: 148px;
+            flex: none;
             object-fit: cover;
             border-radius: 14px;
-            margin: 14px 0;
             background: var(--line);
         }
 
@@ -758,6 +831,7 @@
             }
             .maplibregl-ctrl-bottom-left { display: none; }
             .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
+            #panel-photo { width: 112px; height: 112px; }
         }
     </style>
 </head>
@@ -793,38 +867,48 @@
     <p class="empty" id="empty" hidden>Нищо в този изглед.</p>
 
     <aside class="panel" id="panel" hidden>
-        <div class="row">
-            <h2 id="panel-message"></h2>
-            <button class="linkish" id="panel-close" type="button">Затвори</button>
+        <div class="pin-head">
+            <div class="row">
+                <h2 id="panel-message"></h2>
+                <button id="panel-close" type="button" aria-label="Затвори">×</button>
+            </div>
+            <p class="pin-meta">
+                <span id="panel-category" hidden></span>
+                <span id="panel-time"></span>
+            </p>
         </div>
-        <p class="muted" id="panel-category" hidden></p>
-        <img id="panel-photo" alt="" hidden>
-        <p class="muted" id="panel-time"></p>
-        <p class="story" id="panel-description" hidden></p>
-        @auth
-            <button class="dark" id="ban-device" type="button">Забрани устройството</button>
-        @endauth
-        <div class="share-row">
-            <button id="copy-link" type="button">Копирай връзката към пина</button>
-            <button id="share-link" type="button">Сподели</button>
+        <div class="pin-scroll">
+            <div class="pin-split">
+                <img id="panel-photo" alt="" hidden>
+                <p class="story" id="panel-description" hidden></p>
+            </div>
+            @auth
+                <button class="dark" id="ban-device" type="button">Забрани устройството</button>
+            @endauth
+            <div id="panel-replies"></div>
+            <p class="faint" id="panel-reply-error" hidden></p>
+            <p id="panel-sent" hidden>Отговорът е изпратен.</p>
+            <form id="reply-form">
+                <textarea id="reply-text" maxlength="200" placeholder="Имаш право само на 1 отговор"></textarea>
+                <label class="check">
+                    <input id="reply-private" type="checkbox">
+                    <span>Видимо само за автора на пина</span>
+                </label>
+                <p class="count-line" id="reply-count">0/200</p>
+                <button class="primary" id="reply-send" type="submit">Изпрати отговор</button>
+                <p class="faint" id="reply-form-error" hidden></p>
+            </form>
+            <button class="text-btn" id="report" type="button">Докладвай</button>
+            <p class="faint" id="reported" hidden>Докладвано.</p>
+            <button class="dark" id="remove" type="button">Махни пина</button>
         </div>
-        <p class="faint" id="copy-status" hidden></p>
-        <div id="panel-replies"></div>
-        <p class="faint" id="panel-reply-error" hidden></p>
-        <p id="panel-sent" hidden>Отговорът е изпратен.</p>
-        <form id="reply-form">
-            <textarea id="reply-text" maxlength="200" placeholder="Имаш право само на 1 отговор"></textarea>
-            <label class="check">
-                <input id="reply-private" type="checkbox">
-                <span>Видимо само за автора на пина</span>
-            </label>
-            <p class="count-line" id="reply-count">0/200</p>
-            <button class="primary" id="reply-send" type="submit">Изпрати отговор</button>
-            <p class="faint" id="reply-form-error" hidden></p>
-        </form>
-        <button class="text-btn" id="report" type="button">Докладвай</button>
-        <p class="faint" id="reported" hidden>Докладвано.</p>
-        <button class="dark" id="remove" type="button">Махни пина</button>
+        <div class="pin-foot">
+            <div class="share-row">
+                <button id="copy-link" type="button">Копирай връзката към пина</button>
+                <button id="share-link" type="button">Сподели</button>
+            </div>
+            <p class="faint" id="copy-status" hidden></p>
+        </div>
     </aside>
 
     <section class="nearby" id="nearby" hidden>

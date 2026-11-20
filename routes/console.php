@@ -19,3 +19,7 @@ Schedule::command('pins:import-eventibg')
     ->timezone('Europe/Sofia')
     ->withoutOverlapping(180)
     ->appendOutputTo(storage_path('logs/eventibg-import.log'));
+
+Schedule::command('pins:promote-started')
+    ->everyMinute()
+    ->withoutOverlapping();

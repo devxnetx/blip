@@ -288,6 +288,18 @@ class Pin extends Model
             && $this->expires_at->isFuture();
     }
 
+    /**
+     * An event that has started is a normal pin. The end time stays on expires_at.
+     */
+    public static function promoteStarted(): int
+    {
+        return static::query()
+            ->where('kind', self::KIND_UPCOMING)
+            ->whereNotNull('starts_at')
+            ->where('starts_at', '<=', now())
+            ->update(['kind' => self::KIND_NORMAL]);
+    }
+
     public function scopeOnMap(Builder $query): Builder
     {
         return $query

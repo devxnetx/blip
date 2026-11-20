@@ -93,24 +93,29 @@
 
         .bubble {
             position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
             background: var(--ink);
             color: #f6f4ef;
             border-radius: 14px;
-            padding: 10px;
+            padding: 8px;
         }
 
         .bubble img {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
+            width: 72px;
+            height: 72px;
+            flex: none;
+            border-radius: 10px;
             object-fit: cover;
             display: block;
             background: #8a847a;
         }
 
+        .bubble .meta { min-width: 0; }
+
         .bubble strong {
             display: block;
-            margin-top: 8px;
             font-size: 15px;
             font-weight: 600;
             line-height: 1.3;
@@ -373,11 +378,14 @@
                 img.src = pin.image_url;
                 card.appendChild(img);
             }
+            const info = document.createElement('div');
+            info.className = 'meta';
             const title = document.createElement('strong');
             title.textContent = pin.message || '';
             const note = document.createElement('em');
             note.textContent = meta(pin);
-            card.append(title, note);
+            info.append(title, note);
+            card.append(info);
             return card;
         }
 

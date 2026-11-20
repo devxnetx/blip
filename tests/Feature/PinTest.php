@@ -455,4 +455,62 @@ class PinTest extends TestCase
 
         $this->assertSame(0, Pin::query()->count());
     }
+
+    public function test_a_started_upcoming_pin_becomes_a_normal_pin(): void
+    {
+        $started = Pin::query()->create([
+            'device_hash' => hash('sha256', 'started'),
+            'message' => 'Вече е започнало',
+            'kind' => Pin::KIND_UPCOMING,
+            'latitude' => 42.42,
+            'longitude' => 25.63,
+            'starts_at' => now()->subMinute(),
+            'duration_minutes' => 180,
+            'expires_at' => now()->addHours(3),
+        ]);
+        $later = Pin::query()->create([
+            'device_hash' => hash('sha256', 'later'),
+            'message' => 'Още не',
+            'kind' => Pin::KIND_UPCOMING,
+            'latitude' => 42.43,
+            'longitude' => 25.64,
+            'starts_at' => now()->addHour(),
+            'duration_minutes' => 60,
+            'expires_at' => now()->addHours(2),
+        ]);
+        $plain = Pin::query()->create([
+            'device_hash' => hash('sha256', 'plain'),
+            'message' => 'Обикновен',
+            'kind' => Pin::KIND_NORMAL,
+            'latitude' => 42.44,
+            'longitude' => 25.65,
+            'expires_at' => now()->addHour(),
+        ]);
+        $unassigned = Pin::query()->create([
+            'device_hash' => hash('sha256', 'loose'),
+            'message' => 'Без място',
+            'kind' => Pin::KIND_UNASSIGNED,
+            'starts_at' => now()->subMinute(),
+            'duration_minutes' => 60,
+            'expires_at' => now()->addHour(),
+        ]);
+        $ends = $started->expires_at->toIso8601String();
+
+        $this->artisan('pins:promote-started')
+            ->expectsOutput('Promoted 1 pin.')
+            ->assertSuccessful();
+
+        $this->assertSame(Pin::KIND_NORMAL, $started->fresh()->kind);
+        $this->assertSame($ends, $started->fresh()->expires_at->toIso8601String());
+        $this->assertSame(Pin::KIND_UPCOMING, $later->fresh()->kind);
+        $this->assertSame(Pin::KIND_NORMAL, $plain->fresh()->kind);
+        $this->assertSame(Pin::KIND_UNASSIGNED, $unassigned->fresh()->kind);
+    }
+
+    public function test_started_pins_are_promoted_every_minute(): void
+    {
+        $this->artisan('schedule:list')
+            ->expectsOutputToContain('pins:promote-started')
+            ->assertSuccessful();
+    }
 }

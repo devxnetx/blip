@@ -171,6 +171,46 @@ function formatWhen(iso) {
   }).format(date);
 }
 
+function formatPanelWhen(iso) {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) {
+    return '';
+  }
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Sofia',
+    day: 'numeric',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const pick = (type) => parts.find((part) => part.type === type)?.value || '';
+  const day = pick('day');
+  const month = pick('month');
+  const hour = pick('hour');
+  const minute = pick('minute');
+  if (!day || !month || hour === '' || minute === '') {
+    return '';
+  }
+  return `${day}.${month}, ${hour}:${minute}`;
+}
+
+function panelWhen(pin) {
+  if (pin && pin.kind === 'upcoming' && pin.starts_at && new Date(pin.starts_at).getTime() > Date.now()) {
+    const when = formatPanelWhen(pin.starts_at);
+    return when ? `Предстоящо · ${when}` : 'Предстоящо';
+  }
+  return timeLeft(pin.expires_at);
+}
+
+function pinStackHeight(pin) {
+  const when = pin.kind === 'upcoming' && pin.starts_at && new Date(pin.starts_at).getTime() > Date.now();
+  const text = 36 + (categoryLabel(pin.category) ? 16 : 0) + (when ? 32 : 0);
+  const photo = safeUrl(pin.image_url) ? 72 : 0;
+
+  return Math.max(text, photo) + 28;
+}
+
 function upcomingLabel(pin) {
   if (!pin || pin.kind !== 'upcoming' || !pin.starts_at) {
     return '';
@@ -275,7 +315,7 @@ function groupPins(rows, region) {
         stacks.push(stack);
       }
       singles.push({ ...pin, stackOffset: stack.offset });
-      stack.offset += pin.image_url ? 132 : 80;
+      stack.offset += pinStackHeight(pin);
     });
     return { clusters: [], singles };
   }
@@ -382,14 +422,15 @@ function drawMarkers() {
   items.singles.forEach((pin) => {
     const kind = categoryLabel(pin.category);
     const when = upcomingLabel(pin);
-    const base = (pin.image_url ? 132 : 80) + (kind ? 18 : 0) + (when ? 36 : 0);
+    const content = pinStackHeight(pin);
+    const height = content + (pin.stackOffset || 0);
     const image = safeUrl(pin.image_url)
       ? `<img src="${safeUrl(pin.image_url)}" alt="">`
       : '';
     const kindHtml = kind ? `<small>${escapeHtml(kind)}</small>` : '';
     const whenHtml = when ? `<small>${escapeHtml(when)}</small>` : '';
     const element = markerElement(
-      `<div class="bubble-wrap" style="height:${base}px;padding-bottom:${pin.stackOffset || 0}px"><div class="bubble">${image}<span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div><div class="tail"></div></div>`,
+      `<div class="bubble-wrap" style="height:${height}px;padding-bottom:${pin.stackOffset || 0}px"><div class="bubble">${image}<div class="meta"><span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div></div><div class="tail"></div></div>`,
       () => {
         focusPin(pin, { padPanel: true });
         openPin(pin);
@@ -466,7 +507,10 @@ function renderPanel() {
   const label = categoryLabel(selected.category);
   category.hidden = !label;
   category.textContent = label;
-  document.getElementById('panel-time').textContent = upcomingLabel(selected) || timeLeft(selected.expires_at);
+  const when = document.getElementById('panel-time');
+  const whenText = panelWhen(selected);
+  when.hidden = !whenText;
+  when.textContent = whenText;
   const photo = document.getElementById('panel-photo');
   photo.hidden = !safeUrl(selected.image_url);
   photo.src = photo.hidden ? '' : selected.image_url;
@@ -518,6 +562,10 @@ async function openPin(pin) {
   document.getElementById('copy-status').hidden = true;
   nearbyEl.hidden = true;
   panel.hidden = false;
+  const scroller = panel.querySelector('.pin-scroll');
+  if (scroller) {
+    scroller.scrollTop = 0;
+  }
   renderPanel();
 
   if (pin.imported) {
