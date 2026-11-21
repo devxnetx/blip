@@ -223,6 +223,38 @@ function pinStackHeight(pin) {
   return Math.max(text, photo) + 28;
 }
 
+const STACK_SIDE_BY_SIDE = 4;
+const STACK_SHIFT = 124;
+const STACK_FETCH_PAD_PX = 360;
+
+function placeGroup(group) {
+  if (group.length < STACK_SIDE_BY_SIDE) {
+    let y = 0;
+    return group.map((pin) => {
+      const placed = { ...pin, stackX: 0, stackY: y };
+      y += pinStackHeight(pin);
+      return placed;
+    });
+  }
+
+  const placed = [];
+  let y = 0;
+  for (let index = 0; index < group.length; index += 2) {
+    const left = group[index];
+    const right = group[index + 1];
+    const rowHeight = Math.max(pinStackHeight(left), right ? pinStackHeight(right) : 0);
+    if (!right) {
+      placed.push({ ...left, stackX: 0, stackY: y });
+    } else {
+      placed.push({ ...left, stackX: -STACK_SHIFT, stackY: y });
+      placed.push({ ...right, stackX: STACK_SHIFT, stackY: y });
+    }
+    y += rowHeight;
+  }
+
+  return placed;
+}
+
 function upcomingLabel(pin) {
   if (!pin || pin.kind !== 'upcoming' || !pin.starts_at) {
     return '';
@@ -318,18 +350,16 @@ function groupPins(rows, region) {
   }
   if (region.latitudeDelta <= REVEAL_DELTA) {
     const sorted = [...rows].sort((a, b) => a.id - b.id);
-    const stacks = [];
-    const singles = [];
+    const groups = [];
     sorted.forEach((pin) => {
-      let stack = stacks.find((item) => sameSpot(item, pin));
-      if (!stack) {
-        stack = { latitude: pin.latitude, longitude: pin.longitude, offset: 0 };
-        stacks.push(stack);
+      let group = groups.find((item) => sameSpot(item, pin));
+      if (!group) {
+        group = { latitude: pin.latitude, longitude: pin.longitude, pins: [] };
+        groups.push(group);
       }
-      singles.push({ ...pin, stackOffset: stack.offset });
-      stack.offset += pinStackHeight(pin);
+      group.pins.push(pin);
     });
-    return { clusters: [], singles };
+    return { clusters: [], singles: groups.flatMap((group) => placeGroup(group.pins)) };
   }
 
   const latCell = region.latitudeDelta / 7;
@@ -349,7 +379,7 @@ function groupPins(rows, region) {
   const singles = [];
   cells.forEach((group, key) => {
     if (group.length === 1) {
-      singles.push({ ...group[0], stackOffset: 0 });
+      singles.push({ ...group[0], stackX: 0, stackY: 0 });
       return;
     }
     const lats = group.map((pin) => pin.latitude);
@@ -446,11 +476,11 @@ function drawMarkers() {
         openPin(pin);
       },
     );
-    element.style.zIndex = String(1000 + (pin.stackOffset || 0));
+    element.style.zIndex = String(1000 + (pin.stackY || 0) + (pin.stackX > 0 ? 1 : 0));
     const marker = new maplibregl.Marker({
       element,
       anchor: 'bottom',
-      offset: [0, -(pin.stackOffset || 0)],
+      offset: [pin.stackX || 0, -(pin.stackY || 0)],
     })
       .setLngLat([pin.longitude, pin.latitude])
       .addTo(map);
@@ -464,8 +494,14 @@ async function loadPins() {
   }
   const id = ++requestId;
   const bounds = map.getBounds();
+  const region = currentRegion();
+  let north = bounds.getNorth();
+  if (region.latitudeDelta <= REVEAL_DELTA) {
+    const height = map.getCanvas().clientHeight || 800;
+    north += (bounds.getNorth() - bounds.getSouth()) * (STACK_FETCH_PAD_PX / height);
+  }
   const params = new URLSearchParams({
-    north: String(bounds.getNorth()),
+    north: String(north),
     south: String(bounds.getSouth()),
     east: String(bounds.getEast()),
     west: String(bounds.getWest()),
