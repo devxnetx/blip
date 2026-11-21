@@ -15,6 +15,9 @@ return [
     'eventibg_pause_ms' => (int) env('EVENTIBG_PAUSE_MS', 1500),
     'eventibg_days' => (int) env('EVENTIBG_DAYS', 14),
 
+    // Gap between Kupi Bileti pages. That import reads every upcoming event.
+    'kupibileti_pause_ms' => (int) env('KUPIBILETI_PAUSE_MS', 1500),
+
     // Gap between address lookups. Nominatim asks for at most one a second.
     'nominatim_pause_ms' => (int) env('NOMINATIM_PAUSE_MS', 1100),
 

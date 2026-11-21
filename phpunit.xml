@@ -36,5 +36,6 @@
         <env name="NOMINATIM_PAUSE_MS" value="0"/>
         <env name="EVENTIBG_PAUSE_MS" value="0"/>
         <env name="EVENTIBG_DAYS" value="14"/>
+        <env name="KUPIBILETI_PAUSE_MS" value="0"/>
     </php>
 </phpunit>

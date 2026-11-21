@@ -85,6 +85,10 @@ class NominatimGeocoder
         if ($venue !== '') {
             $short = self::shortVenue($venue, $city);
             $places = $short !== null ? [$short, $venue] : [$venue];
+
+            foreach (self::venueAliases($venue) as $alias) {
+                $places[] = $alias;
+            }
         }
 
         foreach (self::placeNames($address) as $place) {
@@ -101,6 +105,19 @@ class NominatimGeocoder
                     continue;
                 }
 
+                $seen[$query] = true;
+                $attempts[] = [
+                    'q' => $query,
+                    '_city' => $city ?? '',
+                ];
+            }
+        }
+
+        if ($places === [] && $streetName !== null && $streetName !== '') {
+            $label = ($structured['kind'] ?? 'street') === 'square' ? 'пл. '.$streetName : $streetName;
+            $query = self::placeQuery($label, $city);
+
+            if ($query !== null && ! isset($seen[$query])) {
                 $seen[$query] = true;
                 $attempts[] = [
                     'q' => $query,
@@ -168,13 +185,14 @@ class NominatimGeocoder
     /**
      * A street plus a city. Nominatim misses the full sidebar sentence.
      *
-     * @return array{street: string, city: string}|null
+     * @return array{street: string, city: string, kind: string}|null
      */
     public static function structuredQuery(string $address): ?array
     {
         $parts = preg_split('/\s*,\s*/u', $address) ?: [];
         $street = null;
         $number = null;
+        $kind = 'street';
         $cities = [];
 
         foreach ($parts as $part) {
@@ -184,8 +202,8 @@ class NominatimGeocoder
                 continue;
             }
 
-            if (preg_match('/(?:^|\s)(?:ул\.|ул(?=\s)|улица|бул\.|булевард|пл\.|площад)\s*(.+)/ui', $part, $match)) {
-                $rest = self::trimEdge($match[1]);
+            if (preg_match('/(?:^|\s)(ул\.|ул(?=\s)|улица|бул\.|булевард|пл\.|площад)\s*(.+)/ui', $part, $match)) {
+                $rest = self::trimEdge($match[2]);
 
                 if (preg_match('/№\s*(\d+[а-яa-z]?)/ui', $rest, $numberMatch)) {
                     $number = $numberMatch[1];
@@ -199,6 +217,7 @@ class NominatimGeocoder
 
                 if ($rest !== '') {
                     $street = $rest;
+                    $kind = preg_match('/^пл/ui', $match[1]) === 1 ? 'square' : 'street';
                 }
 
                 continue;
@@ -211,7 +230,9 @@ class NominatimGeocoder
             $cities[] = $part;
         }
 
-        if ($street === null || $cities === []) {
+        $city = $cities === [] ? '' : self::bareCity($cities[0]);
+
+        if ($street === null || $city === '') {
             return null;
         }
 
@@ -219,7 +240,8 @@ class NominatimGeocoder
 
         return [
             'street' => $line,
-            'city' => $cities[0],
+            'city' => $city,
+            'kind' => $kind,
         ];
     }
 
@@ -347,6 +369,23 @@ class NominatimGeocoder
         $value = preg_replace('/^[\s"\'«»\.]+|[\s"\'«»\.]+$/u', '', $value);
 
         return trim(is_string($value) ? $value : '');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function venueAliases(string $venue): array
+    {
+        if (preg_match('/етно\s+музей/ui', $venue) === 1) {
+            return ['Етнографски музей'];
+        }
+
+        return [];
+    }
+
+    private static function bareCity(string $city): string
+    {
+        return trim((string) preg_replace('/^(?:гр\.|град|с\.|село)\s+/ui', '', trim($city)));
     }
 
     private static function shortVenue(string $venue, ?string $city): ?string

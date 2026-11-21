@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Services\EventiBg\DayClient;
 use App\Services\EventiBg\DayParser;
 use App\Services\EventiBg\PlaceLine;
+use App\Services\SportenKalendar\NominatimGeocoder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -254,6 +255,92 @@ class EventibgImportTest extends TestCase
         $town = Pin::query()->where('external_id', 'bez-miasto')->firstOrFail();
         $this->assertEqualsWithDelta(42.697696, $town->latitude, 0.00001);
         $this->assertEqualsWithDelta(23.321744, $town->longitude, 0.00001);
+    }
+
+    public function test_a_burgas_street_square_or_museum_replaces_the_town_point(): void
+    {
+        $yard = PlaceLine::fromDescription('През целия декември дворът на Етно музей и кафене в Бургас грейва в коледни светлини.');
+        $this->assertSame('Етно музей и кафене', $yard['venue']);
+        $this->assertSame('Бургас', $yard['address']);
+
+        $museum = NominatimGeocoder::lookupAttempts('Бургас', 'Етно музей и кафене');
+        $this->assertSame('Етнографски музей, Бургас, България', $museum[1]['q']);
+
+        Http::preventStrayRequests();
+        $future = now('Europe/Sofia')->addDays(3)->format('Y-m-d');
+        $town = [42.513077, 27.464419];
+        Http::fake(function (Request $request) use ($future, $town) {
+            $url = $request->url();
+
+            if (str_contains($url, 'nominatim.openstreetmap.org')) {
+                $data = $request->data();
+                $query = (string) ($data['q'] ?? '');
+                $street = (string) ($data['street'] ?? '');
+
+                if ($street === 'Славянска 69' && ($data['city'] ?? '') === 'Бургас') {
+                    return Http::response([[
+                        'lat' => '42.4967712',
+                        'lon' => '27.4737924',
+                        'address' => ['road' => 'Славянска', 'city' => 'Бургас'],
+                    ]]);
+                }
+
+                if ($query === 'Алеко Константинов, Бургас, България') {
+                    return Http::response([[
+                        'lat' => '42.4961405',
+                        'lon' => '27.4721112',
+                        'address' => ['road' => 'Алеко Константинов', 'city' => 'Бургас'],
+                    ]]);
+                }
+
+                if ($query === 'пл. Св. св. Кирил и Методий, Бургас, България') {
+                    return Http::response([[
+                        'lat' => '42.4961654',
+                        'lon' => '27.4734099',
+                        'address' => ['road' => 'пл. Св. Св. Кирил и Методий', 'city' => 'Бургас'],
+                    ]]);
+                }
+
+                if ($query === 'Етнографски музей, Бургас, България') {
+                    return Http::response([[
+                        'lat' => '42.4961822',
+                        'lon' => '27.4750141',
+                        'address' => ['tourism' => 'Етнографски музей', 'road' => 'Славянска', 'city' => 'Бургас'],
+                    ]]);
+                }
+
+                return Http::response([]);
+            }
+
+            if (! preg_match('#/event/\d{2}/\d{2}/\d{4}$#', $url)) {
+                return Http::response('missing', 404);
+            }
+
+            return Http::response($this->page([
+                $this->row('aleko', 'Коледа на Алеко', $town[0], $town[1], $future, $future, '10:00:00', '18:00:00', 'Място: ул. „Алеко Константинов“, Бургас'),
+                $this->row('square', 'Коледен базар', $town[0], $town[1], $future, $future, '10:00:00', '18:00:00', 'Място: площад „Св. св. Кирил и Методий“, Бургас'),
+                $this->row('yard', 'Свинска глава', $town[0], $town[1], $future, $future, '10:00:00', '18:00:00', 'Място: дворът на Етнографската експозиция, ул. „Славянска“ 69, гр. Бургас'),
+                $this->row('etno', 'Етно Коледа', $town[0], $town[1], $future, $future, '10:00:00', '20:00:00', 'През целия декември дворът на Етно музей и кафене в Бургас грейва в коледни светлини.'),
+            ]));
+        });
+
+        $this->artisan('pins:import-eventibg', ['--days' => 1])->assertSuccessful();
+
+        $aleko = Pin::query()->where('external_id', 'aleko')->firstOrFail();
+        $this->assertEqualsWithDelta(42.4961405, $aleko->latitude, 0.00001);
+        $this->assertEqualsWithDelta(27.4721112, $aleko->longitude, 0.00001);
+
+        $square = Pin::query()->where('external_id', 'square')->firstOrFail();
+        $this->assertEqualsWithDelta(42.4961654, $square->latitude, 0.00001);
+        $this->assertEqualsWithDelta(27.4734099, $square->longitude, 0.00001);
+
+        $yardPin = Pin::query()->where('external_id', 'yard')->firstOrFail();
+        $this->assertEqualsWithDelta(42.4967712, $yardPin->latitude, 0.00001);
+        $this->assertEqualsWithDelta(27.4737924, $yardPin->longitude, 0.00001);
+
+        $etno = Pin::query()->where('external_id', 'etno')->firstOrFail();
+        $this->assertEqualsWithDelta(42.4961822, $etno->latitude, 0.00001);
+        $this->assertEqualsWithDelta(27.4750141, $etno->longitude, 0.00001);
     }
 
     public function test_a_turned_off_import_does_nothing(): void

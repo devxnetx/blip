@@ -77,6 +77,15 @@ class PlaceLine
             }
         }
 
+        if (preg_match('/дворът на\s+(.+?)\s+в\s+([А-Я][а-я]+)/u', $description, $match) === 1) {
+            $venue = trim($match[1]);
+            $city = trim($match[2]);
+
+            if ($venue !== '' && $city !== '') {
+                return $venue.', '.$city;
+            }
+        }
+
         if (preg_match('/парк\s+[„"«]?([^„"»\n,.]{3,60})/ui', $description, $match) === 1) {
             $park = trim($match[1], " \t\"'«».");
             $city = preg_match('/\bСофия\b/u', $description) === 1 ? ', София' : '';

@@ -12,9 +12,12 @@ class PinImport extends Model
 
     public const SOURCE_EVENTIBG = 'eventibg';
 
+    public const SOURCE_KUPIBILETI = 'kupibileti';
+
     public const LABELS = [
         self::SOURCE_SPORTEN => 'Спортен календар',
         self::SOURCE_EVENTIBG => 'EventiBG',
+        self::SOURCE_KUPIBILETI => 'Купи билети',
     ];
 
     public static function begin(string $source): self

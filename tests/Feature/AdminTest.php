@@ -656,6 +656,8 @@ class AdminTest extends TestCase
             ->assertOk()
             ->assertSee('Спортен календар')
             ->assertSee('EventiBG')
+            ->assertSee('Купи билети')
+            ->assertSee('Ограничението в дни не важи тук.')
             ->assertSee('Снимката на събитието се записва.')
             ->assertDontSee('Снимките от този сайт не се взимат.')
             ->assertSeeInOrder(['Функции', 'Карта', 'Система', 'Импорти', 'Настройки'])
@@ -671,6 +673,7 @@ class AdminTest extends TestCase
 
         $this->assertFalse(Setting::enabled('import_sporten_enabled'));
         $this->assertTrue(Setting::enabled('import_eventibg_enabled'));
+        $this->assertFalse(Setting::enabled('import_kupibileti_enabled'));
         $this->assertSame(7, Setting::daysAhead());
 
         $this->actingAs($admin)

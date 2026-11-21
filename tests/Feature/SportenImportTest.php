@@ -288,6 +288,17 @@ class SportenImportTest extends TestCase
         $this->assertSame('Освобождение, Княгиня Мария Луиза, София, България', $cinema[0]['q']);
         $this->assertArrayNotHasKey('street', $cinema[0]);
 
+        $aleko = NominatimGeocoder::lookupAttempts('ул. „Алеко Константинов“, Бургас');
+        $this->assertSame('Алеко Константинов, Бургас, България', $aleko[0]['q']);
+        $this->assertArrayNotHasKey('street', $aleko[0]);
+
+        $square = NominatimGeocoder::lookupAttempts('площад „Св. св. Кирил и Методий“, Бургас');
+        $this->assertSame('пл. Св. св. Кирил и Методий, Бургас, България', $square[0]['q']);
+
+        $slavianska = NominatimGeocoder::lookupAttempts('ул. „Славянска“ 69, гр. Бургас', 'дворът на Етнографската експозиция');
+        $this->assertSame('Славянска 69', $slavianska[0]['street']);
+        $this->assertSame('Бургас', $slavianska[0]['city']);
+
         $yambol = NominatimGeocoder::lookupAttempts('Ямбол, Градски парк, Ямбол', 'Спортна зала "Диана"');
         $this->assertSame('Спортна зала Диана, Ямбол, България', $yambol[0]['q']);
         $this->assertSame('Градски парк, Ямбол, България', $yambol[1]['q']);
