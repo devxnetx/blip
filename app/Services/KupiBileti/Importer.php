@@ -39,7 +39,13 @@ class Importer
         ];
         $seen = [];
 
-        foreach ($this->pages->eventUrls() as $url) {
+        try {
+            $urls = $this->pages->eventUrls();
+        } catch (RuntimeException $exception) {
+            throw new ImportHalted($exception->getMessage(), $counts);
+        }
+
+        foreach ($urls as $url) {
             try {
                 $html = $this->pages->get($url);
 

@@ -15,15 +15,15 @@ class Client
     {
         $body = $this->get('https://kupibileti.bg/sitemap/bg.xml', 'application/xml,text/xml');
 
-        if (! is_string($body)) {
-            return [];
-        }
-
-        preg_match_all('#<loc>\s*(https://kupibileti\.bg/events/[a-z0-9-]+/?)\s*</loc>#i', $body, $matches);
+        preg_match_all('#<loc>\s*(https://kupibileti\.bg/events/[a-z0-9-]+/?)\s*</loc>#i', (string) $body, $matches);
         $urls = [];
 
         foreach ($matches[1] as $url) {
             $urls[rtrim($url, '/').'/'] = true;
+        }
+
+        if ($urls === []) {
+            throw new RuntimeException('Kupi Bileti did not return the event list. The import stopped.');
         }
 
         return array_keys($urls);

@@ -216,6 +216,21 @@ class KupibiletiImportTest extends TestCase
         $this->assertStringContainsString('slow down', (string) $run->error);
     }
 
+    public function test_a_blocked_event_list_stops_the_import(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(function (Request $request) {
+            return Http::response('<html><title>Just a moment...</title></html>', 403);
+        });
+
+        $this->artisan('pins:import-kupibileti')->assertFailed();
+
+        $run = PinImport::query()->where('source', 'kupibileti')->firstOrFail();
+        $this->assertFalse($run->successful);
+        $this->assertStringContainsString('event list', (string) $run->error);
+        $this->assertSame(0, Pin::query()->count());
+    }
+
     public function test_a_turned_off_import_does_nothing(): void
     {
         Http::preventStrayRequests();
