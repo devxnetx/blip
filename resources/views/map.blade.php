@@ -38,7 +38,7 @@
             font-family: "Schibsted Grotesk", sans-serif;
         }
 
-        #map { position: absolute; inset: 0; background: var(--line); }
+        #map { position: absolute; inset: 0; z-index: 0; background: var(--line); }
 
         .blip-icon { background: none; border: none; }
 
@@ -50,6 +50,18 @@
             width: 240px;
             cursor: pointer;
         }
+
+        .bubble-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 240px;
+        }
+
+        .bubble-card.tail-right { align-items: flex-end; }
+        .bubble-card.tail-left { align-items: flex-start; }
+        .bubble-card.tail-right .tail { margin-right: 14px; }
+        .bubble-card.tail-left .tail { margin-left: 14px; }
 
         .bubble {
             display: flex;
@@ -238,7 +250,7 @@
         #boot {
             position: fixed;
             inset: 0;
-            z-index: 800;
+            z-index: 12000;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -291,7 +303,7 @@
 
         .boot-word i { color: var(--pin); font-style: normal; }
 
-        .panel { z-index: 650; }
+        .panel { z-index: 10000; }
 
         .panel:not([hidden]) {
             display: flex;
@@ -306,7 +318,7 @@
         }
 
         .toast {
-            z-index: 700;
+            z-index: 11000;
             top: 72px;
             left: 50%;
             transform: translateX(-50%);

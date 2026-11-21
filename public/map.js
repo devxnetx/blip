@@ -227,11 +227,18 @@ const STACK_SIDE_BY_SIDE = 4;
 const STACK_SHIFT = 124;
 const STACK_FETCH_PAD_PX = 360;
 
+function tailFor(index, count) {
+  if (count < 2) {
+    return 'center';
+  }
+  return index % 2 === 0 ? 'right' : 'left';
+}
+
 function placeGroup(group) {
   if (group.length < STACK_SIDE_BY_SIDE) {
     let y = 0;
-    return group.map((pin) => {
-      const placed = { ...pin, stackX: 0, stackY: y };
+    return group.map((pin, index) => {
+      const placed = { ...pin, stackX: 0, stackY: y, tail: tailFor(index, group.length) };
       y += pinStackHeight(pin);
       return placed;
     });
@@ -244,10 +251,10 @@ function placeGroup(group) {
     const right = group[index + 1];
     const rowHeight = Math.max(pinStackHeight(left), right ? pinStackHeight(right) : 0);
     if (!right) {
-      placed.push({ ...left, stackX: 0, stackY: y });
+      placed.push({ ...left, stackX: 0, stackY: y, tail: tailFor(index, group.length) });
     } else {
-      placed.push({ ...left, stackX: -STACK_SHIFT, stackY: y });
-      placed.push({ ...right, stackX: STACK_SHIFT, stackY: y });
+      placed.push({ ...left, stackX: -STACK_SHIFT, stackY: y, tail: tailFor(index, group.length) });
+      placed.push({ ...right, stackX: STACK_SHIFT, stackY: y, tail: tailFor(index + 1, group.length) });
     }
     y += rowHeight;
   }
@@ -379,7 +386,7 @@ function groupPins(rows, region) {
   const singles = [];
   cells.forEach((group, key) => {
     if (group.length === 1) {
-      singles.push({ ...group[0], stackX: 0, stackY: 0 });
+      singles.push({ ...group[0], stackX: 0, stackY: 0, tail: 'center' });
       return;
     }
     const lats = group.map((pin) => pin.latitude);
@@ -469,14 +476,18 @@ function drawMarkers() {
       : '';
     const kindHtml = kind ? `<small>${escapeHtml(kind)}</small>` : '';
     const whenHtml = when ? `<small>${escapeHtml(when)}</small>` : '';
+    const tailClass = pin.tail === 'right' || pin.tail === 'left' ? ` tail-${pin.tail}` : '';
     const element = markerElement(
-      `<div class="bubble-wrap"><div class="bubble">${image}<div class="meta"><span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div></div><div class="tail"></div></div>`,
+      `<div class="bubble-wrap"><div class="bubble-card${tailClass}"><div class="bubble">${image}<div class="meta"><span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div></div><div class="tail"></div></div></div>`,
       () => {
-        focusPin(pin, { padPanel: true });
+        const region = currentRegion();
+        const close = region && region.latitudeDelta <= REVEAL_DELTA;
+        if (!close || items.singles.length < 2) {
+          focusPin(pin, { padPanel: true });
+        }
         openPin(pin);
       },
     );
-    element.style.zIndex = String(1000 + (pin.stackY || 0) + (pin.stackX > 0 ? 1 : 0));
     const marker = new maplibregl.Marker({
       element,
       anchor: 'bottom',
@@ -484,6 +495,7 @@ function drawMarkers() {
     })
       .setLngLat([pin.longitude, pin.latitude])
       .addTo(map);
+    marker.getElement().style.zIndex = String(1000 + (pin.stackY || 0) + (pin.stackX > 0 ? 1 : 0));
     markers.push(marker);
   });
 }
