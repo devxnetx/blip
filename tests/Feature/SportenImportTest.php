@@ -284,6 +284,15 @@ class SportenImportTest extends TestCase
         ]], 'Ямбол');
         $this->assertSame(42.4865072, $park['latitude']);
 
+        $squarePoint = NominatimGeocoder::pointFromPayload([[
+            'lat' => '42.1907450',
+            'lon' => '24.3316809',
+            'category' => 'place',
+            'type' => 'square',
+            'address' => ['square' => 'пл. Константин Величков', 'city' => 'Пазарджик'],
+        ]], 'Пазарджик');
+        $this->assertSame(42.1907450, $squarePoint['latitude']);
+
         $cinema = NominatimGeocoder::lookupAttempts('бул. Княгиня Мария Луиза, София', 'Кино-театър "Освобождение"');
         $this->assertSame('Освобождение, Княгиня Мария Луиза, София, България', $cinema[0]['q']);
         $this->assertArrayNotHasKey('street', $cinema[0]);
@@ -295,9 +304,19 @@ class SportenImportTest extends TestCase
         $square = NominatimGeocoder::lookupAttempts('площад „Св. св. Кирил и Методий“, Бургас');
         $this->assertSame('пл. Св. св. Кирил и Методий, Бургас, България', $square[0]['q']);
 
+        $numberedSquare = NominatimGeocoder::lookupAttempts('пл. „Константин Величков“ 1, Пазарджик', 'ДКТ Константин Величков');
+        $this->assertSame('пл. Константин Величков 1, Пазарджик, България', $numberedSquare[0]['q']);
+        $this->assertArrayNotHasKey('street', $numberedSquare[0]);
+
         $slavianska = NominatimGeocoder::lookupAttempts('ул. „Славянска“ 69, гр. Бургас', 'дворът на Етнографската експозиция');
         $this->assertSame('Славянска 69', $slavianska[0]['street']);
         $this->assertSame('Бургас', $slavianska[0]['city']);
+
+        $boris = NominatimGeocoder::lookupAttempts('бул. „Княз Борис I-ви“ 115, Варна', 'MAZE CLUB');
+        $this->assertSame('Княз Борис I 115', $boris[0]['street']);
+        $this->assertSame('Варна', $boris[0]['city']);
+        $written = array_values(array_filter($boris, fn (array $attempt): bool => str_contains((string) ($attempt['q'] ?? ''), 'бул. Княз Борис I 115')));
+        $this->assertNotSame([], $written);
 
         $yambol = NominatimGeocoder::lookupAttempts('Ямбол, Градски парк, Ямбол', 'Спортна зала "Диана"');
         $this->assertSame('Спортна зала Диана, Ямбол, България', $yambol[0]['q']);

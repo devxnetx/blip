@@ -70,11 +70,29 @@ class NominatimGeocoder
         $seen = [];
         $structured = $address !== '' ? self::structuredQuery($address) : null;
         $numbered = $structured !== null && preg_match('/\d/u', $structured['street']) === 1;
+        $kind = $structured['kind'] ?? '';
+        // A numbered square shares its name with a road. Street search returns that road.
+        $numberedRoad = $numbered && $kind !== 'square';
 
-        if ($numbered) {
+        if ($numberedRoad) {
             $attempts[] = [
                 'street' => $structured['street'],
                 'city' => $structured['city'],
+            ];
+        }
+
+        $addressLine = null;
+
+        if ($structured !== null && ($kind === 'square' || $numberedRoad)) {
+            $prefix = $structured['prefix'] ?? ($kind === 'square' ? 'пл.' : 'ул.');
+            $addressLine = self::placeQuery(trim($prefix.' '.$structured['street']), $structured['city'] ?? null);
+        }
+
+        if ($kind === 'square' && $addressLine !== null && ! isset($seen[$addressLine])) {
+            $seen[$addressLine] = true;
+            $attempts[] = [
+                'q' => $addressLine,
+                '_city' => $structured['city'] ?? '',
             ];
         }
 
@@ -134,6 +152,16 @@ class NominatimGeocoder
             }
         }
 
+        // The street search often answers with the same name in a nearby village.
+        // The written address, with бул./ул. kept, ranks the city itself.
+        if ($addressLine !== null && ! isset($seen[$addressLine])) {
+            $seen[$addressLine] = true;
+            $attempts[] = [
+                'q' => $addressLine,
+                '_city' => $structured['city'] ?? '',
+            ];
+        }
+
         return $attempts;
     }
 
@@ -185,7 +213,7 @@ class NominatimGeocoder
     /**
      * A street plus a city. Nominatim misses the full sidebar sentence.
      *
-     * @return array{street: string, city: string, kind: string}|null
+     * @return array{street: string, city: string, kind: string, prefix: string}|null
      */
     public static function structuredQuery(string $address): ?array
     {
@@ -193,6 +221,7 @@ class NominatimGeocoder
         $street = null;
         $number = null;
         $kind = 'street';
+        $prefix = 'ул.';
         $cities = [];
 
         foreach ($parts as $part) {
@@ -213,11 +242,20 @@ class NominatimGeocoder
                     $number = $numberMatch[2];
                 }
 
-                $rest = self::trimEdge($rest);
+                $rest = self::dropOrdinal(self::trimEdge($rest));
 
                 if ($rest !== '') {
                     $street = $rest;
-                    $kind = preg_match('/^пл/ui', $match[1]) === 1 ? 'square' : 'street';
+                    $kind = 'street';
+                    $prefix = 'ул.';
+
+                    if (preg_match('/^пл/ui', $match[1]) === 1) {
+                        $kind = 'square';
+                        $prefix = 'пл.';
+                    } elseif (preg_match('/^бул/ui', $match[1]) === 1) {
+                        $kind = 'boulevard';
+                        $prefix = 'бул.';
+                    }
                 }
 
                 continue;
@@ -242,7 +280,18 @@ class NominatimGeocoder
             'street' => $line,
             'city' => $city,
             'kind' => $kind,
+            'prefix' => $prefix,
         ];
+    }
+
+    /**
+     * "I-ви" is how a page writes a roman number. The map stores the number alone.
+     */
+    private static function dropOrdinal(string $value): string
+    {
+        $value = preg_replace('/\b((?:[IVXLCDM]+)|(?:\d+))\s*-\s*(?:ви|ри|ти|ми)\b/ui', '$1', $value);
+
+        return trim(is_string($value) ? $value : '');
     }
 
     /**
@@ -278,6 +327,8 @@ class NominatimGeocoder
             || isset($address['historic'])
             || isset($address['man_made'])
             || isset($address['park'])
+            || isset($address['square'])
+            || ($category === 'place' && $type === 'square')
             || ($category === 'leisure' && in_array($type, ['park', 'sports_centre', 'stadium', 'pitch', 'swimming_pool', 'track', 'sports_hall'], true));
 
         if (! $specific) {

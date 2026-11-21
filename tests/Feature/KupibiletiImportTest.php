@@ -290,6 +290,25 @@ class KupibiletiImportTest extends TestCase
         $this->assertSame(2, Pin::query()->count());
     }
 
+    public function test_a_numbered_square_is_not_placed_on_the_road_with_the_same_name(): void
+    {
+        Storage::fake('public');
+        $this->install(['square' => true, 'slugs' => []]);
+
+        $this->artisan('pins:import-kupibileti')->assertSuccessful();
+
+        $theatre = Pin::query()->where('external_id', 'makbut-pazardzhik-65956')->firstOrFail();
+        $this->assertSame(Pin::KIND_UPCOMING, $theatre->kind);
+        $this->assertEqualsWithDelta(42.1907450, $theatre->latitude, 0.00001);
+        $this->assertEqualsWithDelta(24.3316809, $theatre->longitude, 0.00001);
+
+        $club = Pin::query()->where('external_id', 'one-direction-party-66297')->firstOrFail();
+        $this->assertSame(Pin::KIND_UPCOMING, $club->kind);
+        $this->assertEqualsWithDelta(43.2105700, $club->latitude, 0.00001);
+        $this->assertEqualsWithDelta(27.9306096, $club->longitude, 0.00001);
+        $this->assertSame(2, Pin::query()->count());
+    }
+
     public function test_a_tour_becomes_one_upcoming_pin_per_date(): void
     {
         Storage::fake('public');
@@ -367,6 +386,26 @@ class KupibiletiImportTest extends TestCase
                         ]]);
                     }
 
+                    if (str_contains($street, 'Величков')) {
+                        return Http::response([[
+                            'lat' => '42.1899765',
+                            'lon' => '24.3171396',
+                            'category' => 'highway',
+                            'type' => 'residential',
+                            'address' => ['road' => 'Константин Величков', 'city' => 'Пазарджик'],
+                        ]]);
+                    }
+
+                    if (str_contains($street, 'Борис')) {
+                        return Http::response([[
+                            'lat' => '43.2469713',
+                            'lon' => '27.9056520',
+                            'category' => 'highway',
+                            'type' => 'residential',
+                            'address' => ['road' => 'Княз Борис I', 'village' => 'Каменар'],
+                        ]]);
+                    }
+
                     return Http::response([[
                         'lat' => '42.5180661',
                         'lon' => '27.4566817',
@@ -400,6 +439,24 @@ class KupibiletiImportTest extends TestCase
                         'lat' => '43.2038',
                         'lon' => '27.9147',
                         'address' => ['amenity' => 'Летен театър', 'city' => 'Варна'],
+                    ]]);
+                }
+
+                if (str_contains($query, 'пл. Константин Величков')) {
+                    return Http::response([[
+                        'lat' => '42.1907450',
+                        'lon' => '24.3316809',
+                        'category' => 'place',
+                        'type' => 'square',
+                        'address' => ['square' => 'пл. Константин Величков', 'city' => 'Пазарджик'],
+                    ]]);
+                }
+
+                if (str_contains($query, 'бул. Княз Борис I 115')) {
+                    return Http::response([[
+                        'lat' => '43.2105700',
+                        'lon' => '27.9306096',
+                        'address' => ['house_number' => '115', 'road' => 'бул. Княз Борис I', 'city' => 'Варна'],
                     ]]);
                 }
 
@@ -558,6 +615,35 @@ class KupibiletiImportTest extends TestCase
             }
 
             $pages['/events/'.$event['slug'].'/'] = $this->eventHtml($event);
+        }
+
+        if ($this->options['square'] ?? false) {
+            $pazardzhik = now('Europe/Sofia')->addDays(6)->setTime(19, 0, 0);
+            $varna = now('Europe/Sofia')->addDays(5)->setTime(21, 0, 0);
+            $pages['/events/makbut-pazardzhik-65956/'] = $this->eventHtml([
+                'slug' => 'makbut-pazardzhik-65956',
+                'name' => 'Макбут - Пазарджик',
+                'section' => 'art',
+                'sectionName' => 'Арт',
+                'start' => $pazardzhik,
+                'end' => $pazardzhik->copy()->addHours(2),
+                'location' => 'ПАЗАРДЖИК - ДКТ "Константин Величков"',
+                'street' => 'пл. „Константин Величков“ 1, 4400',
+                'description' => 'Спектакъл.',
+                'cards' => true,
+            ]);
+            $pages['/events/one-direction-party-66297/'] = $this->eventHtml([
+                'slug' => 'one-direction-party-66297',
+                'name' => 'One Direction Party',
+                'section' => 'music',
+                'sectionName' => 'Музика',
+                'start' => $varna,
+                'end' => $varna->copy()->addHours(3),
+                'location' => 'ВАРНА - MAZE CLUB',
+                'street' => 'бул. „Княз Борис I-ви“ 115',
+                'description' => 'Парти.',
+                'cards' => true,
+            ]);
         }
 
         if ($this->options['address'] ?? false) {
