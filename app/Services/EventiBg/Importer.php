@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\Pin;
 use App\Models\Setting;
 use App\Services\ImportHalted;
+use App\Services\SportenKalendar\NominatimGeocoder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -18,6 +19,7 @@ class Importer
     public function __construct(
         private DayClient $pages,
         private DayParser $parser,
+        private NominatimGeocoder $geocoder,
     ) {}
 
     /**
@@ -103,7 +105,8 @@ class Importer
         $expiresAt = $minutes === 65535 && $event->endsAt->greaterThan($event->startsAt->copy()->addMinutes(65535))
             ? $event->startsAt->copy()->addMinutes(65535)
             : $event->endsAt;
-        $point = $event->latitude !== null && $event->longitude !== null;
+        $resolved = $existing?->placed_manually ? null : $this->resolve($event);
+        $point = $resolved !== null || ($event->latitude !== null && $event->longitude !== null);
 
         if ($existing?->placed_manually) {
             $point = $existing->latitude !== null && $existing->longitude !== null;
@@ -140,6 +143,9 @@ class Importer
             $outcome = $existing->kind === Pin::KIND_UPCOMING
                 ? 'upcoming'
                 : ($existing->latitude === null ? 'unassigned' : 'current');
+        } elseif ($resolved !== null) {
+            $attributes['latitude'] = $resolved['latitude'];
+            $attributes['longitude'] = $resolved['longitude'];
         } elseif ($event->latitude !== null && $event->longitude !== null) {
             $attributes['latitude'] = $event->latitude;
             $attributes['longitude'] = $event->longitude;
@@ -163,6 +169,20 @@ class Importer
         }
 
         return $outcome;
+    }
+
+    /**
+     * @return array{latitude: float, longitude: float}|null
+     */
+    private function resolve(ParsedEvent $event): ?array
+    {
+        $place = PlaceLine::fromDescription($event->description);
+
+        if ($place === null) {
+            return null;
+        }
+
+        return $this->geocoder->locate($place['address'], $place['venue']);
     }
 
     private function eventCategory(): void

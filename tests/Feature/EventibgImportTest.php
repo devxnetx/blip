@@ -8,6 +8,7 @@ use App\Models\PinImport;
 use App\Models\Setting;
 use App\Services\EventiBg\DayClient;
 use App\Services\EventiBg\DayParser;
+use App\Services\EventiBg\PlaceLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -208,6 +209,53 @@ class EventibgImportTest extends TestCase
         $this->assertSame('2026-12-06 21:59:00', $events[1]->endsAt->utc()->format('Y-m-d H:i:s'));
     }
 
+    public function test_a_named_hall_replaces_the_town_coordinate(): void
+    {
+        $place = PlaceLine::fromDescription("Място: Кино-театър „Освобождение“, бул. „Княгиня Мария Луиза“, София\nКатегория: Фолклор");
+        $this->assertSame('Кино-театър „Освобождение“', $place['venue']);
+        $this->assertSame('бул. „Княгиня Мария Луиза“, София', $place['address']);
+
+        Http::preventStrayRequests();
+        $future = now('Europe/Sofia')->addDays(3)->format('Y-m-d');
+        Http::fake(function (Request $request) use ($future) {
+            $url = $request->url();
+
+            if (str_contains($url, 'nominatim.openstreetmap.org')) {
+                $query = (string) ($request->data()['q'] ?? '');
+                if (str_contains($query, 'Освобождение') && str_contains($query, 'Мария Луиза')) {
+                    return Http::response([[
+                        'lat' => '42.7128141',
+                        'lon' => '23.3174830',
+                        'category' => 'amenity',
+                        'type' => 'theatre',
+                        'address' => ['amenity' => 'Театър Освобождение', 'road' => 'бул. Княгиня Мария Луиза', 'city' => 'София'],
+                    ]]);
+                }
+
+                return Http::response([]);
+            }
+
+            if (! preg_match('#/event/\d{2}/\d{2}/\d{4}$#', $url)) {
+                return Http::response('missing', 404);
+            }
+
+            return Http::response($this->page([
+                $this->row('kanatitsa', 'Юбилеен концерт', 42.697696, 23.321744, $future, $future, '18:30:00', '21:00:00', 'Място: Кино-театър „Освобождение“, бул. „Княгиня Мария Луиза“, София'),
+                $this->row('bez-miasto', 'Само град', 42.697696, 23.321744, $future, $future, '18:00:00', '22:00:00', 'Само град'),
+            ]));
+        });
+
+        $this->artisan('pins:import-eventibg', ['--days' => 1])->assertSuccessful();
+
+        $hall = Pin::query()->where('external_id', 'kanatitsa')->firstOrFail();
+        $this->assertEqualsWithDelta(42.7128141, $hall->latitude, 0.00001);
+        $this->assertEqualsWithDelta(23.317483, $hall->longitude, 0.00001);
+
+        $town = Pin::query()->where('external_id', 'bez-miasto')->firstOrFail();
+        $this->assertEqualsWithDelta(42.697696, $town->latitude, 0.00001);
+        $this->assertEqualsWithDelta(23.321744, $town->longitude, 0.00001);
+    }
+
     public function test_a_turned_off_import_does_nothing(): void
     {
         Http::preventStrayRequests();
@@ -281,7 +329,7 @@ class EventibgImportTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function row(string $slug, string $name, ?float $lat, ?float $lng, string $start, string $end, string $open = '18:00:00', string $close = '22:00:00'): array
+    private function row(string $slug, string $name, ?float $lat, ?float $lng, string $start, string $end, string $open = '18:00:00', string $close = '22:00:00', string $description = 'note ]; still an event'): array
     {
         return [
             'slug' => $slug,
@@ -294,8 +342,8 @@ class EventibgImportTest extends TestCase
             'start' => $start.'T00:00:00+00:00',
             'end' => $end.'T00:00:00+00:00',
             'url' => '/event/'.$slug,
-            'description' => 'note ]; still an event',
-            'image' => '/uploads/events/nope.jpg',
+            'description' => $description,
+            'image' => $description === 'note ]; still an event' ? '/uploads/events/nope.jpg' : null,
         ];
     }
 

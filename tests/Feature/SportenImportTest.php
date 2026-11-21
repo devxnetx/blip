@@ -284,6 +284,10 @@ class SportenImportTest extends TestCase
         ]], 'Ямбол');
         $this->assertSame(42.4865072, $park['latitude']);
 
+        $cinema = NominatimGeocoder::lookupAttempts('бул. Княгиня Мария Луиза, София', 'Кино-театър "Освобождение"');
+        $this->assertSame('Освобождение, Княгиня Мария Луиза, София, България', $cinema[0]['q']);
+        $this->assertArrayNotHasKey('street', $cinema[0]);
+
         $yambol = NominatimGeocoder::lookupAttempts('Ямбол, Градски парк, Ямбол', 'Спортна зала "Диана"');
         $this->assertSame('Спортна зала Диана, Ямбол, България', $yambol[0]['q']);
         $this->assertSame('Градски парк, Ямбол, България', $yambol[1]['q']);

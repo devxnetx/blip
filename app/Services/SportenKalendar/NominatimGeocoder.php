@@ -69,30 +69,44 @@ class NominatimGeocoder
         $attempts = [];
         $seen = [];
         $structured = $address !== '' ? self::structuredQuery($address) : null;
+        $numbered = $structured !== null && preg_match('/\d/u', $structured['street']) === 1;
 
-        if ($structured !== null) {
-            $attempts[] = $structured;
+        if ($numbered) {
+            $attempts[] = [
+                'street' => $structured['street'],
+                'city' => $structured['city'],
+            ];
         }
 
         $city = $structured['city'] ?? self::cityName($address);
-        $places = $venue !== '' ? [$venue] : [];
+        $streetName = $structured !== null && ! $numbered ? $structured['street'] : null;
+        $places = [];
+
+        if ($venue !== '') {
+            $short = self::shortVenue($venue, $city);
+            $places = $short !== null ? [$short, $venue] : [$venue];
+        }
 
         foreach (self::placeNames($address) as $place) {
             $places[] = $place;
         }
 
         foreach ($places as $place) {
-            $query = self::placeQuery($place, $city);
+            $labels = $streetName !== null && $streetName !== '' ? [$place.', '.$streetName, $place] : [$place];
 
-            if ($query === null || isset($seen[$query])) {
-                continue;
+            foreach ($labels as $label) {
+                $query = self::placeQuery($label, $city);
+
+                if ($query === null || isset($seen[$query])) {
+                    continue;
+                }
+
+                $seen[$query] = true;
+                $attempts[] = [
+                    'q' => $query,
+                    '_city' => $city ?? '',
+                ];
             }
-
-            $seen[$query] = true;
-            $attempts[] = [
-                'q' => $query,
-                '_city' => $city ?? '',
-            ];
         }
 
         if ($places === [] && $structured === null && $address !== '') {
@@ -333,6 +347,25 @@ class NominatimGeocoder
         $value = preg_replace('/^[\s"\'«»\.]+|[\s"\'«»\.]+$/u', '', $value);
 
         return trim(is_string($value) ? $value : '');
+    }
+
+    private static function shortVenue(string $venue, ?string $city): ?string
+    {
+        $short = self::normalize((string) preg_replace(
+            '/^(?:кино[\s-]*театър|кинотеатър|кино|театър)\s+/ui',
+            '',
+            $venue,
+        ));
+
+        if ($short === '' || $short === $venue || mb_strlen($short) < 5) {
+            return null;
+        }
+
+        if ($city !== null && mb_strtolower($short) === mb_strtolower($city)) {
+            return null;
+        }
+
+        return $short;
     }
 
     private static function isStreet(string $part): bool
