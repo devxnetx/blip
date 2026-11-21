@@ -37,9 +37,16 @@
         </label>
         <p class="meta">Всяка нощ в 06:00, българско време. Чете всички предстоящи събития. Ограничението в дни не важи тук. Снимката се записва.</p>
 
+        <label class="switch">
+            <input type="checkbox" name="import_aktualnitenovini_enabled" value="1" @checked($aktualnitenovini)>
+            <i aria-hidden="true"></i>
+            <span>Актуалните новини</span>
+        </label>
+        <p class="meta">Всяка нощ в 05:40, българско време. Клубни участия и концерти. Снимката се записва.</p>
+
         <label for="import-days">Дни напред</label>
         <input id="import-days" name="import_days_ahead" type="number" min="1" max="90" value="{{ old('import_days_ahead', $days) }}" required>
-        <p class="meta">Колко дни напред да се четат Спортен календар и EventiBG. Купи билети чете целия предстоящ списък. Събитие, което трае цяла седмица, се записва веднъж.</p>
+        <p class="meta">Колко дни напред да се четат Спортен календар, EventiBG и Актуалните новини. Купи билети чете целия предстоящ списък. Събитие, което трае цяла седмица, се записва веднъж.</p>
 
         <div class="form-actions">
             <button type="submit">Запази</button>

@@ -16,6 +16,7 @@ class SettingsController extends Controller
             'sporten' => Setting::enabled('import_sporten_enabled'),
             'eventibg' => Setting::enabled('import_eventibg_enabled'),
             'kupibileti' => Setting::enabled('import_kupibileti_enabled'),
+            'aktualnitenovini' => Setting::enabled('import_aktualnitenovini_enabled'),
             'days' => Setting::daysAhead(),
         ]);
     }
@@ -33,6 +34,7 @@ class SettingsController extends Controller
         Setting::put('import_sporten_enabled', $request->boolean('import_sporten_enabled') ? '1' : '0');
         Setting::put('import_eventibg_enabled', $request->boolean('import_eventibg_enabled') ? '1' : '0');
         Setting::put('import_kupibileti_enabled', $request->boolean('import_kupibileti_enabled') ? '1' : '0');
+        Setting::put('import_aktualnitenovini_enabled', $request->boolean('import_aktualnitenovini_enabled') ? '1' : '0');
         Setting::put('import_days_ahead', (string) $data['import_days_ahead']);
 
         return back()->with('status', 'Настройките са запазени.');

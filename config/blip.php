@@ -13,7 +13,10 @@ return [
 
     // Gap between EventiBG day pages. How many days ahead is an admin setting.
     'eventibg_pause_ms' => (int) env('EVENTIBG_PAUSE_MS', 1500),
-    'eventibg_days' => (int) env('EVENTIBG_DAYS', 14),
+    'eventibg_days' => (int) env('EVENTIBG_DAYS', 40),
+
+    // Gap between Aktualnite Novini pages. How many days ahead is the shared setting.
+    'aktualnitenovini_pause_ms' => (int) env('AKTUALNITENOVINI_PAUSE_MS', 1500),
 
     // Gap between Kupi Bileti pages. That import reads every upcoming event.
     'kupibileti_pause_ms' => (int) env('KUPIBILETI_PAUSE_MS', 1500),

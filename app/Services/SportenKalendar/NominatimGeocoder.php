@@ -231,7 +231,7 @@ class NominatimGeocoder
                 continue;
             }
 
-            if (preg_match('/(?:^|\s)(ул\.|ул(?=\s)|улица|бул\.|булевард|пл\.|площад)\s*(.+)/ui', $part, $match)) {
+            if (preg_match('/(?:^|\s)(ул\.|ул(?=\s)|улица|бул\.|бул(?=\s)|булевард|пл\.|пл(?=\s)|площад)\s*(.+)/ui', $part, $match)) {
                 $rest = self::trimEdge($match[2]);
 
                 if (preg_match('/№\s*(\d+[а-яa-z]?)/ui', $rest, $numberMatch)) {
@@ -460,7 +460,7 @@ class NominatimGeocoder
 
     private static function isStreet(string $part): bool
     {
-        return preg_match('/(?:^|\s)(?:ул\.|ул(?=\s)|улица|бул\.|булевард|пл\.|площад)\s*\S/ui', $part) === 1;
+        return preg_match('/(?:^|\s)(?:ул\.|ул(?=\s)|улица|бул\.|бул(?=\s)|булевард|пл\.|пл(?=\s)|площад)\s*\S/ui', $part) === 1;
     }
 
     private static function isPlace(string $part): bool
