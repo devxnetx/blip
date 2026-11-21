@@ -39,7 +39,7 @@ class KupibiletiImportTest extends TestCase
         $place = EventPage::place('БУРГАС - Спортна зала "Младост"', 'гр. Бургас, ж.к. "Славейков" №62');
         $this->assertSame('Спортна зала Младост', $place['venue']);
         $this->assertSame('Бургас', $place['city']);
-        $this->assertNull($place['address']);
+        $this->assertSame('Бургас, ж.к. Славейков №62', $place['address']);
 
         $attempts = NominatimGeocoder::lookupAttempts('Бургас', 'Спортна зала Младост');
         $this->assertSame('Спортна зала Младост, Бургас, България', $attempts[0]['q']);
@@ -271,6 +271,25 @@ class KupibiletiImportTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_the_address_card_places_a_pin_when_the_hall_name_is_unknown(): void
+    {
+        Storage::fake('public');
+        $this->install(['address' => true, 'slugs' => ['arena-izi-66348', 'domat-na-dyado-koleda-30-11-pernik-66104']]);
+
+        $this->artisan('pins:import-kupibileti')->assertSuccessful();
+
+        $arena = Pin::query()->where('external_id', 'arena-izi-66348')->firstOrFail();
+        $this->assertSame(Pin::KIND_UPCOMING, $arena->kind);
+        $this->assertEqualsWithDelta(42.6501, $arena->latitude, 0.00001);
+        $this->assertEqualsWithDelta(23.3802, $arena->longitude, 0.00001);
+
+        $pernik = Pin::query()->where('external_id', 'domat-na-dyado-koleda-30-11-pernik-66104')->firstOrFail();
+        $this->assertSame(Pin::KIND_UPCOMING, $pernik->kind);
+        $this->assertEqualsWithDelta(42.60621, $pernik->latitude, 0.00001);
+        $this->assertEqualsWithDelta(23.0302169, $pernik->longitude, 0.00001);
+        $this->assertSame(2, Pin::query()->count());
+    }
+
     public function test_a_tour_becomes_one_upcoming_pin_per_date(): void
     {
         Storage::fake('public');
@@ -338,6 +357,15 @@ class KupibiletiImportTest extends TestCase
 
                 if (array_key_exists('street', $data)) {
                     $this->sawStreet = true;
+                    $street = (string) $data['street'];
+
+                    if (str_contains($street, 'Лазаров')) {
+                        return Http::response([[
+                            'lat' => '42.6501',
+                            'lon' => '23.3802',
+                            'address' => ['house_number' => '14', 'road' => 'бул. проф. Цветан Лазаров', 'city' => 'София'],
+                        ]]);
+                    }
 
                     return Http::response([[
                         'lat' => '42.5180661',
@@ -372,6 +400,26 @@ class KupibiletiImportTest extends TestCase
                         'lat' => '43.2038',
                         'lon' => '27.9147',
                         'address' => ['amenity' => 'Летен театър', 'city' => 'Варна'],
+                    ]]);
+                }
+
+                if (str_contains($query, 'Мемориал,')) {
+                    return Http::response([[
+                        'lat' => '42.6062100',
+                        'lon' => '23.0302169',
+                        'category' => 'historic',
+                        'type' => 'memorial',
+                        'address' => ['historic' => 'Мемориал на миньорския труд', 'city' => 'Перник'],
+                    ]]);
+                }
+
+                if (str_contains($query, 'Свобода')) {
+                    return Http::response([[
+                        'lat' => '42.5470294',
+                        'lon' => '22.9647027',
+                        'category' => 'leisure',
+                        'type' => 'park',
+                        'address' => ['park' => 'Площад Свобода', 'town' => 'Радомир'],
                     ]]);
                 }
 
@@ -510,6 +558,35 @@ class KupibiletiImportTest extends TestCase
             }
 
             $pages['/events/'.$event['slug'].'/'] = $this->eventHtml($event);
+        }
+
+        if ($this->options['address'] ?? false) {
+            $arenaStart = now('Europe/Sofia')->addDays(12)->setTime(19, 0, 0);
+            $pernikStart = now('Europe/Sofia')->addDays(9)->setTime(10, 15, 0);
+            $pages['/events/arena-izi-66348/'] = $this->eventHtml([
+                'slug' => 'arena-izi-66348',
+                'name' => 'БК ЦСКА',
+                'section' => 'sport',
+                'sectionName' => 'Спорт',
+                'start' => $arenaStart,
+                'end' => $arenaStart->copy()->addHours(2),
+                'location' => 'СОФИЯ - Арена Изи',
+                'street' => 'бул. „проф. Цветан Лазаров“ 14',
+                'description' => 'Мач.',
+                'cards' => true,
+            ]);
+            $pages['/events/domat-na-dyado-koleda-30-11-pernik-66104/'] = $this->eventHtml([
+                'slug' => 'domat-na-dyado-koleda-30-11-pernik-66104',
+                'name' => 'Домът на Дядо Коледа - 30.11 - Перник',
+                'section' => 'event',
+                'sectionName' => 'Събития',
+                'start' => $pernikStart,
+                'end' => $pernikStart->copy()->addHours(10),
+                'location' => 'ПЕРНИК - Домът на Дядо Коледа',
+                'street' => 'пл. Свобода, Мемориала',
+                'description' => 'Коледа.',
+                'cards' => true,
+            ]);
         }
 
         if ($this->options['tour'] ?? false) {
@@ -662,9 +739,18 @@ class KupibiletiImportTest extends TestCase
             ],
         ];
 
+        $cards = '';
+
+        if (($event['cards'] ?? false) === true) {
+            $cards = '<ul class="event-info-cards">'
+                .'<li data-fact="venue"><dl><dt>Място</dt><dd>'.($event['location'] ?? '').'</dd></dl></li>'
+                .'<li data-fact="address"><dl><dt>Адрес</dt><dd>'.($event['street'] ?? '').' Виж на картата →</dd></dl></li>'
+                .'</ul>';
+        }
+
         return '<html><head><script type="application/ld+json">'
             .json_encode($graph, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-            .'</script></head><body></body></html>';
+            .'</script></head><body>'.$cards.'</body></html>';
     }
 
     private function jpegBytes(): string

@@ -43,8 +43,19 @@ class EventPage
         }
 
         $location = is_array($event['location'] ?? null) ? $event['location'] : [];
-        $street = is_array($location['address'] ?? null) ? ($location['address']['streetAddress'] ?? null) : null;
-        $place = self::place(is_string($location['name'] ?? null) ? $location['name'] : null, is_string($street) ? $street : null);
+        $street = self::card($html, 'address');
+
+        if ($street === null && is_array($location['address'] ?? null) && is_string($location['address']['streetAddress'] ?? null)) {
+            $street = $location['address']['streetAddress'];
+        }
+
+        $venueName = self::card($html, 'venue');
+
+        if ($venueName === null && is_string($location['name'] ?? null)) {
+            $venueName = $location['name'];
+        }
+
+        $place = self::place($venueName, $street);
         $slug = self::slug($url);
 
         if ($slug === '') {
@@ -161,8 +172,85 @@ class EventPage
         return [
             'venue' => $venue !== '' ? $venue : null,
             'city' => $city !== '' ? $city : null,
-            'address' => $venue === null && $street !== '' ? $street : null,
+            'address' => self::lookupAddress($street, $city),
         ];
+    }
+
+    /**
+     * The street or square, then the city, then a landmark. The geocoder treats the first plain part as the city.
+     */
+    public static function lookupAddress(string $street, ?string $city): ?string
+    {
+        $street = NominatimGeocoder::normalize($street);
+
+        if ($street === '') {
+            return null;
+        }
+
+        $streets = [];
+        $extras = [];
+
+        foreach (preg_split('/\s*,\s*/u', $street) ?: [] as $part) {
+            $part = trim($part);
+
+            if ($part === '' || preg_match('/^\d{4}$/u', $part) === 1) {
+                continue;
+            }
+
+            if (preg_match('/(?:^|\s)(?:ул\.|ул(?=\s)|улица|бул\.|булевард|пл\.|площад)\s*\S/ui', $part) === 1) {
+                $streets[] = $part;
+
+                continue;
+            }
+
+            $bare = trim((string) preg_replace('/^(?:гр\.|град|с\.|село)\s+/ui', '', $part));
+
+            if ($city !== null && $bare !== '' && mb_strtolower($bare) === mb_strtolower($city)) {
+                continue;
+            }
+
+            if ($city === null && preg_match('/^(?:гр\.|град|с\.|село)\s+\S/ui', $part) === 1) {
+                $city = self::titleCity($part);
+
+                continue;
+            }
+
+            $extras[] = $part;
+        }
+
+        if ($streets === [] && $extras === []) {
+            return null;
+        }
+
+        $chunks = $streets;
+
+        if ($city !== null && $city !== '') {
+            $chunks[] = $city;
+        }
+
+        foreach ($extras as $extra) {
+            $chunks[] = $extra;
+        }
+
+        $line = implode(', ', $chunks);
+
+        return $line === '' ? null : $line;
+    }
+
+    /**
+     * The last info card is the address. The link text is not part of it.
+     */
+    public static function card(string $html, string $fact): ?string
+    {
+        if (preg_match('/data-fact="'.preg_quote($fact, '/').'"[\s\S]*?<dd[^>]*>(.*?)<\/dd>/u', $html, $match) !== 1) {
+            return null;
+        }
+
+        $text = html_entity_decode(strip_tags($match[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = trim((string) preg_replace('/\s+/u', ' ', $text));
+        $text = trim((string) preg_replace('/\s*Виж на картата.*$/u', '', $text));
+
+        return $text === '' ? null : $text;
     }
 
     /**

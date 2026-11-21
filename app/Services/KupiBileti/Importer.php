@@ -189,15 +189,77 @@ class Importer
      */
     private function resolve(ParsedEvent $event): ?array
     {
-        if ($event->venue !== null) {
-            return $this->geocoder->locate($event->city, $event->venue);
+        $address = $event->address ?? $event->city;
+
+        if ($address !== null || $event->venue !== null) {
+            $point = $this->geocoder->locate($address, $event->venue);
+
+            if ($point !== null) {
+                return $point;
+            }
         }
 
         if ($event->address !== null) {
-            return $this->geocoder->locate($event->address, null);
+            $point = $this->geocoder->locate($event->address, null);
+
+            if ($point !== null) {
+                return $point;
+            }
+        }
+
+        foreach ($this->placeWords($event->address, $event->city) as $word) {
+            $line = $event->city !== null && $event->city !== '' ? $word.', '.$event->city : $word;
+            $point = $this->geocoder->locate($line, null);
+
+            if ($point !== null) {
+                return $point;
+            }
         }
 
         return null;
+    }
+
+    /**
+     * A landmark written after the street, with the article taken off when the map knows the bare word.
+     *
+     * @return list<string>
+     */
+    private function placeWords(?string $address, ?string $city): array
+    {
+        if ($address === null || $address === '') {
+            return [];
+        }
+
+        $words = [];
+
+        foreach (preg_split('/\s*,\s*/u', $address) ?: [] as $part) {
+            $part = trim($part);
+
+            if ($part === '' || preg_match('/^\d{4}$/u', $part) === 1) {
+                continue;
+            }
+
+            if (preg_match('/(?:^|\s)(?:ул\.|ул(?=\s)|улица|бул\.|булевард|пл\.|площад)\s*\S/ui', $part) === 1) {
+                continue;
+            }
+
+            if ($city !== null && mb_strtolower($part) === mb_strtolower($city)) {
+                continue;
+            }
+
+            $words[$part] = true;
+            $bare = $part;
+
+            if (preg_match('/^(.+?)(а|я)$/u', $part, $match) === 1 && mb_strlen($match[1]) >= 5) {
+                $bare = $match[1];
+            }
+
+            if ($bare !== $part) {
+                $words[$bare] = true;
+            }
+        }
+
+        return array_keys($words);
     }
 
     private function categories(): void
