@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\Pin;
 use App\Models\PinImport;
 use App\Models\Setting;
+use Illuminate\Console\Scheduling\Schedule;
 use App\Services\KupiBileti\Client;
 use App\Services\KupiBileti\EventPage;
 use App\Services\SportenKalendar\NominatimGeocoder;
@@ -26,7 +27,7 @@ class KupibiletiImportTest extends TestCase
 
     private bool $sawStreet = false;
 
-    /** @var array{fightTitle?: string, artVenue?: string, past?: bool, haltAfter?: int|null, slugs?: list<string>} */
+    /** @var array{fightTitle?: string, artVenue?: string, past?: bool, haltAfter?: int|null, slugs?: list<string>, tour?: bool} */
     private array $options = [];
 
     private int $pageHits = 0;
@@ -270,15 +271,48 @@ class KupibiletiImportTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_import_is_scheduled_daily(): void
+    public function test_a_tour_becomes_one_upcoming_pin_per_date(): void
+    {
+        Storage::fake('public');
+        $this->install(['tour' => true, 'slugs' => ['lili-ivanova-varna-66324']]);
+
+        $this->artisan('pins:import-kupibileti')->assertSuccessful();
+
+        $varna = Pin::query()->where('external_id', 'lili-ivanova-varna-66324')->firstOrFail();
+        $sofia = Pin::query()->where('external_id', 'lili-ivanova-66322')->firstOrFail();
+
+        $this->assertSame(Pin::KIND_UPCOMING, $varna->kind);
+        $this->assertSame(Pin::KIND_UPCOMING, $sofia->kind);
+        $this->assertSame('event', $varna->category);
+        $this->assertSame('event', $sofia->category);
+        $this->assertSame('Лили Иванова', $varna->message);
+        $this->assertSame('Лили Иванова', $sofia->message);
+        $this->assertSame('Концерт.', $varna->description);
+        $this->assertSame('Концерт в София.', $sofia->description);
+        $this->assertNotNull($varna->latitude);
+        $this->assertNotNull($sofia->latitude);
+        $this->assertSame('pins/kupibileti-lili-ivanova-66322.jpg', $sofia->image_path);
+        $this->assertSame('https://kupibileti.bg/events/lili-ivanova-66322/', $sofia->source_url);
+        $this->assertNull(Pin::query()->where('external_id', 'lili-ivanova-turne-2027-4593')->first());
+        $this->assertSame(2, Pin::query()->count());
+    }
+
+    public function test_import_runs_once_a_week(): void
     {
         $this->artisan('schedule:list')
             ->expectsOutputToContain('pins:import-kupibileti')
             ->assertSuccessful();
+
+        $event = collect(app(Schedule::class)->events())
+            ->first(fn ($event) => str_contains((string) $event->command, 'pins:import-kupibileti'));
+
+        $this->assertNotNull($event);
+        $this->assertSame('0 6 * * 1', $event->expression);
+        $this->assertSame('Europe/Sofia', $event->timezone);
     }
 
     /**
-     * @param  array{fightTitle?: string, artVenue?: string, past?: bool, haltAfter?: int|null, slugs?: list<string>}  $options
+     * @param  array{fightTitle?: string, artVenue?: string, past?: bool, haltAfter?: int|null, slugs?: list<string>, tour?: bool}  $options
      */
     private function install(array $options = []): void
     {
@@ -348,33 +382,112 @@ class KupibiletiImportTest extends TestCase
                 return Http::response($jpeg, 200, ['Content-Type' => 'image/jpeg']);
             }
 
-            $pages = $this->pages();
+            if ($host === 'api.scrape.ly') {
+                $data = $request->data();
+                $target = (string) ($data['url'] ?? '');
+                $this->assertSame('json', $data['format'] ?? null);
+                $this->assertSame('BG', $data['country'] ?? null);
+                $this->assertSame(['Bearer test-token'], $request->header('Authorization'));
 
-            if ($path === '/sitemap/bg.xml') {
-                $sitemap = '';
-
-                foreach (array_keys($pages) as $page) {
-                    $sitemap .= '<loc>https://kupibileti.bg'.$page.'</loc>';
-                }
-
-                return Http::response('<urlset>'.$sitemap.'</urlset>', 200, ['Content-Type' => 'application/xml']);
+                return $this->scraped($target);
             }
 
-            $page = rtrim($path, '/').'/';
-
-            if (isset($pages[$page])) {
-                $this->pageHits++;
-                $haltAfter = $this->options['haltAfter'] ?? null;
-
-                if ($haltAfter !== null && $this->pageHits > $haltAfter) {
-                    return Http::response('slow', 429);
-                }
-
-                return Http::response($pages[$page]);
+            if (in_array($host, ['kupibileti.bg', 'www.kupibileti.bg'], true)) {
+                return Http::response('direct', 500);
             }
 
             return Http::response('missing', 404);
         });
+    }
+
+    private function scraped(string $target)
+    {
+        $path = parse_url($target, PHP_URL_PATH) ?? '';
+        $pages = $this->pages();
+        $page = rtrim($path, '/').'/';
+
+        if ($path === '/sitemap/bg.xml') {
+            $sitemap = '';
+
+            foreach (array_keys($pages) as $listed) {
+                if (($this->options['tour'] ?? false) && str_contains($listed, 'lili-ivanova-66322')) {
+                    continue;
+                }
+
+                $sitemap .= '<loc>https://kupibileti.bg'.$listed.'</loc>';
+            }
+
+            if ($this->options['tour'] ?? false) {
+                $sitemap .= '<loc>https://kupibileti.bg/event-groups/lili-ivanova-turne-2027-4593/</loc>';
+            }
+
+            return $this->pageBody($target, '<urlset>'.$sitemap.'</urlset>');
+        }
+
+        if ($page === '/event-groups/lili-ivanova-turne-2027-4593/') {
+            return $this->pageBody($target, $this->seriesHtml([
+                'lili-ivanova-varna-66324',
+                'lili-ivanova-66322',
+            ]));
+        }
+
+        if (isset($pages[$page])) {
+            $this->pageHits++;
+            $haltAfter = $this->options['haltAfter'] ?? null;
+
+            if ($haltAfter !== null && $this->pageHits > $haltAfter) {
+                return Http::response([
+                    'url' => $target,
+                    'loadedUrl' => $target,
+                    'status' => 429,
+                    'html' => 'slow',
+                ]);
+            }
+
+            return $this->pageBody($target, $pages[$page]);
+        }
+
+        return Http::response([
+            'error' => ['type' => 'page-not-loaded', 'message' => 'missing'],
+        ], 422);
+    }
+
+    private function pageBody(string $target, string $html)
+    {
+        return Http::response([
+            'url' => $target,
+            'loadedUrl' => $target,
+            'status' => 200,
+            'chrome' => false,
+            'html' => $html,
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $slugs
+     */
+    private function seriesHtml(array $slugs): string
+    {
+        $subs = [];
+
+        foreach ($slugs as $slug) {
+            $subs[] = [
+                '@type' => 'Event',
+                'name' => 'Лили Иванова',
+                'url' => 'https://kupibileti.bg/events/'.$slug.'/',
+            ];
+        }
+
+        $node = [
+            '@context' => 'https://schema.org',
+            '@type' => 'EventSeries',
+            'name' => 'ЛИЛИ ИВАНОВА - ТУРНЕ 2027',
+            'subEvent' => $subs,
+        ];
+
+        return '<html><head><script type="application/ld+json">'
+            .json_encode($node, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            .'</script></head></html>';
     }
 
     /**
@@ -397,6 +510,22 @@ class KupibiletiImportTest extends TestCase
             }
 
             $pages['/events/'.$event['slug'].'/'] = $this->eventHtml($event);
+        }
+
+        if ($this->options['tour'] ?? false) {
+            $sofiaStart = now('Europe/Sofia')->addDays(405)->setTime(20, 0, 0);
+            $pages['/events/lili-ivanova-66322/'] = $this->eventHtml([
+                'slug' => 'lili-ivanova-66322',
+                'name' => 'Лили Иванова',
+                'section' => 'music',
+                'sectionName' => 'Музика',
+                'start' => $sofiaStart,
+                'end' => $sofiaStart->copy()->addHours(2),
+                'location' => 'СОФИЯ - Народен театър Иван Вазов',
+                'street' => 'гр. София',
+                'description' => 'Концерт в София.',
+                'image' => 'https://static-client.aws.kupibileti.bg/events/sofia-show.jpg',
+            ]);
         }
 
         return $pages;

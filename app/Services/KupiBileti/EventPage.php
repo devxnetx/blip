@@ -73,6 +73,62 @@ class EventPage
     }
 
     /**
+     * Dates on a tour page. Each one is its own event page.
+     *
+     * @return list<string>
+     */
+    public static function eventLinks(string $html): array
+    {
+        $urls = [];
+
+        foreach (self::nodes($html) as $node) {
+            if (self::type($node) !== 'EventSeries') {
+                continue;
+            }
+
+            foreach ($node['subEvent'] ?? [] as $sub) {
+                if (! is_array($sub)) {
+                    continue;
+                }
+
+                $url = self::eventUrl(is_string($sub['url'] ?? null) ? $sub['url'] : '');
+
+                if ($url !== null) {
+                    $urls[$url] = true;
+                }
+            }
+        }
+
+        preg_match_all('#(?:https://kupibileti\.bg)?(/events/[a-z0-9-]+/?)#i', $html, $found);
+
+        foreach ($found[1] as $path) {
+            $url = self::eventUrl('https://kupibileti.bg'.$path);
+
+            if ($url !== null) {
+                $urls[$url] = true;
+            }
+        }
+
+        return array_keys($urls);
+    }
+
+    private static function eventUrl(string $url): ?string
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+
+        if (! in_array($host, ['kupibileti.bg', 'www.kupibileti.bg'], true)) {
+            return null;
+        }
+
+        if (preg_match('#^/events/[a-z0-9-]+/?$#i', $path) !== 1) {
+            return null;
+        }
+
+        return 'https://kupibileti.bg'.rtrim($path, '/').'/';
+    }
+
+    /**
      * The hall name is the place. A neighbourhood block number is not.
      *
      * @return array{venue: ?string, city: ?string, address: ?string}

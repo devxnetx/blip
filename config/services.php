@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'scrapely' => [
+        'token' => env('SCRAPELY_TOKEN'),
+    ],
+
 ];
