@@ -126,8 +126,8 @@ class Client
                 ->acceptJson()
                 ->asJson()
                 ->connectTimeout(15)
-                ->timeout(240)
-                ->post(self::ACTOR.'?timeout=200', $input);
+                ->timeout(330)
+                ->post(self::ACTOR.'?timeout=300', $input);
         } catch (ConnectionException) {
             throw new RuntimeException('Facebook events did not return a list. The import stopped.');
         }
@@ -155,7 +155,13 @@ class Client
 
     private function maxResults(): int
     {
-        return max(1, min(50, (int) config('blip.facebook_events_max_per_city', 15)));
+        $limit = (int) config('blip.facebook_events_max_per_city', 0);
+
+        if ($limit <= 0) {
+            return 0;
+        }
+
+        return min(50, $limit);
     }
 
     private function pause(): void

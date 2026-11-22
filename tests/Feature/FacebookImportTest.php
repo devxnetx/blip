@@ -108,7 +108,7 @@ class FacebookImportTest extends TestCase
             return str_contains($request->url(), 'unseenuser~fb-events/run-sync-get-dataset-items')
                 && ($data['cityUrls'][0] ?? null) === 'https://www.facebook.com/events/explore/varna-bulgaria/114974968516694'
                 && ($data['onlyUpcoming'] ?? null) === true
-                && ($data['maxResults'] ?? null) === 15
+                && ($data['maxResults'] ?? null) === 0
                 && ($request->header('Authorization')[0] ?? '') === 'Bearer test-token';
         });
         Http::assertSent(function (Request $request) {
@@ -249,8 +249,16 @@ class FacebookImportTest extends TestCase
                 return Http::response($this->varnaEvents());
             }
 
+            if (is_string($cityUrl) && $cityUrl !== '') {
+                return Http::response([]);
+            }
+
             if (($data['queries'][0] ?? null) === 'Stara Zagora') {
                 return Http::response($this->staraEvents());
+            }
+
+            if (isset($data['queries'])) {
+                return Http::response([]);
             }
 
             return Http::response(['error' => 'unexpected'], 400);
