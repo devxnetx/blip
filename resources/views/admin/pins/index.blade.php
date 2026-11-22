@@ -41,6 +41,7 @@
                 <thead>
                     <tr>
                         <th>Съобщение</th>
+                        <th>Град</th>
                         <th>Източник</th>
                         <th>Връзка</th>
                         <th>Категория</th>
@@ -54,6 +55,7 @@
                     @foreach ($pins as $pin)
                         <tr>
                             <td><a href="{{ route('admin.pins.show', $pin) }}">{{ $pin->message }}</a></td>
+                            <td>{{ $pin->cityName() ?: '—' }}</td>
                             <td>{{ $pin->sourceLabel() ?: '—' }}</td>
                             <td>
                                 @if ($pin->source_url)

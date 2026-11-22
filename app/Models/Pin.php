@@ -279,6 +279,40 @@ class Pin extends Model
         return PinImport::LABELS[$this->source] ?? $this->source;
     }
 
+    /**
+     * The nearest city on the map. A pin without coordinates has none.
+     */
+    public function cityName(): ?string
+    {
+        if ($this->latitude === null || $this->longitude === null) {
+            return null;
+        }
+
+        $best = null;
+        $bestMeters = INF;
+        $cities = config('blip.facebook_cities', []);
+
+        foreach (is_array($cities) ? $cities : [] as $city) {
+            if (! is_array($city) || ! isset($city['name'], $city['latitude'], $city['longitude'])) {
+                continue;
+            }
+
+            $meters = self::metersBetween(
+                (float) $this->latitude,
+                (float) $this->longitude,
+                (float) $city['latitude'],
+                (float) $city['longitude'],
+            );
+
+            if ($meters < $bestMeters) {
+                $bestMeters = $meters;
+                $best = (string) $city['name'];
+            }
+        }
+
+        return $best;
+    }
+
     public function isPublic(): bool
     {
         return $this->kind !== self::KIND_UNASSIGNED

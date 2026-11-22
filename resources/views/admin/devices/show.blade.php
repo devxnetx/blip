@@ -46,6 +46,7 @@
                 <thead>
                     <tr>
                         <th>Съобщение</th>
+                        <th>Град</th>
                         <th>Категория</th>
                         <th>Място</th>
                         <th>Създаден</th>
@@ -57,6 +58,7 @@
                     @foreach ($pins as $pin)
                         <tr>
                             <td>{{ $pin->message }}</td>
+                            <td>{{ $pin->cityName() ?: '—' }}</td>
                             <td>{{ \App\Models\Category::label($pin->category) }}</td>
                             <td>{{ number_format($pin->latitude, 5, '.', '') }}, {{ number_format($pin->longitude, 5, '.', '') }}</td>
                             <td class="date">{{ $pin->created_at?->timezone('Europe/Sofia')->format('d.m.Y H:i') }}</td>
