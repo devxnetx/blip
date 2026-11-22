@@ -44,9 +44,16 @@
         </label>
         <p class="meta">Всяка нощ в 05:40, българско време. Клубни участия и концерти. Снимката се записва.</p>
 
+        <label class="switch">
+            <input type="checkbox" name="import_facebook_enabled" value="1" @checked($facebook)>
+            <i aria-hidden="true"></i>
+            <span>Facebook събития</span>
+        </label>
+        <p class="meta">На 1, 4, 7, 10, 13, 16, 19, 22, 25 и 28 число, в 06:20, българско време. Стара Загора и Варна. Снимката се записва. Събитие без координати остава без място.</p>
+
         <label for="import-days">Дни напред</label>
         <input id="import-days" name="import_days_ahead" type="number" min="1" max="90" value="{{ old('import_days_ahead', $days) }}" required>
-        <p class="meta">Колко дни напред да се четат Спортен календар, EventiBG и Актуалните новини. Купи билети чете целия предстоящ списък. Събитие, което трае цяла седмица, се записва веднъж.</p>
+        <p class="meta">Колко дни напред да се четат Спортен календар, EventiBG, Актуалните новини и Facebook. Купи билети чете целия предстоящ списък. Събитие, което трае цяла седмица, се записва веднъж.</p>
 
         <div class="form-actions">
             <button type="submit">Запази</button>

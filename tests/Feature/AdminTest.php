@@ -658,6 +658,7 @@ class AdminTest extends TestCase
             ->assertSee('EventiBG')
             ->assertSee('Купи билети')
             ->assertSee('Актуалните новини')
+            ->assertSee('Facebook събития')
             ->assertSee('Ограничението в дни не важи тук.')
             ->assertSee('Снимката на събитието се записва.')
             ->assertDontSee('Снимките от този сайт не се взимат.')
@@ -676,6 +677,7 @@ class AdminTest extends TestCase
         $this->assertTrue(Setting::enabled('import_eventibg_enabled'));
         $this->assertFalse(Setting::enabled('import_kupibileti_enabled'));
         $this->assertFalse(Setting::enabled('import_aktualnitenovini_enabled'));
+        $this->assertFalse(Setting::enabled('import_facebook_enabled'));
         $this->assertSame(7, Setting::daysAhead());
 
         $this->actingAs($admin)

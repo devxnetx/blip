@@ -21,6 +21,30 @@ return [
     // Gap between Kupi Bileti pages. That import reads every upcoming event.
     'kupibileti_pause_ms' => (int) env('KUPIBILETI_PAUSE_MS', 1500),
 
+    // Gap between Facebook event reads. A free Apify account still stops at 5 events per call.
+    'facebook_pause_ms' => (int) env('FACEBOOK_PAUSE_MS', 1500),
+    'facebook_events_max_per_city' => 15,
+    'facebook_cities' => [
+        [
+            'name' => 'Стара Загора',
+            'url' => 'https://www.facebook.com/events/explore/stara-zagora-bulgaria/108597975837530',
+            'query' => 'Stara Zagora',
+            'city_id' => '108597975837530',
+            'latitude' => 42.4258,
+            'longitude' => 25.6345,
+            'match' => ['stara zagora', 'стара загора'],
+        ],
+        [
+            'name' => 'Варна',
+            'url' => 'https://www.facebook.com/events/explore/varna-bulgaria/114974968516694',
+            'query' => 'Varna',
+            'city_id' => '114974968516694',
+            'latitude' => 43.2141,
+            'longitude' => 27.9147,
+            'match' => ['varna', 'варна'],
+        ],
+    ],
+
     // Gap between address lookups. Nominatim asks for at most one a second.
     'nominatim_pause_ms' => (int) env('NOMINATIM_PAUSE_MS', 1100),
 

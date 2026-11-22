@@ -32,6 +32,12 @@ Schedule::command('pins:import-kupibileti')
     ->withoutOverlapping(180)
     ->appendOutputTo(storage_path('logs/kupibileti-import.log'));
 
+Schedule::command('pins:import-facebook')
+    ->cron('20 6 */3 * *')
+    ->timezone('Europe/Sofia')
+    ->withoutOverlapping(180)
+    ->appendOutputTo(storage_path('logs/facebook-import.log'));
+
 Schedule::command('pins:promote-started')
     ->everyMinute()
     ->withoutOverlapping();

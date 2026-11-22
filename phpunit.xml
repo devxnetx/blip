@@ -38,6 +38,8 @@
         <env name="EVENTIBG_DAYS" value="14"/>
         <env name="KUPIBILETI_PAUSE_MS" value="0"/>
         <env name="AKTUALNITENOVINI_PAUSE_MS" value="0"/>
+        <env name="FACEBOOK_PAUSE_MS" value="0"/>
         <env name="SCRAPELY_TOKEN" value="test-token"/>
+        <env name="APIFY_TOKEN" value="test-token"/>
     </php>
 </phpunit>

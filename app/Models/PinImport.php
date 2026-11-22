@@ -16,11 +16,14 @@ class PinImport extends Model
 
     public const SOURCE_AKTUALNITENOVINI = 'aktualnitenovini';
 
+    public const SOURCE_FACEBOOK = 'facebook';
+
     public const LABELS = [
         self::SOURCE_SPORTEN => 'Спортен календар',
         self::SOURCE_EVENTIBG => 'EventiBG',
         self::SOURCE_KUPIBILETI => 'Купи билети',
         self::SOURCE_AKTUALNITENOVINI => 'Актуалните новини',
+        self::SOURCE_FACEBOOK => 'Facebook събития',
     ];
 
     public static function begin(string $source): self

@@ -39,4 +39,8 @@ return [
         'token' => env('SCRAPELY_TOKEN'),
     ],
 
+    'apify' => [
+        'token' => env('APIFY_TOKEN'),
+    ],
+
 ];
