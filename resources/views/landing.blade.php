@@ -63,7 +63,7 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 168px;
+            width: 260px;
             opacity: 0;
             color: inherit;
             text-decoration: none;
@@ -80,8 +80,8 @@
         }
 
         @keyframes fall {
-            from { transform: translate3d(0, -36vh, 0) scale(var(--scale, 1)); }
-            to { transform: translate3d(var(--drift, 0px), 120vh, 0) scale(var(--scale, 1)); }
+            from { transform: translate3d(0, -42vh, 0); }
+            to { transform: translate3d(var(--drift, 0px), 128vh, 0); }
         }
 
         .bubble {
@@ -96,8 +96,8 @@
         }
 
         .bubble img {
-            width: 52px;
-            height: 52px;
+            width: 72px;
+            height: 72px;
             flex: none;
             border-radius: 10px;
             object-fit: cover;
@@ -109,7 +109,7 @@
 
         .bubble strong {
             display: block;
-            font-size: 13px;
+            font-size: 15px;
             font-weight: 600;
             line-height: 1.3;
         }
@@ -223,18 +223,34 @@
             line-height: 1.05;
         }
 
+        .hero-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .about-link,
         .view-map {
             display: flex;
+            flex: 1;
             align-items: center;
             justify-content: center;
             height: 38px;
-            margin-top: 10px;
             border-radius: 8px;
-            background: var(--pin);
-            color: #fff;
             text-decoration: none;
             font-size: 14px;
             font-weight: 600;
+        }
+
+        .about-link {
+            border: 1px solid var(--line);
+            background: transparent;
+            color: var(--ink);
+        }
+
+        .view-map {
+            background: var(--pin);
+            color: #fff;
         }
 
         #boot {
@@ -296,7 +312,8 @@
 
         @media (max-width: 700px) {
             body { overflow-x: hidden; }
-            a.drop { width: 142px; }
+            a.drop { width: 220px; }
+            .bubble img { width: 60px; height: 60px; }
             .center { padding: 56px 14px 48px; }
             h1 { font-size: 26px; }
             .lede { font-size: 13px; }
@@ -309,7 +326,6 @@
                 animation: none;
                 opacity: 1;
                 top: var(--rest, 12%);
-                transform: scale(var(--scale, 1));
             }
             #boot { transition: none; }
         }
@@ -337,7 +353,10 @@
                     <span><small>Get it on</small><b>Google Play</b></span>
                 </a>
             </div>
-            <a class="view-map" href="{{ route('map') }}">Виж картата</a>
+            <div class="hero-actions">
+                <a class="about-link" href="{{ route('about') }}">За нас</a>
+                <a class="view-map" href="{{ route('map') }}">Виж картата</a>
+            </div>
         </div>
     </main>
     <div id="boot">
@@ -402,29 +421,26 @@
             if (!pins.length) {
                 return;
             }
-            const total = Math.max(40, pins.length * 3);
-            for (let index = 0; index < total; index += 1) {
-                const pin = pins[index % pins.length];
+            pins.forEach((pin, index) => {
                 const drop = document.createElement('a');
-                const duration = 7 + (index % 8) * 1.35;
+                const duration = 34 + (index % 6) * 3;
                 drop.className = 'drop';
                 drop.href = '/map?pin=' + encodeURIComponent(pin.id);
-                drop.style.left = ((index * 17 + (index % 5) * 9) % 92) + '%';
-                drop.style.animationDuration = duration.toFixed(2) + 's';
-                drop.style.animationDelay = (-((index * 0.47) % duration)).toFixed(2) + 's';
-                drop.style.setProperty('--scale', (0.58 + (index % 6) * 0.08).toFixed(2));
-                drop.style.setProperty('--drift', (((index % 7) - 3) * 16) + 'px');
-                drop.style.setProperty('--rest', (6 + (index * 13) % 80) + '%');
+                drop.style.left = ((index * 13 + (index % 4) * 7) % 86) + '%';
+                drop.style.animationDuration = duration + 's';
+                drop.style.animationDelay = (-((index * 2.4) % duration)).toFixed(2) + 's';
+                drop.style.setProperty('--drift', (((index % 5) - 2) * 10) + 'px');
+                drop.style.setProperty('--rest', (6 + (index * 11) % 78) + '%');
                 drop.appendChild(bubble(pin));
                 rain.appendChild(drop);
-            }
+            });
         }
 
         async function load() {
-            const response = await fetch('/api/pins/latest', { headers: { Accept: 'application/json' } });
+            const response = await fetch('/api/pins/latest?limit=48', { headers: { Accept: 'application/json' } });
             if (!response.ok) throw new Error('latest');
             const data = await response.json();
-            return Array.isArray(data.pins) ? data.pins.slice(0, 15) : [];
+            return Array.isArray(data.pins) ? data.pins : [];
         }
 
         const opened = performance.now();

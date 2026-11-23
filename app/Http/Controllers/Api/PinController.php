@@ -78,14 +78,17 @@ class PinController extends Controller
         return response()->json(['cities' => MapCities::counts()]);
     }
 
-    public function latest(): JsonResponse
+    public function latest(Request $request): JsonResponse
     {
         Pin::pruneExpired();
+
+        $limit = (int) $request->query('limit', 15);
+        $limit = max(1, min($limit, 60));
 
         $pins = Pin::query()
             ->onMap()
             ->latest()
-            ->limit(15)
+            ->limit($limit)
             ->get()
             ->map(fn (Pin $pin) => $pin->toApi(false))
             ->values();

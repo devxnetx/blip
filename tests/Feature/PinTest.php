@@ -30,6 +30,7 @@ class PinTest extends TestCase
             ->assertDontSee('exp://u.expo.dev/update/01a1e4d4-a46f-7bac-9b48-48946b24bd2e', false)
             ->assertDontSee('https://apps.apple.com', false)
             ->assertDontSee('https://play.google.com/store', false)
+            ->assertSee('За нас')
             ->assertSee('Виж картата')
             ->assertSee('id="rain"', false)
             ->assertSee('class="hero-pin"', false)
@@ -95,6 +96,22 @@ class PinTest extends TestCase
             ->assertJsonMissing(['message' => 'Older city note'])
             ->assertJsonMissing(['message' => 'Expired city note'])
             ->assertJsonMissing(['message' => 'secret reply text']);
+
+        $this->getJson('/api/pins/latest?limit=40')
+            ->assertOk()
+            ->assertJsonCount(16, 'pins')
+            ->assertJsonFragment(['message' => 'Older city note']);
+    }
+
+    public function test_about_page_has_the_site_nav(): void
+    {
+        $this->get('/about')
+            ->assertOk()
+            ->assertSee('За нас')
+            ->assertSee('Начало')
+            ->assertSee('Картата')
+            ->assertSee('class="site-nav"', false)
+            ->assertSee('Няма нужда от профил', false);
     }
 
     public function test_the_desktop_map_views_pins_without_a_way_to_add_one(): void

@@ -23,6 +23,16 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/about', function () {
+    return view('about', [
+        'preview' => LinkPreview::page(
+            'За нас — Kostaa',
+            'Kostaa е карта за кратки бележки и събития. Оставяш пин там, където стоиш.',
+            rtrim(request()->getSchemeAndHttpHost(), '/').'/about',
+        ),
+    ]);
+})->name('about');
+
 Route::get('/map', function (Request $request) {
     $pin = null;
     $raw = $request->query('pin');
