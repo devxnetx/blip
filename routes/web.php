@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\PinController as AdminPinController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\PinPageController;
 use App\Http\Controllers\SiteController;
 use App\Models\Pin;
 use App\Support\LinkPreview;
@@ -32,6 +33,11 @@ Route::post('/contact', [SiteController::class, 'storeContact'])
     ->middleware('throttle:5,1')
     ->name('contact.store');
 Route::get('/support', [SiteController::class, 'support'])->name('support');
+Route::get('/pins', [PinPageController::class, 'index'])->name('pins');
+Route::get('/pins/{city}', [PinPageController::class, 'city'])->where('city', '[a-z0-9-]+')->name('pins.city');
+Route::get('/pins/{city}/{pin}', [PinPageController::class, 'show'])->where(['city' => '[a-z0-9-]+', 'pin' => '[a-z0-9-]+'])->name('pins.show');
+Route::get('/sitemap.xml', [PinPageController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [PinPageController::class, 'robots'])->name('robots');
 
 Route::get('/map', function (Request $request) {
     $pin = null;

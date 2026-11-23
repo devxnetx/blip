@@ -227,11 +227,28 @@
             main { width: min(760px, calc(100% - 28px)); padding-top: 32px; }
             .socials li { align-items: flex-start; flex-direction: column; gap: 4px; }
         }
+
+        body.is-wide {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        main.is-wide {
+            width: auto;
+            margin: 0;
+            padding: 0;
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+        }
     </style>
+    @stack('head')
 </head>
-<body>
+<body @class(['is-wide' => $wide ?? false])>
     @include('partials.site-nav')
-    <main>
+    <main @class(['is-wide' => $wide ?? false])>
         @yield('content')
     </main>
     @stack('scripts')

@@ -9,6 +9,7 @@
         <a href="{{ route('how') }}" @class(['is-on' => request()->routeIs('how')])>Как работи</a>
         <a href="{{ route('contact') }}" @class(['is-on' => request()->routeIs('contact')])>Контакт</a>
         <a href="{{ route('support') }}" @class(['is-on' => request()->routeIs('support')])>Подкрепи ни</a>
+        <a href="{{ route('pins') }}" @class(['is-on' => request()->routeIs('pins', 'pins.city', 'pins.show')])>Пинове</a>
         <a class="map-link" href="{{ route('map') }}">Картата</a>
     </div>
 </nav>
