@@ -45,7 +45,7 @@ const CITIES = [
 
 const map = new maplibregl.Map({
   container: 'map',
-  style: '/maps/fiord-3d.json',
+  style: 'https://tiles.openfreemap.org/styles/liberty',
   center: [25.6345, 42.4258],
   zoom: 12.2,
   pitch: 48,
