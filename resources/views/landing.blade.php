@@ -122,16 +122,6 @@
             font-style: normal;
         }
 
-        .bubble:after {
-            content: "";
-            position: absolute;
-            left: 22px;
-            bottom: -8px;
-            border-left: 7px solid transparent;
-            border-right: 7px solid transparent;
-            border-top: 8px solid var(--ink);
-        }
-
         .center {
             position: relative;
             z-index: 5;
@@ -421,7 +411,8 @@
             if (!pins.length) {
                 return;
             }
-            pins.forEach((pin, index) => {
+            const falling = window.matchMedia('(max-width: 700px)').matches ? pins.slice(0, 8) : pins;
+            falling.forEach((pin, index) => {
                 const drop = document.createElement('a');
                 const duration = 34 + (index % 6) * 3;
                 drop.className = 'drop';
