@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\DeviceController;
 use App\Http\Controllers\Admin\PinController as AdminPinController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\SiteController;
 use App\Models\Pin;
 use App\Support\LinkPreview;
 use Illuminate\Http\Request;
@@ -23,15 +25,13 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/about', function () {
-    return view('about', [
-        'preview' => LinkPreview::page(
-            'За нас — Kostaa',
-            'Kostaa е карта за кратки бележки и събития. Оставяш пин там, където стоиш.',
-            rtrim(request()->getSchemeAndHttpHost(), '/').'/about',
-        ),
-    ]);
-})->name('about');
+Route::get('/about', [SiteController::class, 'about'])->name('about');
+Route::get('/how', [SiteController::class, 'how'])->name('how');
+Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
+Route::post('/contact', [SiteController::class, 'storeContact'])
+    ->middleware('throttle:5,1')
+    ->name('contact.store');
+Route::get('/support', [SiteController::class, 'support'])->name('support');
 
 Route::get('/map', function (Request $request) {
     $pin = null;
@@ -62,6 +62,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/devices/{device}', [DeviceController::class, 'show'])->name('admin.devices.show');
     Route::post('/admin/devices/{device}/ban', [DeviceController::class, 'ban'])->name('admin.devices.ban');
     Route::post('/admin/devices/{device}/unban', [DeviceController::class, 'unban'])->name('admin.devices.unban');
+    Route::get('/admin/contacts', [ContactMessageController::class, 'index'])->name('admin.contacts');
+    Route::get('/admin/contacts/{contactMessage}', [ContactMessageController::class, 'show'])->name('admin.contacts.show');
+    Route::delete('/admin/contacts/{contactMessage}', [ContactMessageController::class, 'destroy'])->name('admin.contacts.destroy');
     Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users');
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
     Route::get('/admin/users/{user}', [UserController::class, 'show'])->name('admin.users.show');

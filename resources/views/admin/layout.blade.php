@@ -47,6 +47,9 @@
         }
 
         .mark {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             color: var(--ink);
             font-weight: 700;
             font-size: 22px;
@@ -54,6 +57,8 @@
             text-decoration: none;
             padding: 0 12px;
         }
+
+        .mark img { width: 28px; height: 28px; border-radius: 8px; display: block; }
 
         .mark i { color: var(--pin); font-style: normal; }
 
@@ -87,6 +92,33 @@
         }
 
         .side nav a.on { background: var(--ink); color: var(--card); }
+        .side nav a.map-link { color: var(--pin); }
+
+        .nav-count {
+            margin-left: auto;
+            min-width: 20px;
+            padding: 1px 6px;
+            border-radius: 999px;
+            background: var(--pin);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .side nav a.on .nav-count { background: var(--card); color: var(--ink); }
+
+        .pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: var(--pin);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .message-body { white-space: pre-wrap; margin: 0; line-height: 1.5; }
 
         .icon { width: 16px; height: 16px; flex: none; display: block; }
         .side .icon { width: 18px; height: 18px; }
@@ -369,14 +401,15 @@
     @include('admin.icons')
     <div class="shell">
         <aside class="side">
-            <a class="mark" href="{{ route('admin.devices') }}"><i>KO</i>staa</a>
+            <a class="mark" href="{{ route('admin.devices') }}"><img src="{{ asset('icons/icon-192.png') }}" alt="" width="28" height="28"><span><i>KO</i>staa</span></a>
             <nav>
                 <p class="nav-label">Функции</p>
                 <a href="{{ route('admin.pins') }}" @class(['on' => request()->routeIs('admin.pins*')])>@include('admin.icon', ['name' => 'pin']) Пинове</a>
                 <a href="{{ route('admin.devices') }}" @class(['on' => request()->routeIs('admin.devices*')])>@include('admin.icon', ['name' => 'device']) Устройства</a>
                 <a href="{{ route('admin.categories') }}" @class(['on' => request()->routeIs('admin.categories*')])>@include('admin.icon', ['name' => 'tag']) Категории</a>
-                <a href="{{ route('map') }}">@include('admin.icon', ['name' => 'map']) Карта</a>
+                <a class="map-link" href="{{ route('map') }}">@include('admin.icon', ['name' => 'map']) Карта</a>
                 <p class="nav-label">Система</p>
+                <a href="{{ route('admin.contacts') }}" @class(['on' => request()->routeIs('admin.contacts*')])>@include('admin.icon', ['name' => 'mail']) Съобщения @if (($unreadContacts ?? 0) > 0)<span class="nav-count">{{ $unreadContacts }}</span>@endif</a>
                 <a href="{{ route('admin.users') }}" @class(['on' => request()->routeIs('admin.users*')])>@include('admin.icon', ['name' => 'users']) Потребители</a>
                 <a href="{{ route('admin.imports') }}" @class(['on' => request()->routeIs('admin.imports')])>@include('admin.icon', ['name' => 'clock']) Импорти</a>
                 <a href="{{ route('admin.settings') }}" @class(['on' => request()->routeIs('admin.settings*')])>@include('admin.icon', ['name' => 'sliders']) Настройки</a>

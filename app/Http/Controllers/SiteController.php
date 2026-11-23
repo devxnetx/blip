@@ -1,0 +1,108 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ContactMessage;
+use App\Support\LinkPreview;
+use App\Support\SiteLinks;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class SiteController extends Controller
+{
+    public function about(): View
+    {
+        return view('about', [
+            'preview' => $this->preview(
+                'За нас — Kostaa',
+                'Kostaa е карта за кратки бележки и събития. Оставяш пин там, където стоиш.',
+                '/about',
+            ),
+        ]);
+    }
+
+    public function how(): View
+    {
+        return view('how', [
+            'preview' => $this->preview(
+                'Как работи — Kostaa',
+                'Пин се пуска само там, където стоиш. Предстоящо събитие се вижда веднага и чака часа си.',
+                '/how',
+            ),
+        ]);
+    }
+
+    public function contact(): View
+    {
+        return view('contact', [
+            'social' => SiteLinks::social(),
+            'preview' => $this->preview(
+                'Контакт — Kostaa',
+                'Пиши ни за картата. Съобщението стига до админ панела.',
+                '/contact',
+            ),
+        ]);
+    }
+
+    public function storeContact(Request $request): RedirectResponse
+    {
+        if (trim((string) $request->input('company')) !== '') {
+            return redirect()
+                ->route('contact')
+                ->with('status', 'Съобщението е изпратено. Ще го прочетем.');
+        }
+
+        $request->merge([
+            'name' => trim((string) $request->input('name')),
+            'email' => trim((string) $request->input('email')),
+            'message' => trim((string) $request->input('message')),
+        ]);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+            'email' => ['required', 'string', 'email', 'max:160'],
+            'message' => ['required', 'string', 'max:2000'],
+        ], [
+            'name.required' => 'Напиши име.',
+            'name.max' => 'Името може да е до 80 знака.',
+            'email.required' => 'Напиши имейл.',
+            'email.email' => 'Имейлът не изглежда верен.',
+            'email.max' => 'Имейлът е твърде дълъг.',
+            'message.required' => 'Напиши съобщение.',
+            'message.max' => 'Съобщението може да е до 2000 знака.',
+        ]);
+
+        ContactMessage::query()->create($data);
+
+        return redirect()
+            ->route('contact')
+            ->with('status', 'Съобщението е изпратено. Ще го прочетем.');
+    }
+
+    public function support(): View
+    {
+        return view('support', [
+            'revolut' => SiteLinks::revolut(),
+            'ethereum' => SiteLinks::ethereum(),
+            'solana' => SiteLinks::solana(),
+            'preview' => $this->preview(
+                'Подкрепи ни — Kostaa',
+                'Kostaa е безплатна. Ако искаш, можеш да помогнеш с Revolut, Ethereum или Solana.',
+                '/support',
+            ),
+        ]);
+    }
+
+    /**
+     * @return array{title: string, description: string, image: string, image_type: string, url: string}
+     */
+    private function preview(string $title, string $description, string $path): array
+    {
+        return LinkPreview::page(
+            $title,
+            $description,
+            rtrim(request()->getSchemeAndHttpHost(), '/').$path,
+        );
+    }
+}

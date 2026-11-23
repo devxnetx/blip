@@ -55,6 +55,33 @@
         <input id="import-days" name="import_days_ahead" type="number" min="1" max="90" value="{{ old('import_days_ahead', $days) }}" required>
         <p class="meta">Колко дни напред да се четат Спортен календар, EventiBG, Актуалните новини и Facebook. Купи билети чете целия предстоящ списък. Събитие, което трае цяла седмица, се записва веднъж.</p>
 
+        <h2>Сайт</h2>
+        <p class="meta">Връзките се показват на страницата Контакт. Празно поле маха връзката от сайта.</p>
+
+        <label for="social-instagram">Instagram</label>
+        <input id="social-instagram" name="social_instagram" type="url" value="{{ old('social_instagram', $links['social_instagram']) }}" placeholder="https://instagram.com/…" maxlength="255">
+
+        <label for="social-facebook">Facebook</label>
+        <input id="social-facebook" name="social_facebook" type="url" value="{{ old('social_facebook', $links['social_facebook']) }}" placeholder="https://facebook.com/…" maxlength="255">
+
+        <label for="social-telegram">Telegram</label>
+        <input id="social-telegram" name="social_telegram" type="url" value="{{ old('social_telegram', $links['social_telegram']) }}" placeholder="https://t.me/…" maxlength="255">
+
+        <label for="social-tiktok">TikTok</label>
+        <input id="social-tiktok" name="social_tiktok" type="url" value="{{ old('social_tiktok', $links['social_tiktok']) }}" placeholder="https://www.tiktok.com/@…" maxlength="255">
+
+        <h2>Подкрепа</h2>
+        <p class="meta">Тези стойности се показват на Подкрепи ни. Празно поле маха адреса от сайта.</p>
+
+        <label for="donate-revolut">Revolut</label>
+        <input id="donate-revolut" name="donate_revolut" type="url" value="{{ old('donate_revolut', $links['donate_revolut']) }}" placeholder="https://revolut.me/…" maxlength="255">
+
+        <label for="donate-eth">Ethereum</label>
+        <input id="donate-eth" name="donate_eth" value="{{ old('donate_eth', $links['donate_eth']) }}" placeholder="0x…" maxlength="42" spellcheck="false" autocomplete="off">
+
+        <label for="donate-sol">Solana</label>
+        <input id="donate-sol" name="donate_sol" value="{{ old('donate_sol', $links['donate_sol']) }}" placeholder="Solana адрес" maxlength="44" spellcheck="false" autocomplete="off">
+
         <div class="form-actions">
             <button type="submit">Запази</button>
         </div>

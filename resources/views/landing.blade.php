@@ -45,11 +45,36 @@
 
         .street { position: absolute; background: rgba(255, 255, 255, 0.55); }
         .street.h { left: 0; right: 0; height: 22px; }
-        .street.v { top: 0; bottom: 0; width: 16px; }
+        .street.v { top: 0; bottom: 0; width: 22px; }
         .h1 { top: 28%; }
         .h2 { top: 64%; }
         .v1 { left: 24%; }
         .v2 { left: 57%; }
+
+        .street span {
+            position: absolute;
+            color: #6a655e;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .street.h span { top: 50%; transform: translate(-50%, -50%); }
+        .street.h .n1 { left: 12%; }
+        .street.h .n2 { left: 40%; }
+        .street.h .n3 { left: 78%; }
+
+        .street.v span {
+            left: 50%;
+            writing-mode: vertical-rl;
+            transform: translateX(-50%);
+        }
+
+        .street.v .n1 { top: 5%; }
+        .street.v .n2 { top: 42%; }
+        .street.v .n3 { top: 76%; }
 
         .rain {
             position: fixed;
@@ -307,6 +332,10 @@
             .center { padding: 56px 14px 48px; }
             h1 { font-size: 26px; }
             .lede { font-size: 13px; }
+            .street span { font-size: 10px; }
+            .street .n1, .street .n3 { display: none; }
+            .street.h .n2 { left: calc(57% + 30px); transform: translateY(-50%); }
+            .street.v .n2 { top: 6%; }
             .badge { height: 40px; padding-right: 10px; }
             .badge b { font-size: 13px; }
         }
@@ -323,10 +352,26 @@
 </head>
 <body>
     <div class="map-bg" aria-hidden="true">
-        <div class="street h h1"></div>
-        <div class="street h h2"></div>
-        <div class="street v v1"></div>
-        <div class="street v v2"></div>
+        <div class="street h h1">
+            <span class="n1">бул. Цар Симеон Велики</span>
+            <span class="n2">бул. Цар Симеон Велики</span>
+            <span class="n3">бул. Цар Симеон Велики</span>
+        </div>
+        <div class="street h h2">
+            <span class="n1">ул. Генерал Столетов</span>
+            <span class="n2">ул. Генерал Столетов</span>
+            <span class="n3">ул. Генерал Столетов</span>
+        </div>
+        <div class="street v v1">
+            <span class="n1">бул. Руски</span>
+            <span class="n2">бул. Руски</span>
+            <span class="n3">бул. Руски</span>
+        </div>
+        <div class="street v v2">
+            <span class="n1">ул. Св. Княз Борис</span>
+            <span class="n2">ул. Св. Княз Борис</span>
+            <span class="n3">ул. Св. Княз Борис</span>
+        </div>
     </div>
     <div id="rain" class="rain"></div>
     <main class="center">

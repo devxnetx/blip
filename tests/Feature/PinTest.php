@@ -33,6 +33,10 @@ class PinTest extends TestCase
             ->assertSee('За нас')
             ->assertSee('Виж картата')
             ->assertSee('id="rain"', false)
+            ->assertSee('бул. Цар Симеон Велики', false)
+            ->assertSee('ул. Генерал Столетов', false)
+            ->assertSee('бул. Руски', false)
+            ->assertSee('ул. Св. Княз Борис', false)
             ->assertSee('class="hero-pin"', false)
             ->assertSee('/map?pin=', false)
             ->assertDontSee('Последни')
@@ -109,8 +113,13 @@ class PinTest extends TestCase
             ->assertOk()
             ->assertSee('За нас')
             ->assertSee('Начало')
+            ->assertSee('Как работи')
+            ->assertSee('Контакт')
+            ->assertSee('Подкрепи ни')
             ->assertSee('Картата')
             ->assertSee('class="site-nav"', false)
+            ->assertSee('class="map-link"', false)
+            ->assertSee('icons/icon-192.png', false)
             ->assertSee('Няма нужда от профил', false);
     }
 

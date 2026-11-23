@@ -3,10 +3,12 @@
 namespace App\Providers;
 
 use App\Models\Category;
+use App\Models\ContactMessage;
 use App\Models\Device;
 use App\Models\Pin;
 use App\Models\Reply;
 use App\Models\Report;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,6 +36,20 @@ class AppServiceProvider extends ServiceProvider
         Pin::created($record);
         Reply::created($record);
         Report::created($record);
+
+        View::composer('admin.layout', function ($view): void {
+            $unread = 0;
+
+            try {
+                if (Schema::hasTable('contact_messages')) {
+                    $unread = ContactMessage::query()->whereNull('read_at')->count();
+                }
+            } catch (\Throwable) {
+                $unread = 0;
+            }
+
+            $view->with('unreadContacts', $unread);
+        });
 
         View::composer(['map', 'landing'], function ($view): void {
             $categories = Category::options();
