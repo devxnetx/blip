@@ -51,34 +51,28 @@
         .v1 { left: 24%; }
         .v2 { left: 57%; }
 
-        .rain-side {
+        .rain {
             position: fixed;
-            top: 0;
-            bottom: 0;
+            inset: 0;
             z-index: 1;
-            width: max(0px, calc((100% - 760px) / 2));
             overflow: hidden;
             pointer-events: none;
         }
 
-        #rain-left { left: 0; }
-        #rain-right { right: 0; }
-
         a.drop {
             position: absolute;
             top: 0;
-            width: min(210px, calc(100% - 28px));
+            left: 0;
+            width: 168px;
             opacity: 0;
             color: inherit;
             text-decoration: none;
             pointer-events: auto;
             cursor: pointer;
+            will-change: transform;
         }
 
-        #rain-left a.drop { left: auto; right: 16px; }
-        #rain-right a.drop { left: 16px; }
-
-        .rain-side.on a.drop {
+        .rain.on a.drop {
             opacity: 1;
             animation-name: fall;
             animation-timing-function: linear;
@@ -86,8 +80,8 @@
         }
 
         @keyframes fall {
-            from { transform: translate3d(0, -28vh, 0); }
-            to { transform: translate3d(0, 118vh, 0); }
+            from { transform: translate3d(0, -36vh, 0) scale(var(--scale, 1)); }
+            to { transform: translate3d(var(--drift, 0px), 120vh, 0) scale(var(--scale, 1)); }
         }
 
         .bubble {
@@ -102,8 +96,8 @@
         }
 
         .bubble img {
-            width: 72px;
-            height: 72px;
+            width: 52px;
+            height: 52px;
             flex: none;
             border-radius: 10px;
             object-fit: cover;
@@ -115,7 +109,7 @@
 
         .bubble strong {
             display: block;
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 600;
             line-height: 1.3;
         }
@@ -140,88 +134,106 @@
 
         .center {
             position: relative;
-            z-index: 2;
+            z-index: 5;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 48px 24px;
+            padding: 48px 20px 64px;
             text-align: center;
             pointer-events: none;
         }
 
-        .copy {
-            width: min(640px, 100%);
-            min-width: 0;
+        .hero-pin {
+            position: relative;
+            width: min(400px, 100%);
+            padding: 22px 22px 20px;
+            border-radius: 18px;
+            background: var(--card);
+            box-shadow: 0 18px 50px rgba(28, 27, 25, 0.22);
             pointer-events: auto;
+        }
+
+        .hero-pin:after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -11px;
+            margin-left: -11px;
+            border-left: 11px solid transparent;
+            border-right: 11px solid transparent;
+            border-top: 12px solid var(--card);
         }
 
         h1 {
             margin: 0;
             font-family: "Instrument Serif", serif;
-            font-size: clamp(40px, 5vw, 72px);
+            font-size: clamp(26px, 3vw, 34px);
             font-weight: 400;
-            letter-spacing: -0.04em;
-            line-height: 0.95;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
         }
 
         .lede {
-            margin: 22px auto 0;
-            max-width: 38ch;
+            margin: 10px auto 0;
+            max-width: 36ch;
             color: var(--muted);
-            font-size: 18px;
+            font-size: 14px;
         }
 
         .stores {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 12px;
-            margin-top: 28px;
+            gap: 8px;
+            margin-top: 16px;
         }
 
-        .store {
+        .badge {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            min-width: 168px;
-            height: 52px;
-            padding: 0 16px 0 12px;
-            border-radius: 10px;
+            gap: 8px;
+            height: 44px;
+            padding: 0 12px 0 10px;
+            border: 1px solid #555;
+            border-radius: 8px;
             background: #000;
             color: #fff;
             text-decoration: none;
             text-align: left;
         }
 
-        .store svg { width: 22px; height: 22px; flex: none; }
+        .badge svg { width: 22px; height: 22px; flex: none; }
 
-        .store small {
+        .badge small {
             display: block;
-            font-size: 10px;
-            line-height: 1.1;
-            letter-spacing: 0.02em;
+            font-size: 8px;
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            line-height: 1;
+            text-transform: uppercase;
         }
 
-        .store b {
+        .badge b {
             display: block;
-            font-size: 17px;
+            margin-top: 1px;
+            font-size: 15px;
             font-weight: 600;
             letter-spacing: -0.03em;
-            line-height: 1.1;
+            line-height: 1.05;
         }
 
         .view-map {
-            display: inline-flex;
+            display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 148px;
-            height: 52px;
-            padding: 0 18px;
-            border-radius: 10px;
+            height: 38px;
+            margin-top: 10px;
+            border-radius: 8px;
             background: var(--pin);
             color: #fff;
             text-decoration: none;
+            font-size: 14px;
             font-weight: 600;
         }
 
@@ -282,23 +294,23 @@
 
         .boot-word i { color: var(--pin); font-style: normal; }
 
-        @media (max-width: 1100px) {
-            .rain-side { display: none; }
-        }
-
-        @media (max-width: 900px) {
+        @media (max-width: 700px) {
             body { overflow-x: hidden; }
-            .center { width: 100%; min-height: auto; padding: 72px 16px 28px; }
-            .copy { width: 100%; max-width: 100%; padding: 0; }
-            h1 { font-size: 34px; max-width: 9em; }
-            .lede { max-width: 28ch; font-size: 16px; }
-            .stores { width: 100%; }
-            .store, .view-map { min-width: 0; flex: 1 1 140px; }
-            .view-map { flex-basis: 100%; }
+            a.drop { width: 142px; }
+            .center { padding: 56px 14px 48px; }
+            h1 { font-size: 26px; }
+            .lede { font-size: 13px; }
+            .badge { height: 40px; padding-right: 10px; }
+            .badge b { font-size: 13px; }
         }
 
         @media (prefers-reduced-motion: reduce) {
-            .rain-side.on a.drop { animation: none; opacity: 1; }
+            .rain.on a.drop {
+                animation: none;
+                opacity: 1;
+                top: var(--rest, 12%);
+                transform: scale(var(--scale, 1));
+            }
             #boot { transition: none; }
         }
     </style>
@@ -310,23 +322,22 @@
         <div class="street v v1"></div>
         <div class="street v v2"></div>
     </div>
-    <div id="rain-left" class="rain-side"></div>
-    <div id="rain-right" class="rain-side"></div>
+    <div id="rain" class="rain"></div>
     <main class="center">
-        <div class="copy">
+        <div class="hero-pin">
             <h1>Остави бележка там, където стоиш.</h1>
             <p class="lede">„Пин тук“ ползва местоположението ти. Пишеш кратко съобщение, слагаш снимка ако искаш и избираш колко да стои. Бележката седи над пина на сива карта.</p>
             <div class="stores">
-                <a class="store" href="{{ $appStoreUrl }}" rel="noopener">
+                <a class="badge" href="{{ $appStoreUrl }}" rel="noopener">
                     <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M16.4 12.7c0-2.2 1.8-3.2 1.9-3.3-1-1.5-2.6-1.7-3.2-1.7-1.3-.1-2.6.8-3.3.8s-1.7-.8-2.9-.8c-1.5 0-2.8.9-3.6 2.2-1.5 2.7-.4 6.6 1.1 8.8.7 1.1 1.6 2.3 2.7 2.2 1.1 0 1.5-.7 2.8-.7s1.7.7 2.9.7 1.9-1.1 2.6-2.2c.8-1.2 1.2-2.3 1.2-2.4-.1 0-2.2-.9-2.2-3.6zM14.6 6.4c.6-.7 1-1.7.9-2.7-1 .1-2.1.6-2.8 1.4-.6.7-1.1 1.7-.9 2.6 1 .1 2.1-.5 2.8-1.3z"/></svg>
-                    <span><small>За iPhone</small><b>Expo</b></span>
+                    <span><small>Download on the</small><b>App Store</b></span>
                 </a>
-                <a class="store" href="{{ $playStoreUrl }}" rel="noopener">
+                <a class="badge" href="{{ $playStoreUrl }}" rel="noopener">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#34a853" d="M3.5 20.5 13.2 12 3.5 3.5z"/><path fill="#fbbc04" d="m13.2 12 2.6 2.2-9.4 5.4z"/><path fill="#ea4335" d="M15.8 9.8 13.2 12 3.5 3.5l9.4 5.4z"/><path fill="#4285f4" d="M20.2 10.7c.7.4.7 1.2 0 1.6l-3.4 2-2.6-2.3 2.6-2.3z"/></svg>
-                    <span><small>За Android</small><b>APK</b></span>
+                    <span><small>Get it on</small><b>Google Play</b></span>
                 </a>
-                <a class="view-map" href="{{ route('map') }}">Виж картата</a>
             </div>
+            <a class="view-map" href="{{ route('map') }}">Виж картата</a>
         </div>
     </main>
     <div id="boot">
@@ -337,8 +348,7 @@
     </div>
     <script>
         const categories = @json($categories, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
-        const rainLeft = document.getElementById('rain-left');
-        const rainRight = document.getElementById('rain-right');
+        const rain = document.getElementById('rain');
         const boot = document.getElementById('boot');
 
         function timeAgo(createdAt) {
@@ -389,16 +399,25 @@
         }
 
         function startRain(pins) {
-            pins.slice(0, 10).forEach((pin, index) => {
+            if (!pins.length) {
+                return;
+            }
+            const total = Math.max(40, pins.length * 3);
+            for (let index = 0; index < total; index += 1) {
+                const pin = pins[index % pins.length];
                 const drop = document.createElement('a');
-                const sideIndex = Math.floor(index / 2);
+                const duration = 7 + (index % 8) * 1.35;
                 drop.className = 'drop';
                 drop.href = '/map?pin=' + encodeURIComponent(pin.id);
-                drop.style.animationDuration = (index % 2 === 0 ? 42 : 48) + 's';
-                drop.style.animationDelay = (-sideIndex * (index % 2 === 0 ? 8 : 10)) + 's';
+                drop.style.left = ((index * 17 + (index % 5) * 9) % 92) + '%';
+                drop.style.animationDuration = duration.toFixed(2) + 's';
+                drop.style.animationDelay = (-((index * 0.47) % duration)).toFixed(2) + 's';
+                drop.style.setProperty('--scale', (0.58 + (index % 6) * 0.08).toFixed(2));
+                drop.style.setProperty('--drift', (((index % 7) - 3) * 16) + 'px');
+                drop.style.setProperty('--rest', (6 + (index * 13) % 80) + '%');
                 drop.appendChild(bubble(pin));
-                (index % 2 === 0 ? rainLeft : rainRight).appendChild(drop);
-            });
+                rain.appendChild(drop);
+            }
         }
 
         async function load() {
@@ -413,8 +432,7 @@
             const wait = Math.max(0, 1100 - (performance.now() - opened));
             setTimeout(() => {
                 startRain(pins);
-                rainLeft.classList.add('on');
-                rainRight.classList.add('on');
+                rain.classList.add('on');
                 boot.classList.add('is-done');
                 setTimeout(() => { boot.hidden = true; }, 480);
             }, wait);
