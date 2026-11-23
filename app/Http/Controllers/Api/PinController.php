@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\Pin;
 use App\Models\Reply;
 use App\Models\Report;
+use App\Support\MapCities;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -68,6 +69,13 @@ class PinController extends Controller
             ->values();
 
         return response()->json(['pins' => $pins]);
+    }
+
+    public function cities(): JsonResponse
+    {
+        Pin::pruneExpired();
+
+        return response()->json(['cities' => MapCities::counts()]);
     }
 
     public function latest(): JsonResponse

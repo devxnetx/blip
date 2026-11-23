@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Pin;
 use App\Models\Reply;
+use App\Support\LinkPreview;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -118,7 +119,75 @@ class PinTest extends TestCase
             ->assertDontSee('Без място')
             ->assertDontSee('Предстоящо')
             ->assertDontSee('id="open-unassigned"', false)
-            ->assertDontSee('id="unassigned"', false);
+            ->assertDontSee('id="unassigned"', false)
+            ->assertSee('property="og:title"', false)
+            ->assertSee('name="twitter:card"', false)
+            ->assertSee('summary_large_image', false)
+            ->assertSee(LinkPreview::FALLBACK_DESCRIPTION, false)
+            ->assertSee('/icons/icon-512.png', false);
+    }
+
+    public function test_a_pin_link_carries_a_preview_for_chat_apps(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('pins/card.jpg', 'photo');
+
+        $withPhoto = Pin::query()->create([
+            'device_hash' => hash('sha256', 'preview'),
+            'message' => 'Концерт на площада',
+            'description' => 'Голям концерт в центъра.',
+            'latitude' => 42.6977,
+            'longitude' => 23.3219,
+            'image_path' => 'pins/card.jpg',
+            'expires_at' => now()->addHour(),
+        ]);
+        $plain = Pin::query()->create([
+            'device_hash' => hash('sha256', 'plain-preview'),
+            'message' => 'Бележка без снимка',
+            'latitude' => 42.15,
+            'longitude' => 24.75,
+            'expires_at' => now()->addHour(),
+        ]);
+        $hidden = Pin::query()->create([
+            'device_hash' => hash('sha256', 'hidden-preview'),
+            'message' => 'Скрит пин',
+            'latitude' => 42.5,
+            'longitude' => 27.4,
+            'expires_at' => now()->addHour(),
+            'suppressed_at' => now(),
+        ]);
+
+        $this->get('/map?pin='.$withPhoto->id)
+            ->assertOk()
+            ->assertSee('Концерт на площада — Kostaa', false)
+            ->assertSee('Голям концерт в центъра.', false)
+            ->assertSee('/storage/pins/card.jpg', false)
+            ->assertSee('content="image/jpeg"', false)
+            ->assertSee('/map?pin='.$withPhoto->id, false)
+            ->assertDontSee(LinkPreview::FALLBACK_DESCRIPTION, false);
+
+        $this->get('/map?pin='.$plain->id)
+            ->assertOk()
+            ->assertSee('Бележка без снимка — Kostaa', false)
+            ->assertSee(LinkPreview::FALLBACK_DESCRIPTION, false)
+            ->assertSee('/icons/icon-512.png', false)
+            ->assertSee('content="image/png"', false);
+
+        $this->get('/map?pin='.$hidden->id)
+            ->assertOk()
+            ->assertDontSee('Скрит пин', false)
+            ->assertSee('Карта — Kostaa', false);
+
+        $this->get('/map?pin=999999')
+            ->assertOk()
+            ->assertSee('Карта — Kostaa', false)
+            ->assertSee(LinkPreview::FALLBACK_DESCRIPTION, false);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('property="og:image"', false)
+            ->assertSee('/icons/icon-512.png', false)
+            ->assertSee('Kostaa — бележка, която изчезва', false);
     }
 
     public function test_an_expired_pin_keeps_its_note_and_drops_the_photo_when_the_map_loads(): void
@@ -512,5 +581,52 @@ class PinTest extends TestCase
         $this->artisan('schedule:list')
             ->expectsOutputToContain('pins:promote-started')
             ->assertSuccessful();
+    }
+
+    public function test_city_counts_use_the_nearest_city_and_skip_hidden_pins(): void
+    {
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'sofia'),
+            'message' => 'В София',
+            'latitude' => 42.6977,
+            'longitude' => 23.3219,
+            'expires_at' => now()->addHour(),
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'varna'),
+            'message' => 'Във Варна',
+            'latitude' => 43.2141,
+            'longitude' => 27.9147,
+            'expires_at' => now()->addHour(),
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'old'),
+            'message' => 'Изтекло',
+            'latitude' => 42.6977,
+            'longitude' => 23.3219,
+            'expires_at' => now()->subMinute(),
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'loose'),
+            'message' => 'Без място',
+            'kind' => Pin::KIND_UNASSIGNED,
+            'latitude' => 42.6977,
+            'longitude' => 23.3219,
+            'expires_at' => now()->addHour(),
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'far'),
+            'message' => 'Далече',
+            'latitude' => 40.1,
+            'longitude' => 20.1,
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $cities = collect($this->getJson('/api/cities')->assertOk()->json('cities'));
+
+        $this->assertSame(1, $cities->firstWhere('name', 'София')['count']);
+        $this->assertSame(1, $cities->firstWhere('name', 'Варна')['count']);
+        $this->assertSame(0, $cities->firstWhere('name', 'Пловдив')['count']);
+        $this->assertSame(2, $cities->sum('count'));
     }
 }

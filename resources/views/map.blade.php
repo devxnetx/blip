@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Карта — Kostaa</title>
+    @include('partials.social')
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
@@ -124,6 +124,40 @@
             justify-content: center;
             font-weight: 700;
             cursor: pointer;
+        }
+
+        #edges {
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            pointer-events: none;
+        }
+
+        .edge-chip {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 40px;
+            padding: 0 10px 0 8px;
+            border: 2px solid var(--card);
+            border-radius: 20px;
+            background: var(--ink);
+            color: var(--card);
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 2px 8px rgba(28, 27, 25, 0.28);
+        }
+
+        .edge-chip i {
+            width: 0;
+            height: 0;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            border-left: 9px solid var(--card);
         }
 
         #panel-message { flex: 1; min-width: 0; }
@@ -695,7 +729,9 @@
             box-shadow: 0 1px 2px rgba(28, 27, 25, 0.22);
         }
 
-        .city-pill { padding: 8px 14px; }
+        .city-pill { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; }
+
+        .city-count { font-weight: 700; opacity: 0.72; }
 
         #open-cities { background: var(--ink); color: var(--card); }
 
@@ -775,6 +811,10 @@
         }
 
         .city-choice {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
             padding: 14px 16px;
             text-align: left;
             box-shadow: none;
@@ -854,6 +894,7 @@
         </div>
     </div>
     <div id="map"></div>
+    <div id="edges"></div>
     <div class="top-left">
         <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
         <button class="city-pill" id="open-cities-mobile" type="button">Градове</button>

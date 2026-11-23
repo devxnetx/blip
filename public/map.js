@@ -498,6 +498,134 @@ function drawMarkers() {
     marker.getElement().style.zIndex = String(1000 + (pin.stackY || 0) + (pin.stackX > 0 ? 1 : 0));
     markers.push(marker);
   });
+  drawEdges();
+}
+
+function spreadEdges(chips) {
+  const sorted = [...chips].sort((a, b) => a.angle - b.angle);
+  for (let pass = 0; pass < 4; pass += 1) {
+    for (let index = 1; index < sorted.length; index += 1) {
+      const prev = sorted[index - 1];
+      const item = sorted[index];
+      const dx = item.left - prev.left;
+      const dy = item.top - prev.top;
+      const dist = Math.hypot(dx, dy);
+      if (dist >= 46 || dist === 0) {
+        continue;
+      }
+      const push = (46 - dist) / 2;
+      const nx = dx / dist;
+      const ny = dy / dist;
+      prev.left -= nx * push;
+      prev.top -= ny * push;
+      item.left += nx * push;
+      item.top += ny * push;
+    }
+  }
+  return sorted;
+}
+
+function drawEdges() {
+  const root = document.getElementById('edges');
+  if (!root) {
+    return;
+  }
+  root.replaceChildren();
+  const region = currentRegion();
+  if (!placed || !region || region.latitudeDelta <= REVEAL_DELTA || region.latitudeDelta > 0.16) {
+    return;
+  }
+  const canvas = map.getCanvas();
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  if (width < 20 || height < 20) {
+    return;
+  }
+  const pad = { top: 72, right: 72, bottom: 110, left: 72 };
+  const chips = [];
+  groupPins(pins, region).clusters.forEach((cluster) => {
+    const point = map.project([cluster.longitude, cluster.latitude]);
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+      return;
+    }
+    const inside = point.x >= pad.left && point.x <= width - pad.right
+      && point.y >= pad.top && point.y <= height - pad.bottom;
+    if (inside) {
+      return;
+    }
+    const dx = point.x - width / 2;
+    const dy = point.y - height / 2;
+    if (Math.abs(dx) > width * 1.45 || Math.abs(dy) > height * 1.45) {
+      return;
+    }
+    const cx = width / 2;
+    const cy = height / 2;
+    const scaleX = dx === 0 ? Infinity : ((dx > 0 ? width - pad.right : pad.left) - cx) / dx;
+    const scaleY = dy === 0 ? Infinity : ((dy > 0 ? height - pad.bottom : pad.top) - cy) / dy;
+    const scale = Math.min(scaleX, scaleY);
+    if (!Number.isFinite(scale) || scale <= 0 || scale >= 1) {
+      return;
+    }
+    chips.push({
+      cluster,
+      left: cx + dx * scale,
+      top: cy + dy * scale,
+      angle: Math.atan2(dy, dx),
+    });
+  });
+  spreadEdges(chips).forEach((chip) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'edge-chip';
+    button.style.left = `${chip.left}px`;
+    button.style.top = `${chip.top}px`;
+    const arrow = document.createElement('i');
+    arrow.style.transform = `rotate(${chip.angle}rad)`;
+    const label = document.createElement('span');
+    label.textContent = `(${chip.cluster.count})`;
+    button.append(arrow, label);
+    button.addEventListener('click', () => {
+      showBounds(zoomRegion(currentRegion(), chip.cluster));
+    });
+    root.append(button);
+  });
+}
+
+map.on('move', () => {
+  if (placed) {
+    drawEdges();
+  }
+});
+
+function covers(pin, box) {
+  return pin.latitude <= box.north
+    && pin.latitude >= box.south
+    && pin.longitude <= box.east
+    && pin.longitude >= box.west;
+}
+
+function mergePins(existing, incoming, box, now) {
+  const ids = new Set(incoming.map((pin) => pin.id));
+  const byId = new Map();
+
+  existing.forEach((pin) => {
+    if (pin.latitude == null || pin.longitude == null) {
+      return;
+    }
+    if (new Date(pin.expires_at).getTime() <= now) {
+      return;
+    }
+    if (covers(pin, box) && !ids.has(pin.id)) {
+      return;
+    }
+    byId.set(pin.id, pin);
+  });
+
+  incoming.forEach((pin) => {
+    byId.set(pin.id, { ...byId.get(pin.id), ...pin });
+  });
+
+  return [...byId.values()];
 }
 
 async function loadPins() {
@@ -508,15 +636,26 @@ async function loadPins() {
   const bounds = map.getBounds();
   const region = currentRegion();
   let north = bounds.getNorth();
+  let south = bounds.getSouth();
+  let east = bounds.getEast();
+  let west = bounds.getWest();
   if (region.latitudeDelta <= REVEAL_DELTA) {
     const height = map.getCanvas().clientHeight || 800;
-    north += (bounds.getNorth() - bounds.getSouth()) * (STACK_FETCH_PAD_PX / height);
+    north += (north - south) * (STACK_FETCH_PAD_PX / height);
+  } else if (region.latitudeDelta <= 0.16) {
+    const latPad = Math.min((north - south) * 0.8, 0.045);
+    const lngPad = Math.min((east - west) * 0.8, 0.045);
+    north += latPad;
+    south -= latPad;
+    east += lngPad;
+    west -= lngPad;
   }
+  const box = { north, south, east, west };
   const params = new URLSearchParams({
-    north: String(north),
-    south: String(bounds.getSouth()),
-    east: String(bounds.getEast()),
-    west: String(bounds.getWest()),
+    north: String(box.north),
+    south: String(box.south),
+    east: String(box.east),
+    west: String(box.west),
   });
 
   try {
@@ -529,21 +668,27 @@ async function loadPins() {
       return;
     }
     const now = Date.now();
-    pins = (body.pins || []).filter((pin) => (
+    const incoming = (body.pins || []).filter((pin) => (
       pin.latitude != null
       && pin.longitude != null
       && pin.kind !== 'unassigned'
       && new Date(pin.expires_at).getTime() > now
     ));
+    pins = mergePins(pins, incoming, box, now);
     banner.hidden = true;
-    empty.hidden = pins.length !== 0;
+    const view = {
+      north: bounds.getNorth(),
+      south: bounds.getSouth(),
+      east: bounds.getEast(),
+      west: bounds.getWest(),
+    };
+    empty.hidden = pins.some((pin) => covers(pin, view));
     if (selected) {
       const fresh = pins.find((pin) => pin.id === selected.id);
-      const inside = bounds.contains([selected.latitude, selected.longitude]);
       if (fresh) {
         selected = { ...selected, ...fresh };
         renderPanel();
-      } else if (inside) {
+      } else if (covers(selected, box)) {
         closePanel();
       }
     }
@@ -993,12 +1138,26 @@ document.addEventListener('keydown', (event) => {
 });
 
 const FEATURED = ['София', 'Пловдив', 'Варна', 'Бургас', 'Стара Загора'];
+let cityCounts = new Map();
+
+function paintCityButton(button, city) {
+  button.replaceChildren();
+  const name = document.createElement('span');
+  name.textContent = city.name;
+  button.append(name);
+  if (cityCounts.has(city.name)) {
+    const badge = document.createElement('span');
+    badge.className = 'city-count';
+    badge.textContent = `(${cityCounts.get(city.name)})`;
+    button.append(badge);
+  }
+}
 
 function cityButton(city, className) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = className;
-  button.textContent = city.name;
+  paintCityButton(button, city);
   button.addEventListener('click', () => goToCity(city));
   return button;
 }
@@ -1017,10 +1176,34 @@ function renderCityChoices() {
 }
 
 const moreCities = document.getElementById('open-cities');
+const pillButtons = [];
 FEATURED.forEach((name) => {
   const city = CITIES.find((item) => item.name === name);
-  moreCities.before(cityButton(city, 'city-pill'));
+  const button = cityButton(city, 'city-pill');
+  pillButtons.push({ button, city });
+  moreCities.before(button);
 });
+
+function refreshCityButtons() {
+  pillButtons.forEach(({ button, city }) => paintCityButton(button, city));
+  if (!document.getElementById('cities-modal').hidden) {
+    renderCityChoices();
+  }
+}
+
+async function loadCityCounts() {
+  try {
+    const response = await fetch('/api/cities', { headers: headers() });
+    if (!response.ok) {
+      return;
+    }
+    const body = await response.json();
+    cityCounts = new Map((body.cities || []).map((city) => [city.name, Number(city.count) || 0]));
+    refreshCityButtons();
+  } catch {
+    // The city names still work without a number.
+  }
+}
 
 function openCities() {
   closePanel();
@@ -1030,7 +1213,10 @@ function openCities() {
   renderCityChoices();
   document.getElementById('cities-modal').hidden = false;
   document.getElementById('city-search').focus();
+  loadCityCounts();
 }
+
+loadCityCounts();
 
 document.getElementById('open-cities').addEventListener('click', openCities);
 document.getElementById('open-cities-mobile').addEventListener('click', openCities);

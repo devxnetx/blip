@@ -6,16 +6,34 @@ use App\Http\Controllers\Admin\PinController as AdminPinController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\UserController;
+use App\Models\Pin;
+use App\Support\LinkPreview;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('landing', [
         'appStoreUrl' => config('blip.app_store_url'),
         'playStoreUrl' => config('blip.play_store_url'),
+        'preview' => LinkPreview::page(
+            'Kostaa — бележка, която изчезва',
+            'Остави кратка бележка там, където стоиш. Добави снимка, ако искаш. Стои на сива карта, докато таймерът изтече.',
+            rtrim(request()->getSchemeAndHttpHost(), '/').'/',
+        ),
     ]);
 });
 
-Route::view('/map', 'map')->name('map');
+Route::get('/map', function (Request $request) {
+    $pin = null;
+    $raw = $request->query('pin');
+    if (is_string($raw) && ctype_digit($raw)) {
+        $pin = Pin::query()->find((int) $raw);
+    }
+
+    return view('map', [
+        'preview' => LinkPreview::forPin($pin),
+    ]);
+})->name('map');
 Route::view('/testmap', 'testmap');
 
 Route::middleware('guest')->group(function () {
