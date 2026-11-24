@@ -247,8 +247,28 @@ class FacebookImportTest extends TestCase
             ->first(fn ($event) => str_contains((string) $event->command, 'pins:import-facebook'));
 
         $this->assertNotNull($event);
-        $this->assertSame('20 6 */3 * *', $event->expression);
+        $this->assertSame('20 6 * * *', $event->expression);
         $this->assertSame('Europe/Sofia', $event->timezone);
+        $this->assertStringContainsString('--wide', (string) $event->command);
+        $this->assertStringContainsString('--scheduled', (string) $event->command);
+    }
+
+    public function test_scheduled_wide_import_waits_fourteen_days(): void
+    {
+        PinImport::query()->create([
+            'source' => 'facebook',
+            'started_at' => now()->subDays(3),
+            'finished_at' => now()->subDays(3),
+            'successful' => true,
+        ]);
+        Http::preventStrayRequests();
+        Http::fake();
+
+        $this->artisan('pins:import-facebook', ['--wide' => true, '--scheduled' => true])
+            ->expectsOutputToContain('14 days')
+            ->assertSuccessful();
+
+        Http::assertNothingSent();
     }
 
     public function test_a_wide_city_import_keeps_events_past_the_day_window(): void
@@ -256,22 +276,37 @@ class FacebookImportTest extends TestCase
         Storage::fake('public');
         Http::preventStrayRequests();
         Http::fake(function (Request $request) {
-            if (str_contains($request->url(), 'fbcdn.net')) {
+            $url = $request->url();
+
+            if (str_contains($url, 'fbcdn.net')) {
                 return Http::response($this->jpegBytes(), 200, ['Content-Type' => 'image/jpeg']);
             }
 
-            $data = $request->data();
-            $queries = $data['queries'] ?? [];
+            if (str_contains($url, '/runs')) {
+                $data = $request->data();
+                $queries = $data['queries'] ?? [];
+                $this->assertSame(0, $data['maxResults'] ?? null);
+                $this->assertFalse($data['onlyUpcoming'] ?? true);
+                $this->assertSame('', $data['cityTime'] ?? null);
+                $this->assertSame(
+                    'https://www.facebook.com/events/explore/stara-zagora-bulgaria/108597975837530',
+                    $data['cityUrls'][0] ?? null,
+                );
+                $this->assertContains('Stara Zagora', $queries);
+                $this->assertContains('Стара Загора', $queries);
 
-            $this->assertSame(0, $data['maxResults'] ?? null);
-            $this->assertFalse($data['onlyUpcoming'] ?? true);
-            $this->assertSame('', $data['cityTime'] ?? null);
-            $this->assertSame(
-                'https://www.facebook.com/events/explore/stara-zagora-bulgaria/108597975837530',
-                $data['cityUrls'][0] ?? null,
-            );
-            $this->assertContains('Stara Zagora', $queries);
-            $this->assertContains('Стара Загора', $queries);
+                return Http::response(['data' => ['id' => 'WideRun123456']]);
+            }
+
+            if (str_contains($url, '/actor-runs/WideRun123456')) {
+                return Http::response([
+                    'data' => ['status' => 'SUCCEEDED', 'defaultDatasetId' => 'WideData12345'],
+                ]);
+            }
+
+            if (str_contains($url, '/datasets/WideData12345') && ! str_contains($url, '/items')) {
+                return Http::response(['data' => ['itemCount' => 4]]);
+            }
 
             $far = now()->addDays(200);
             $near = now()->addDays(10);
@@ -294,6 +329,58 @@ class FacebookImportTest extends TestCase
         $this->assertNotNull(Pin::query()->where('external_id', '17202')->first());
         $this->assertNull(Pin::query()->where('external_id', '17203')->first());
         $this->assertNull(Pin::query()->where('external_id', '17204')->first());
+    }
+
+    public function test_wide_import_for_every_city_stops_at_the_event_cap(): void
+    {
+        config(['blip.facebook_events_max_total' => 1]);
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+            $data = $request->data();
+
+            if (str_contains($url, '/runs')) {
+                $this->assertSame(
+                    'https://www.facebook.com/events/explore/sofia-bulgaria/106013482772674',
+                    $data['cityUrls'][0] ?? null,
+                );
+                $this->assertSame(1, $data['maxResults'] ?? null);
+                $this->assertFalse($data['onlyUpcoming'] ?? true);
+
+                return Http::response(['data' => ['id' => 'SofiaRun12345']]);
+            }
+
+            if (str_contains($url, '/actor-runs/SofiaRun12345')) {
+                return Http::response([
+                    'data' => ['status' => 'SUCCEEDED', 'defaultDatasetId' => 'SofiaData1234'],
+                ]);
+            }
+
+            if (str_contains($url, '/datasets/SofiaData1234') && ! str_contains($url, '/items')) {
+                return Http::response(['data' => ['itemCount' => 1]]);
+            }
+
+            if (str_contains($url, '/items')) {
+                $start = now()->addDays(5);
+
+                return Http::response([
+                    $this->event('17401', 'София концерт', $start, $start->copy()->addHours(2), '106013482772674', 'Sofia, Bulgaria', 42.7, 23.32, '', null),
+                ]);
+            }
+
+            return Http::response('unexpected', 400);
+        });
+
+        $this->artisan('pins:import-facebook', ['--wide' => true])
+            ->expectsOutputToContain('EXTRACTED София added=1 total=1')
+            ->expectsOutputToContain('BUDGET Пловдив stopped total=1')
+            ->assertSuccessful();
+
+        $this->assertSame(1, Pin::query()->where('source', 'facebook')->count());
+        Http::assertNotSent(function (Request $request) {
+            return str_contains((string) ($request->data()['cityUrls'][0] ?? ''), 'plovdiv-bulgaria');
+        });
     }
 
     public function test_an_existing_actor_run_is_imported_without_a_second_scrape(): void

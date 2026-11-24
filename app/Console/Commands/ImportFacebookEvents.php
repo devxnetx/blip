@@ -12,7 +12,7 @@ use RuntimeException;
 
 class ImportFacebookEvents extends Command
 {
-    protected $signature = 'pins:import-facebook {city?} {--wide : One city, every page, no date cap} {--run= : Import an actor run that is already going}';
+    protected $signature = 'pins:import-facebook {city?} {--wide : Wide search, no date cap} {--scheduled : Skip when a wide import succeeded less than 14 days ago} {--run= : Import an actor run that is already going}';
 
     protected $description = 'Import public Facebook events for every map city into pins';
 
@@ -26,21 +26,35 @@ class ImportFacebookEvents extends Command
 
         $city = $this->argument('city');
         $wide = (bool) $this->option('wide');
+        $scheduled = (bool) $this->option('scheduled');
         $run = trim((string) $this->option('run'));
+        $cityName = is_string($city) ? trim($city) : '';
 
-        if (($wide || $run !== '') && (! is_string($city) || trim($city) === '')) {
+        if ($run !== '' && $cityName === '') {
             $this->error('Name the city for a wide import.');
 
             return self::FAILURE;
         }
 
-        if (is_string($city) && trim($city) !== '' && ! $wide && $run === '') {
+        if ($cityName !== '' && ! $wide && $run === '') {
             $this->error('Pass --wide with the city.');
 
             return self::FAILURE;
         }
 
-        $lock = Cache::lock('pins-import-facebook', 480 * 60);
+        if ($scheduled && (! $wide || $cityName !== '' || $run !== '')) {
+            $this->error('The 14 day schedule runs the wide import for every city.');
+
+            return self::FAILURE;
+        }
+
+        if ($scheduled && ! PinImport::facebookWideIsDue()) {
+            $this->info('The wide Facebook import ran less than 14 days ago.');
+
+            return self::SUCCESS;
+        }
+
+        $lock = Cache::lock('pins-import-facebook', 1080 * 60);
 
         if (! $lock->get()) {
             $this->warn('An import is already running.');
@@ -64,9 +78,11 @@ class ImportFacebookEvents extends Command
                 }
             };
             $counts = $run !== ''
-                ? $importer->saveCollectedRun(trim((string) $city), $run, $progress)
+                ? $importer->saveCollectedRun($cityName, $run, $progress)
                 : ($wide
-                    ? $importer->runWide(trim((string) $city), $progress)
+                    ? ($cityName !== ''
+                        ? $importer->runWide($cityName, $progress)
+                        : $importer->runWideAll($progress))
                     : $importer->run($progress));
             $import->complete($counts);
 

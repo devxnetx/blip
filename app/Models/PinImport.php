@@ -26,6 +26,21 @@ class PinImport extends Model
         self::SOURCE_FACEBOOK => 'Facebook събития',
     ];
 
+    public static function facebookWideIsDue(): bool
+    {
+        $last = self::query()
+            ->where('source', self::SOURCE_FACEBOOK)
+            ->where('successful', true)
+            ->latest('id')
+            ->first();
+
+        if ($last?->started_at === null) {
+            return true;
+        }
+
+        return $last->started_at->lte(now()->subDays(14));
+    }
+
     public static function begin(string $source): self
     {
         return self::query()->create([

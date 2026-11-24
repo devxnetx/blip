@@ -113,19 +113,92 @@ class Importer
         ];
         $seen = [];
         $city = $this->cityBySlug($slug);
-        $queries = array_values(array_unique(array_filter([
-            (string) ($city['query'] ?? ''),
-            (string) ($city['name'] ?? ''),
-            trim((string) ($city['name'] ?? '').' България'),
-        ], fn (string $query): bool => $query !== '')));
 
         try {
-            $rows = $this->events->wide($city, $queries);
+            $rows = $this->events->wide($city, $this->wideQueries($city), 0, $progress);
         } catch (RuntimeException $exception) {
             throw new ImportHalted($exception->getMessage(), $counts);
         }
 
-        return $this->saveWideRows($city, $rows, $hash, $counts, $seen, $progress);
+        return $this->saveWideRows($city, $rows, $hash, $counts, $seen, $progress, count($rows));
+    }
+
+    /**
+     * Wide search for every map city. Stops before the event cap is passed.
+     *
+     * @param  (callable(string): void)|null  $progress
+     * @return array{upcoming: int, current: int, unassigned: int, skipped: int, hidden: int}
+     */
+    public function runWideAll(?callable $progress = null): array
+    {
+        $hash = hash('sha256', 'kostaa-import:facebook');
+        Device::record($hash, 'Facebook събития');
+        $this->eventCategory();
+        $this->openWindow = true;
+        $this->wideMatch = true;
+
+        $counts = [
+            'upcoming' => 0,
+            'current' => 0,
+            'unassigned' => 0,
+            'skipped' => 0,
+            'hidden' => 0,
+        ];
+        $seen = [];
+        $cities = $this->cities();
+        $remaining = max(0, (int) config('blip.facebook_events_max_total', 10000));
+        $extracted = 0;
+        $left = count($cities);
+
+        foreach ($cities as $city) {
+            if ($remaining < 1 || $left < 1) {
+                if ($progress !== null) {
+                    $progress(sprintf('BUDGET %s stopped total=%d', $city['name'], $extracted));
+                }
+
+                break;
+            }
+
+            $allowance = intdiv($remaining, $left);
+            $left--;
+
+            if ($allowance < 1) {
+                $allowance = 1;
+            }
+
+            $allowance = min($allowance, $remaining);
+
+            try {
+                $rows = $this->events->wide($city, $this->wideQueries($city), $allowance, $progress);
+            } catch (RuntimeException $exception) {
+                throw new ImportHalted($exception->getMessage(), $counts);
+            }
+
+            $returned = count($rows);
+
+            if ($returned > $allowance) {
+                $rows = array_slice($rows, 0, $allowance);
+            }
+
+            $extracted += $returned;
+            $remaining = max(0, $remaining - $returned);
+            $counts = $this->saveWideRows($city, $rows, $hash, $counts, $seen, $progress, $extracted);
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param  array{query?: string, name?: string}  $city
+     * @return list<string>
+     */
+    private function wideQueries(array $city): array
+    {
+        return array_values(array_unique(array_filter([
+            (string) ($city['query'] ?? ''),
+            (string) ($city['name'] ?? ''),
+            trim((string) ($city['name'] ?? '').' България'),
+        ], fn (string $query): bool => $query !== '')));
     }
 
     /**
@@ -158,7 +231,7 @@ class Importer
             throw new ImportHalted($exception->getMessage(), $counts);
         }
 
-        return $this->saveWideRows($city, $rows, $hash, $counts, $seen, $progress);
+        return $this->saveWideRows($city, $rows, $hash, $counts, $seen, $progress, count($rows));
     }
 
     /**
@@ -169,14 +242,14 @@ class Importer
      * @param  (callable(string): void)|null  $progress
      * @return array{upcoming: int, current: int, unassigned: int, skipped: int, hidden: int}
      */
-    private function saveWideRows(array $city, array $rows, string $hash, array $counts, array $seen, ?callable $progress): array
+    private function saveWideRows(array $city, array $rows, string $hash, array &$counts, array &$seen, ?callable $progress, int $total): array
     {
         if ($progress !== null) {
             $progress(sprintf(
                 'EXTRACTED %s added=%d total=%d',
                 $city['name'],
                 count($rows),
-                count($rows),
+                $total,
             ));
         }
 

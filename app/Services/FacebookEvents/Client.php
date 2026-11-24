@@ -47,18 +47,24 @@ class Client
      * @param  list<string>  $queries
      * @return list<array<string, mixed>>
      */
-    public function wide(array $city, array $queries): array
+    public function wide(array $city, array $queries, int $limit = 0, ?callable $progress = null): array
     {
         $this->assertCity($city);
 
-        $rows = $this->run([
+        $started = $this->postJson('https://api.apify.com/v2/acts/unseenuser~fb-events/runs?timeout=3600', [
             'cityUrls' => [$city['url']],
             'queries' => array_values($queries),
             'cityTime' => '',
             'onlyUpcoming' => false,
-            'maxResults' => 0,
-        ], 600);
+            'maxResults' => $limit,
+        ]);
+        $runId = (string) ($started['data']['id'] ?? '');
 
+        if (preg_match('/^[A-Za-z0-9]{10,32}$/', $runId) !== 1) {
+            throw new RuntimeException('Facebook events did not return a list. The import stopped.');
+        }
+
+        $rows = $this->collectRun($runId, $progress);
         $unique = [];
 
         foreach ($rows as $row) {
@@ -262,6 +268,44 @@ class Client
                 ->connectTimeout(15)
                 ->timeout(60)
                 ->get($url);
+        } catch (ConnectionException) {
+            throw new RuntimeException('Facebook events did not return a list. The import stopped.');
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Facebook events did not return a list. The import stopped.');
+        }
+
+        $body = $response->json();
+
+        return is_array($body) ? $body : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function postJson(string $url, array $input): array
+    {
+        $token = config('services.apify.token');
+
+        if (! is_string($token) || $token === '') {
+            throw new RuntimeException('The Apify token is missing. The import stopped.');
+        }
+
+        if (! str_starts_with($url, 'https://api.apify.com/v2/acts/unseenuser~fb-events/runs')) {
+            throw new RuntimeException('Facebook events did not return a list. The import stopped.');
+        }
+
+        $this->pause();
+
+        try {
+            $response = Http::withToken($token)
+                ->acceptJson()
+                ->asJson()
+                ->connectTimeout(15)
+                ->timeout(60)
+                ->post($url, $input);
         } catch (ConnectionException) {
             throw new RuntimeException('Facebook events did not return a list. The import stopped.');
         }
