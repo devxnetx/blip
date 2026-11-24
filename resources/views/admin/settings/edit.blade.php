@@ -49,7 +49,7 @@
             <i aria-hidden="true"></i>
             <span>Facebook събития</span>
         </label>
-        <p class="meta">На всеки 14 дни, в 06:20, българско време. Широко търсене за всички градове от картата. Най-много {{ number_format((int) config('blip.facebook_events_max_total'), 0, ',', ' ') }} събития за едно пускане. Снимката се записва. Събитие без координати остава без място.</p>
+        <p class="meta">Автоматичното пускане е спряно. Снимката се записва. Събитие без координати остава без място.</p>
 
         <label for="import-days">Дни напред</label>
         <input id="import-days" name="import_days_ahead" type="number" min="1" max="90" value="{{ old('import_days_ahead', $days) }}" required>

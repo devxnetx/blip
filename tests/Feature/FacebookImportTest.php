@@ -237,20 +237,12 @@ class FacebookImportTest extends TestCase
         $this->assertSame(0, Pin::query()->where('source', 'facebook')->count());
     }
 
-    public function test_import_runs_every_three_days(): void
+    public function test_facebook_import_is_not_scheduled(): void
     {
-        $this->artisan('schedule:list')
-            ->expectsOutputToContain('pins:import-facebook')
-            ->assertSuccessful();
-
         $event = collect(app(Schedule::class)->events())
             ->first(fn ($event) => str_contains((string) $event->command, 'pins:import-facebook'));
 
-        $this->assertNotNull($event);
-        $this->assertSame('20 6 * * *', $event->expression);
-        $this->assertSame('Europe/Sofia', $event->timezone);
-        $this->assertStringContainsString('--wide', (string) $event->command);
-        $this->assertStringContainsString('--scheduled', (string) $event->command);
+        $this->assertNull($event);
     }
 
     public function test_scheduled_wide_import_waits_fourteen_days(): void
