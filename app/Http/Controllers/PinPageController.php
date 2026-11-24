@@ -6,24 +6,34 @@ use App\Models\Category;
 use App\Models\Pin;
 use App\Models\Reply;
 use App\Support\LinkPreview;
+use App\Support\Phone;
 use App\Support\PinPage;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class PinPageController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
+        if ($redirect = $this->phoneRedirect($request)) {
+            return $redirect;
+        }
+
         return $this->render($request, null, null);
     }
 
-    public function city(Request $request, string $city): View
+    public function city(Request $request, string $city): View|RedirectResponse
     {
+        if ($redirect = $this->phoneRedirect($request)) {
+            return $redirect;
+        }
+
         return $this->render($request, $city, null);
     }
 
-    public function show(Request $request, string $city, string $pin): View|\Illuminate\Http\RedirectResponse
+    public function show(Request $request, string $city, string $pin): View|RedirectResponse
     {
         $id = self::idFromToken($pin);
         $found = $id === null ? null : Pin::query()->find($id);
@@ -37,6 +47,10 @@ class PinPageController extends Controller
 
         if ($path === null) {
             abort(404);
+        }
+
+        if ($redirect = $this->phoneRedirect($request, $found)) {
+            return $redirect;
         }
 
         $current = '/'.$request->path();
@@ -65,6 +79,15 @@ class PinPageController extends Controller
         $body = "User-agent: *\nAllow: /\n\nSitemap: {$root}/sitemap.xml\n";
 
         return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
+    }
+
+    private function phoneRedirect(Request $request, ?Pin $pin = null): ?RedirectResponse
+    {
+        if (! Phone::is($request->userAgent())) {
+            return null;
+        }
+
+        return redirect()->route('map', $pin ? ['pin' => $pin->id] : []);
     }
 
     /**

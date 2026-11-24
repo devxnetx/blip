@@ -108,6 +108,29 @@ class PinPageTest extends TestCase
             ->assertDontSee('"@type": "Event"', false);
     }
 
+    public function test_a_phone_is_sent_to_the_map_and_does_not_see_the_pins_button(): void
+    {
+        $here = $this->pin('Концерт на площада', 42.4258, 25.6345);
+        $path = PinPage::path($here);
+        $iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+        $android = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+        $googlebot = 'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.71 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
+
+        $this->get('/pins', ['User-Agent' => $iphone])->assertRedirect(route('map'));
+        $this->get('/pins/stara-zagora', ['User-Agent' => $iphone])->assertRedirect(route('map'));
+        $this->get($path, ['User-Agent' => $android])->assertRedirect(route('map', ['pin' => $here->id]));
+        $this->get($path, ['User-Agent' => $googlebot])->assertOk();
+
+        $this->get('/', ['User-Agent' => $iphone])
+            ->assertOk()
+            ->assertDontSee('class="pins-link"', false)
+            ->assertSee('Виж картата');
+
+        $this->get('/about', ['User-Agent' => $iphone])
+            ->assertOk()
+            ->assertDontSee('href="'.route('pins').'"', false);
+    }
+
     public function test_missing_and_hidden_pins_stay_out_of_the_sitemap(): void
     {
         $live = $this->pin('Жив пин', 42.4258, 25.6345);

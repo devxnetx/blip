@@ -244,7 +244,7 @@
             margin-top: 10px;
         }
 
-        .about-link,
+        .pins-link,
         .view-map {
             display: flex;
             flex: 1;
@@ -257,7 +257,7 @@
             font-weight: 600;
         }
 
-        .about-link {
+        .pins-link {
             border: 1px solid var(--line);
             background: transparent;
             color: var(--ink);
@@ -389,7 +389,9 @@
                 </a>
             </div>
             <div class="hero-actions">
-                <a class="about-link" href="{{ route('about') }}">За нас</a>
+                @unless (\App\Support\Phone::is(request()->userAgent()))
+                    <a class="pins-link" href="{{ route('pins') }}">Пинове</a>
+                @endunless
                 <a class="view-map" href="{{ route('map') }}">Виж картата</a>
             </div>
         </div>
