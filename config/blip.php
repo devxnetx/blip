@@ -23,7 +23,7 @@ return [
 
     // Gap between Facebook event reads. The whole run stops at this many actor results.
     'facebook_pause_ms' => (int) env('FACEBOOK_PAUSE_MS', 1500),
-    'facebook_events_max_total' => 10000,
+    'facebook_events_max_total' => max(0, (int) env('FACEBOOK_EVENTS_MAX_TOTAL', 10000)),
     'facebook_cities' => [
         [
             'name' => 'София',
