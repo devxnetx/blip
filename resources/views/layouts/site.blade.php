@@ -69,6 +69,13 @@
             background: var(--card);
         }
 
+        .brand-side {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: none;
+        }
+
         .brand {
             display: flex;
             align-items: center;
@@ -113,16 +120,9 @@
         .theme-switch {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            margin-right: 2px;
-            padding: 6px 8px 6px 12px;
+            padding: 0;
             border: 0;
-            border-radius: 999px;
             background: transparent;
-            color: var(--ink);
-            font: inherit;
-            font-size: 14px;
-            font-weight: 700;
             cursor: pointer;
         }
 
