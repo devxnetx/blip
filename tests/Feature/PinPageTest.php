@@ -90,7 +90,12 @@ class PinPageTest extends TestCase
             ->assertSee('data-zoom="17"', false)
             ->assertSee('class="bubble"', false)
             ->assertSee('border-top: 8px solid #1c1b19', false)
-            ->assertSee('Отвори в картата');
+            ->assertSee('Отвори в картата')
+            ->assertSee('Копирай връзката към пина')
+            ->assertSee('Сподели')
+            ->assertSee('class="pin-head"', false)
+            ->assertSee('class="pin-foot"', false)
+            ->assertSee('grid-template-columns: 200px 460px 420px minmax(380px, 1fr)', false);
 
         $this->get(PinPage::path($sport))
             ->assertOk()

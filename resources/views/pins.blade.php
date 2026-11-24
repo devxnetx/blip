@@ -5,10 +5,10 @@
     <style>
         .board {
             display: grid;
-            grid-template-columns: 200px 460px minmax(300px, 0.9fr) minmax(380px, 1.35fr);
+            grid-template-columns: 200px 460px 420px minmax(380px, 1fr);
             width: 100%;
             height: 100%;
-            min-width: 1340px;
+            min-width: 1460px;
         }
 
         .col {
@@ -104,12 +104,34 @@
         .pin-row strong { display: block; font-size: 15px; line-height: 1.3; }
         .pin-row small { display: block; margin-top: 3px; }
 
+        .pin-open { display: flex; flex-direction: column; overflow: hidden; }
+        .pin-head, .pin-foot { flex: none; background: var(--card); }
+        .pin-head { padding: 18px 18px 12px; border-bottom: 1px solid var(--line); }
+        .pin-head h1 { font-family: "Instrument Serif", serif; font-size: 32px; font-weight: 400; line-height: 1.05; }
+        .pin-head .meta { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+        .pin-body { flex: 1; min-height: 0; overflow: auto; padding: 14px 18px 18px; }
+        .pin-body img { display: block; width: 100%; border-radius: 14px; background: var(--paper); }
+        .pin-body .story { margin: 14px 0 0; white-space: pre-wrap; }
+        .pin-foot { padding: 12px 18px 16px; border-top: 1px solid var(--line); }
+        .share-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .share-row button {
+            margin: 0;
+            padding: 8px 14px;
+            border: 1.5px solid var(--pin);
+            border-radius: 999px;
+            background: transparent;
+            color: var(--pin);
+            font: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.2;
+            cursor: pointer;
+        }
+        .share-row button:hover { background: rgba(194, 65, 12, 0.08); }
+        .share-status { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
         .detail { padding: 18px 18px 28px; }
-        .detail h1 { font-family: "Instrument Serif", serif; font-size: clamp(28px, 3vw, 40px); font-weight: 400; line-height: 1.05; }
-        .detail .meta { margin-top: 8px; color: var(--muted); font-size: 14px; }
-        .detail img { display: block; width: 100%; margin-top: 14px; border-radius: 14px; background: var(--paper); }
-        .detail .story { margin: 14px 0 0; white-space: pre-wrap; }
-        .detail .open-map { display: inline-flex; margin-top: 16px; color: var(--pin); font-weight: 700; }
+        .detail h1 { font-family: "Instrument Serif", serif; font-size: 32px; font-weight: 400; line-height: 1.05; }
+        .open-map { display: inline-flex; margin-top: 16px; color: var(--pin); font-weight: 700; }
         .replies { margin-top: 18px; }
         .replies article { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--paper); }
         .replies small { color: var(--muted); }
@@ -220,11 +242,13 @@
             @endif
         </section>
 
-        <section class="col" aria-label="Пин">
-            <div class="detail">
-                @if ($pin)
+        <section class="col {{ $pin ? 'pin-open' : '' }}" aria-label="Пин">
+            @if ($pin)
+                <header class="pin-head">
                     <h1>{{ $pin->message }}</h1>
                     <p class="meta">{{ collect([\App\Models\Category::label($pin->category), $city['name'] ?? null, \App\Support\PinPage::whenLabel($pin)])->filter(fn ($part) => $part !== '' && $part !== '—')->implode(' · ') }}</p>
+                </header>
+                <div class="pin-body">
                     @if ($pin->imageUrl())
                         <img src="{{ $pin->imageUrl() }}" alt="{{ $pin->message }}">
                     @endif
@@ -242,11 +266,20 @@
                         </div>
                     @endif
                     <a class="open-map" href="{{ route('map', ['pin' => $pin->id]) }}">Отвори в картата</a>
-                @else
+                </div>
+                <footer class="pin-foot">
+                    <div class="share-row">
+                        <button id="copy-link" type="button" data-url="{{ url()->current() }}">Копирай връзката към пина</button>
+                        <button id="share-link" type="button" data-url="{{ url()->current() }}" data-title="{{ $pin->message }}">Сподели</button>
+                    </div>
+                    <p class="share-status" id="copy-status" hidden></p>
+                </footer>
+            @else
+                <div class="detail">
                     <h1>{{ $city['name'] ?? 'Пинове' }}</h1>
                     <p class="quiet">{{ $city ? 'Избери пин от списъка.' : 'Избери град, после пин.' }}</p>
-                @endif
-            </div>
+                </div>
+            @endif
         </section>
 
         <section class="col map-col" aria-label="Карта">
@@ -299,6 +332,59 @@
             const label = document.getElementById('km-label');
             km.addEventListener('input', () => { label.textContent = km.value + ' км'; });
             km.addEventListener('change', () => km.form.submit());
+        }
+
+        const copyLink = document.getElementById('copy-link');
+        const shareLink = document.getElementById('share-link');
+        const copyStatus = document.getElementById('copy-status');
+
+        async function copyText(value) {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(value);
+                    return true;
+                }
+            } catch (e) {}
+            try {
+                const area = document.createElement('textarea');
+                area.value = value;
+                area.setAttribute('readonly', '');
+                area.style.position = 'fixed';
+                area.style.left = '-9999px';
+                document.body.append(area);
+                area.select();
+                const copied = document.execCommand('copy');
+                area.remove();
+                return copied;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function showCopyStatus(copied, url) {
+            if (!copyStatus) return;
+            copyStatus.hidden = false;
+            copyStatus.textContent = copied ? 'Връзката е копирана.' : url;
+        }
+
+        if (copyLink) {
+            copyLink.addEventListener('click', async () => {
+                showCopyStatus(await copyText(copyLink.dataset.url), copyLink.dataset.url);
+            });
+        }
+        if (shareLink) {
+            shareLink.addEventListener('click', async () => {
+                const url = shareLink.dataset.url;
+                if (navigator.share) {
+                    try {
+                        await navigator.share({ title: shareLink.dataset.title, text: shareLink.dataset.title, url });
+                        return;
+                    } catch (error) {
+                        if (error && error.name === 'AbortError') return;
+                    }
+                }
+                showCopyStatus(await copyText(url), url);
+            });
         }
 
         const spot = document.getElementById('pin-map');
