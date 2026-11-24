@@ -40,6 +40,41 @@ class Client
         ]);
     }
 
+    /**
+     * City page and keyword search together, with the actor's own page cap off.
+     *
+     * @param  array{name: string, url: string, query: string, city_id: string}  $city
+     * @param  list<string>  $queries
+     * @return list<array<string, mixed>>
+     */
+    public function wide(array $city, array $queries): array
+    {
+        $this->assertCity($city);
+
+        $rows = $this->run([
+            'cityUrls' => [$city['url']],
+            'queries' => array_values($queries),
+            'cityTime' => '',
+            'onlyUpcoming' => false,
+            'maxResults' => 0,
+        ], 600);
+
+        $unique = [];
+
+        foreach ($rows as $row) {
+            $id = $row['id'] ?? null;
+            $key = is_int($id) || (is_string($id) && $id !== '') ? (string) $id : 'row-'.count($unique);
+
+            if (isset($unique[$key])) {
+                continue;
+            }
+
+            $unique[$key] = $row;
+        }
+
+        return array_values($unique);
+    }
+
     public function image(string $url): ?string
     {
         if (! self::isCoverUrl($url)) {
@@ -116,7 +151,7 @@ class Client
      * @param  array<string, mixed>  $input
      * @return list<array<string, mixed>>
      */
-    private function run(array $input): array
+    private function run(array $input, int $timeout = 300): array
     {
         $token = config('services.apify.token');
 
@@ -131,8 +166,8 @@ class Client
                 ->acceptJson()
                 ->asJson()
                 ->connectTimeout(15)
-                ->timeout(330)
-                ->post(self::ACTOR.'?timeout=300', $input);
+                ->timeout($timeout + 30)
+                ->post(self::ACTOR.'?timeout='.$timeout, $input);
         } catch (ConnectionException) {
             throw new RuntimeException('Facebook events did not return a list. The import stopped.');
         }

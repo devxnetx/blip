@@ -17,6 +17,10 @@ class Importer
 
     public function __construct(private Client $events) {}
 
+    private bool $openWindow = false;
+
+    private bool $wideMatch = false;
+
     /**
      * @param  (callable(string): void)|null  $progress
      * @return array{upcoming: int, current: int, unassigned: int, skipped: int, hidden: int}
@@ -34,6 +38,8 @@ class Importer
             'hidden' => 0,
         ];
         $seen = [];
+        $this->openWindow = false;
+        $this->wideMatch = false;
         $this->eventCategory();
         $cities = $this->cities();
         $remaining = max(0, (int) config('blip.facebook_events_max_total', 10000));
@@ -78,33 +84,57 @@ class Importer
                 ));
             }
 
-            foreach ($rows as $row) {
-                $event = EventRecord::from($row);
-
-                if ($event === null || isset($seen[$event->id]) || ! $this->belongs($event, $city)) {
-                    if ($event !== null && ! isset($seen[$event->id]) && ! $this->belongs($event, $city)) {
-                        $seen[$event->id] = true;
-                        $counts['skipped']++;
-                    }
-
-                    continue;
-                }
-
-                $seen[$event->id] = true;
-
-                try {
-                    $outcome = $this->store($event, $hash);
-                } catch (RuntimeException $exception) {
-                    throw new ImportHalted($exception->getMessage(), $counts);
-                }
-
-                $counts[$outcome ?? 'skipped']++;
-
-                if ($progress !== null) {
-                    $progress(($outcome ?? 'skipped').' '.$event->id);
-                }
-            }
+            $this->absorb($rows, $city, $hash, $counts, $seen, $progress);
         }
+
+        return $counts;
+    }
+
+    /**
+     * One city, with the date window off and both the city page and the keyword search.
+     *
+     * @param  (callable(string): void)|null  $progress
+     * @return array{upcoming: int, current: int, unassigned: int, skipped: int, hidden: int}
+     */
+    public function runWide(string $slug, ?callable $progress = null): array
+    {
+        $hash = hash('sha256', 'kostaa-import:facebook');
+        Device::record($hash, 'Facebook събития');
+        $this->eventCategory();
+        $this->openWindow = true;
+        $this->wideMatch = true;
+
+        $counts = [
+            'upcoming' => 0,
+            'current' => 0,
+            'unassigned' => 0,
+            'skipped' => 0,
+            'hidden' => 0,
+        ];
+        $seen = [];
+        $city = $this->cityBySlug($slug);
+        $queries = array_values(array_unique(array_filter([
+            (string) ($city['query'] ?? ''),
+            (string) ($city['name'] ?? ''),
+            trim((string) ($city['name'] ?? '').' България'),
+        ], fn (string $query): bool => $query !== '')));
+
+        try {
+            $rows = $this->events->wide($city, $queries);
+        } catch (RuntimeException $exception) {
+            throw new ImportHalted($exception->getMessage(), $counts);
+        }
+
+        if ($progress !== null) {
+            $progress(sprintf(
+                'EXTRACTED %s added=%d total=%d',
+                $city['name'],
+                count($rows),
+                count($rows),
+            ));
+        }
+
+        $this->absorb($rows, $city, $hash, $counts, $seen, $progress);
 
         return $counts;
     }
@@ -149,7 +179,86 @@ class Importer
             }
         }
 
+        if ($this->wideMatch && $this->nearCity($event, $city)) {
+            return true;
+        }
+
         return false;
+    }
+
+    /**
+     * @param  array{latitude?: float, longitude?: float}  $city
+     */
+    private function nearCity(ParsedEvent $event, array $city): bool
+    {
+        if ($event->latitude === null || $event->longitude === null) {
+            return false;
+        }
+
+        $latitude = $city['latitude'] ?? null;
+        $longitude = $city['longitude'] ?? null;
+
+        if (! is_numeric($latitude) || ! is_numeric($longitude)) {
+            return false;
+        }
+
+        return Pin::metersBetween($event->latitude, $event->longitude, (float) $latitude, (float) $longitude) <= 25000;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @param  array{name?: string, city_id?: string, match?: list<string>, latitude?: float, longitude?: float}  $city
+     * @param  array{upcoming: int, current: int, unassigned: int, skipped: int, hidden: int}  $counts
+     * @param  array<string, true>  $seen
+     * @param  (callable(string): void)|null  $progress
+     */
+    private function absorb(array $rows, array $city, string $hash, array &$counts, array &$seen, ?callable $progress): void
+    {
+        foreach ($rows as $row) {
+            $event = EventRecord::from($row);
+
+            if ($event === null || isset($seen[$event->id]) || ! $this->belongs($event, $city)) {
+                if ($event !== null && ! isset($seen[$event->id]) && ! $this->belongs($event, $city)) {
+                    $seen[$event->id] = true;
+                    $counts['skipped']++;
+                }
+
+                continue;
+            }
+
+            $seen[$event->id] = true;
+
+            try {
+                $outcome = $this->store($event, $hash);
+            } catch (RuntimeException $exception) {
+                throw new ImportHalted($exception->getMessage(), $counts);
+            }
+
+            $counts[$outcome ?? 'skipped']++;
+
+            if ($progress !== null) {
+                $progress(($outcome ?? 'skipped').' '.$event->id);
+            }
+        }
+    }
+
+    /**
+     * @return array{name: string, url: string, query: string, city_id: string, latitude: float, longitude: float, match: list<string>}
+     */
+    private function cityBySlug(string $slug): array
+    {
+        $needle = mb_strtolower(trim($slug));
+
+        foreach ($this->cities() as $city) {
+            $name = mb_strtolower((string) ($city['name'] ?? ''));
+            $url = (string) ($city['url'] ?? '');
+
+            if ($needle !== '' && ($needle === $name || preg_match('#/events/explore/'.preg_quote($needle, '#').'-bulgaria/\d+#', $url) === 1)) {
+                return $city;
+            }
+        }
+
+        throw new RuntimeException('That city is not on the map.');
     }
 
     private function store(ParsedEvent $event, string $deviceHash): ?string
@@ -175,7 +284,7 @@ class Importer
             return 'skipped';
         }
 
-        if ($event->startsAt->greaterThan($now->copy()->addYear()) || $event->startsAt->greaterThanOrEqualTo(Setting::importUntil())) {
+        if (! $this->openWindow && ($event->startsAt->greaterThan($now->copy()->addYear()) || $event->startsAt->greaterThanOrEqualTo(Setting::importUntil()))) {
             return 'skipped';
         }
 

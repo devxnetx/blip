@@ -12,7 +12,7 @@ use RuntimeException;
 
 class ImportFacebookEvents extends Command
 {
-    protected $signature = 'pins:import-facebook';
+    protected $signature = 'pins:import-facebook {city?} {--wide : One city, every page, no date cap}';
 
     protected $description = 'Import public Facebook events for every map city into pins';
 
@@ -22,6 +22,21 @@ class ImportFacebookEvents extends Command
             $this->info('The Facebook events import is turned off.');
 
             return self::SUCCESS;
+        }
+
+        $city = $this->argument('city');
+        $wide = (bool) $this->option('wide');
+
+        if ($wide && (! is_string($city) || trim($city) === '')) {
+            $this->error('Name the city for a wide import.');
+
+            return self::FAILURE;
+        }
+
+        if (is_string($city) && trim($city) !== '' && ! $wide) {
+            $this->error('Pass --wide with the city.');
+
+            return self::FAILURE;
         }
 
         $lock = Cache::lock('pins-import-facebook', 480 * 60);
@@ -40,13 +55,16 @@ class ImportFacebookEvents extends Command
         ];
 
         try {
-            $counts = $importer->run(function (string $line): void {
+            $progress = function (string $line): void {
                 $this->output->writeln($line);
 
                 if (defined('STDOUT') && is_resource(STDOUT)) {
                     fflush(STDOUT);
                 }
-            });
+            };
+            $counts = $wide
+                ? $importer->runWide(trim((string) $city), $progress)
+                : $importer->run($progress);
             $import->complete($counts);
 
             $this->info(sprintf(

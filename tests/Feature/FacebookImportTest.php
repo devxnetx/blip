@@ -251,6 +251,51 @@ class FacebookImportTest extends TestCase
         $this->assertSame('Europe/Sofia', $event->timezone);
     }
 
+    public function test_a_wide_city_import_keeps_events_past_the_day_window(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), 'fbcdn.net')) {
+                return Http::response($this->jpegBytes(), 200, ['Content-Type' => 'image/jpeg']);
+            }
+
+            $data = $request->data();
+            $queries = $data['queries'] ?? [];
+
+            $this->assertSame(0, $data['maxResults'] ?? null);
+            $this->assertFalse($data['onlyUpcoming'] ?? true);
+            $this->assertSame('', $data['cityTime'] ?? null);
+            $this->assertSame(
+                'https://www.facebook.com/events/explore/stara-zagora-bulgaria/108597975837530',
+                $data['cityUrls'][0] ?? null,
+            );
+            $this->assertContains('Stara Zagora', $queries);
+            $this->assertContains('Стара Загора', $queries);
+
+            $far = now()->addDays(200);
+            $near = now()->addDays(10);
+            $ended = now()->subDay();
+
+            return Http::response([
+                $this->event('17201', 'Далечен концерт', $far, $far->copy()->addHours(3), '108597975837530', 'Stara Zagora, Bulgaria', 42.426, 25.635, '', null),
+                $this->event('17202', 'Близко село', $near, $near->copy()->addHours(2), '1', 'Малко село', 42.47, 25.6345, '', null),
+                $this->event('17203', 'Минало', $ended, $ended->copy()->addHour(), '108597975837530', 'Stara Zagora, Bulgaria', 42.42, 25.62, '', null),
+                $this->event('17204', 'Пловдив', $near, $near->copy()->addHours(2), '999', 'Plovdiv, Bulgaria', 42.14, 24.75, '', null),
+            ]);
+        });
+
+        $this->artisan('pins:import-facebook', ['city' => 'stara-zagora', '--wide' => true])
+            ->expectsOutputToContain('EXTRACTED Стара Загора added=4 total=4')
+            ->expectsOutputToContain('Upcoming 2, on the map now 0, unassigned 0, skipped 2, hidden 0.')
+            ->assertSuccessful();
+
+        $this->assertNotNull(Pin::query()->where('external_id', '17201')->first());
+        $this->assertNotNull(Pin::query()->where('external_id', '17202')->first());
+        $this->assertNull(Pin::query()->where('external_id', '17203')->first());
+        $this->assertNull(Pin::query()->where('external_id', '17204')->first());
+    }
+
     public function test_only_a_facebook_cover_can_be_fetched(): void
     {
         $this->assertTrue(Client::isCoverUrl('https://scontent.xx.fbcdn.net/v/t39/cover.jpg'));
