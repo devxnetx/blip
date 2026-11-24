@@ -14,14 +14,19 @@ class Client
      * @param  array{name: string, url: string, query: string, city_id: string, latitude: float, longitude: float, match: list<string>}  $city
      * @return list<array<string, mixed>>
      */
-    public function events(array $city): array
+    public function events(array $city, int $limit): array
     {
         $this->assertCity($city);
+
+        if ($limit < 1) {
+            return [];
+        }
+
         $rows = $this->run([
             'cityUrls' => [$city['url']],
             'cityTime' => '',
             'onlyUpcoming' => true,
-            'maxResults' => $this->maxResults(),
+            'maxResults' => $limit,
         ]);
 
         if ($rows !== []) {
@@ -31,7 +36,7 @@ class Client
         return $this->run([
             'queries' => [$city['query']],
             'onlyUpcoming' => true,
-            'maxResults' => $this->maxResults(),
+            'maxResults' => $limit,
         ]);
     }
 
@@ -151,17 +156,6 @@ class Client
         }
 
         return $rows;
-    }
-
-    private function maxResults(): int
-    {
-        $limit = (int) config('blip.facebook_events_max_per_city', 0);
-
-        if ($limit <= 0) {
-            return 0;
-        }
-
-        return min(50, $limit);
     }
 
     private function pause(): void

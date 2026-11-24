@@ -21,9 +21,9 @@ return [
     // Gap between Kupi Bileti pages. That import reads every upcoming event.
     'kupibileti_pause_ms' => (int) env('KUPIBILETI_PAUSE_MS', 1500),
 
-    // Gap between Facebook event reads. 0 asks for every event. A free Apify account still stops at 5 per call.
+    // Gap between Facebook event reads. The whole run stops at this many actor results.
     'facebook_pause_ms' => (int) env('FACEBOOK_PAUSE_MS', 1500),
-    'facebook_events_max_per_city' => 0,
+    'facebook_events_max_total' => 10000,
     'facebook_cities' => [
         [
             'name' => 'София',

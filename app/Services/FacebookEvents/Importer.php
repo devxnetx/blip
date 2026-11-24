@@ -35,12 +35,47 @@ class Importer
         ];
         $seen = [];
         $this->eventCategory();
+        $cities = $this->cities();
+        $remaining = max(0, (int) config('blip.facebook_events_max_total', 10000));
+        $extracted = 0;
+        $left = count($cities);
 
-        foreach ($this->cities() as $city) {
+        foreach ($cities as $city) {
+            if ($remaining < 1 || $left < 1) {
+                break;
+            }
+
+            $allowance = intdiv($remaining, $left);
+            $left--;
+
+            if ($allowance < 1) {
+                $allowance = 1;
+            }
+
+            $allowance = min($allowance, $remaining);
+
             try {
-                $rows = $this->events->events($city);
+                $rows = $this->events->events($city, $allowance);
             } catch (RuntimeException $exception) {
                 throw new ImportHalted($exception->getMessage(), $counts);
+            }
+
+            $returned = count($rows);
+
+            if ($returned > $allowance) {
+                $rows = array_slice($rows, 0, $allowance);
+            }
+
+            $extracted += $returned;
+            $remaining = max(0, $remaining - $returned);
+
+            if ($progress !== null) {
+                $progress(sprintf(
+                    'EXTRACTED %s added=%d total=%d',
+                    $city['name'],
+                    $returned,
+                    $extracted,
+                ));
             }
 
             foreach ($rows as $row) {

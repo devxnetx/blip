@@ -108,7 +108,9 @@ class FacebookImportTest extends TestCase
             return str_contains($request->url(), 'unseenuser~fb-events/run-sync-get-dataset-items')
                 && ($data['cityUrls'][0] ?? null) === 'https://www.facebook.com/events/explore/varna-bulgaria/114974968516694'
                 && ($data['onlyUpcoming'] ?? null) === true
-                && ($data['maxResults'] ?? null) === 0
+                && is_int($data['maxResults'] ?? null)
+                && ($data['maxResults'] ?? 0) >= 1
+                && ($data['maxResults'] ?? 0) <= 10000
                 && ($request->header('Authorization')[0] ?? '') === 'Bearer test-token';
         });
         Http::assertSent(function (Request $request) {
@@ -126,6 +128,39 @@ class FacebookImportTest extends TestCase
         });
         Http::assertNotSent(function (Request $request) {
             return str_contains($request->url(), 'evil.example');
+        });
+    }
+
+    public function test_extraction_stops_at_the_event_cap(): void
+    {
+        config(['blip.facebook_events_max_total' => 1]);
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        Http::fake(function (Request $request) {
+            $data = $request->data();
+
+            if (str_contains($request->url(), 'fbcdn.net')) {
+                return Http::response($this->jpegBytes(), 200, ['Content-Type' => 'image/jpeg']);
+            }
+
+            $this->assertLessThanOrEqual(1, (int) ($data['maxResults'] ?? 0));
+
+            if (($data['cityUrls'][0] ?? null) === 'https://www.facebook.com/events/explore/varna-bulgaria/114974968516694') {
+                $limit = (int) ($data['maxResults'] ?? 0);
+
+                return Http::response(array_slice($this->varnaEvents(), 0, $limit));
+            }
+
+            return Http::response([]);
+        });
+
+        $this->artisan('pins:import-facebook')
+            ->expectsOutputToContain('EXTRACTED Варна added=1 total=1')
+            ->assertSuccessful();
+
+        $this->assertSame(1, Pin::query()->where('source', 'facebook')->count());
+        Http::assertNotSent(function (Request $request) {
+            return ($request->data()['cityUrls'][0] ?? null) === 'https://www.facebook.com/events/explore/burgas-bulgaria/114964575187249';
         });
     }
 

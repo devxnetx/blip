@@ -14,7 +14,7 @@ class ImportFacebookEvents extends Command
 {
     protected $signature = 'pins:import-facebook';
 
-    protected $description = 'Import public Facebook events for Stara Zagora and Varna into pins';
+    protected $description = 'Import public Facebook events for every map city into pins';
 
     public function handle(Importer $importer): int
     {
@@ -24,7 +24,7 @@ class ImportFacebookEvents extends Command
             return self::SUCCESS;
         }
 
-        $lock = Cache::lock('pins-import-facebook', 180 * 60);
+        $lock = Cache::lock('pins-import-facebook', 480 * 60);
 
         if (! $lock->get()) {
             $this->warn('An import is already running.');
@@ -41,7 +41,11 @@ class ImportFacebookEvents extends Command
 
         try {
             $counts = $importer->run(function (string $line): void {
-                $this->line($line);
+                $this->output->writeln($line);
+
+                if (defined('STDOUT') && is_resource(STDOUT)) {
+                    fflush(STDOUT);
+                }
             });
             $import->complete($counts);
 
