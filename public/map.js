@@ -134,13 +134,20 @@ async function readError(response) {
 }
 
 function currentRegion() {
-  const bounds = map.getBounds();
   const center = map.getCenter();
+  const zoom = map.getZoom();
+  const canvas = map.getCanvas();
+  const height = Math.max(canvas.clientHeight, 1);
+  const width = Math.max(canvas.clientWidth, 1);
+  const cos = Math.cos(center.lat * Math.PI / 180);
+  const metersPerPixel = 156543.03392 * Math.max(cos, 0.01) / (2 ** zoom);
+  const latitudeDelta = (height * metersPerPixel) / 111320;
+  const longitudeDelta = (width * metersPerPixel) / (111320 * Math.max(Math.abs(cos), 0.2));
   return {
     latitude: center.lat,
     longitude: center.lng,
-    latitudeDelta: bounds.getNorth() - bounds.getSouth(),
-    longitudeDelta: bounds.getEast() - bounds.getWest(),
+    latitudeDelta,
+    longitudeDelta,
   };
 }
 
@@ -405,8 +412,8 @@ function groupPins(rows, region) {
 
 function zoomRegion(region, cluster) {
   const span = Math.max(cluster.latitudeSpan || 0, cluster.longitudeSpan || 0);
-  const latitudeDelta = Math.min(region.latitudeDelta * 0.45, Math.max(span * 1.8, 0.006));
-  const ratio = region.longitudeDelta && region.latitudeDelta
+  const latitudeDelta = Math.min(Math.max(span * 2.4, 0.004), REVEAL_DELTA - 0.001);
+  const ratio = region && region.longitudeDelta && region.latitudeDelta
     ? region.longitudeDelta / region.latitudeDelta
     : 1;
   return {
@@ -415,6 +422,14 @@ function zoomRegion(region, cluster) {
     latitudeDelta,
     longitudeDelta: latitudeDelta * ratio,
   };
+}
+
+function zoomForDelta(latitude, latitudeDelta) {
+  const height = Math.max(map.getCanvas().clientHeight, 1);
+  const metersPerPixel = (latitudeDelta * 111320) / height;
+  const cos = Math.cos(latitude * Math.PI / 180);
+  const zoom = Math.log2((156543.03392 * Math.max(cos, 0.01)) / metersPerPixel);
+  return Math.max(0, Math.min(18, zoom));
 }
 
 function frameMap(west, south, east, north, duration, padding) {
@@ -429,12 +444,14 @@ function frameMap(west, south, east, north, duration, padding) {
 }
 
 function showBounds(region) {
-  frameMap(
-    region.longitude - region.longitudeDelta / 2,
-    region.latitude - region.latitudeDelta / 2,
-    region.longitude + region.longitudeDelta / 2,
-    region.latitude + region.latitudeDelta / 2,
-  );
+  placed = true;
+  map.easeTo({
+    center: [region.longitude, region.latitude],
+    zoom: zoomForDelta(region.latitude, region.latitudeDelta),
+    pitch: map.getPitch(),
+    bearing: map.getBearing(),
+    duration: 700,
+  });
 }
 
 function markerElement(html, onClick) {
