@@ -1,6 +1,6 @@
 <nav class="site-nav">
     <a class="brand" href="{{ url('/') }}">
-        <img src="{{ asset('icons/icon-192.png') }}" alt="" width="36" height="36">
+        <img src="{{ asset('brand/icon-192.png') }}" alt="" width="36" height="36">
         <span><i>KO</i>staa</span>
     </a>
     <div class="links">

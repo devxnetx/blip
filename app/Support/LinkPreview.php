@@ -48,7 +48,7 @@ class LinkPreview
 
     public static function logo(): string
     {
-        return self::root().'/icons/icon-512.png';
+        return self::root().'/brand/icon-512.png';
     }
 
     private static function root(): string

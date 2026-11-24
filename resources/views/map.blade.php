@@ -15,7 +15,7 @@
     <meta name="apple-mobile-web-app-title" content="Kostaa">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
-    <link rel="apple-touch-icon" href="{{ asset('icons/icon-192.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('brand/icon-192.png') }}">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.css">
     <style>
         :root {

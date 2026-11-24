@@ -401,7 +401,7 @@
     @include('admin.icons')
     <div class="shell">
         <aside class="side">
-            <a class="mark" href="{{ route('admin.devices') }}"><img src="{{ asset('icons/icon-192.png') }}" alt="" width="28" height="28"><span><i>KO</i>staa</span></a>
+            <a class="mark" href="{{ route('admin.devices') }}"><img src="{{ asset('brand/icon-192.png') }}" alt="" width="28" height="28"><span><i>KO</i>staa</span></a>
             <nav>
                 <p class="nav-label">Функции</p>
                 <a href="{{ route('admin.pins') }}" @class(['on' => request()->routeIs('admin.pins*')])>@include('admin.icon', ['name' => 'pin']) Пинове</a>

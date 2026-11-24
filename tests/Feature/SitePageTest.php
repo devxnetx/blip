@@ -29,7 +29,7 @@ class SitePageTest extends TestCase
             ->assertSee('Видимо само за автора на пина')
             ->assertSee('Пет доклада')
             ->assertSee('class="map-link"', false)
-            ->assertSee('icons/icon-192.png', false)
+            ->assertSee('brand/icon-192.png', false)
             ->assertDontSee('Пин тук');
     }
 
