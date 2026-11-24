@@ -140,7 +140,7 @@
             align-items: center;
             gap: 4px;
             height: 40px;
-            padding: 0 10px 0 8px;
+            padding: 0 8px;
             border: 2px solid var(--card);
             border-radius: 20px;
             background: var(--ink);
@@ -152,12 +152,11 @@
             box-shadow: 0 2px 8px rgba(28, 27, 25, 0.28);
         }
 
-        .edge-chip i {
-            width: 0;
-            height: 0;
-            border-top: 6px solid transparent;
-            border-bottom: 6px solid transparent;
-            border-left: 9px solid var(--card);
+        .edge-chip svg {
+            width: 18px;
+            height: 14px;
+            flex: none;
+            display: block;
         }
 
         #panel-message { flex: 1; min-width: 0; }

@@ -579,11 +579,25 @@ function drawEdges() {
     button.className = 'edge-chip';
     button.style.left = `${chip.left}px`;
     button.style.top = `${chip.top}px`;
-    const arrow = document.createElement('i');
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    arrow.setAttribute('viewBox', '0 0 18 14');
+    arrow.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M1 7h10M7 2l7 5-7 5');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    arrow.append(path);
     arrow.style.transform = `rotate(${chip.angle}rad)`;
     const label = document.createElement('span');
     label.textContent = `(${chip.cluster.count})`;
-    button.append(arrow, label);
+    if (Math.cos(chip.angle) > 0.35) {
+      button.append(label, arrow);
+    } else {
+      button.append(arrow, label);
+    }
     button.addEventListener('click', () => {
       showBounds(zoomRegion(currentRegion(), chip.cluster));
     });
