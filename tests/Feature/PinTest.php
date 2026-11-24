@@ -118,6 +118,9 @@ class PinTest extends TestCase
             ->assertSee('Подкрепи ни')
             ->assertSee('Картата')
             ->assertSee('class="site-nav"', false)
+            ->assertSee('id="theme-switch"', false)
+            ->assertSee('Тъмен режим', false)
+            ->assertSee('kostaa-theme', false)
             ->assertSee('class="map-link"', false)
             ->assertSee('icons/icon-192.png', false)
             ->assertSee('Няма нужда от профил', false);

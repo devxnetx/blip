@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="bg">
 <head>
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem('kostaa-theme');
+                var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+            } catch (e) {}
+        })();
+    </script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     @include('partials.social')
@@ -17,6 +26,25 @@
             --line: #cfcabe;
             --card: #f6f4ef;
             --pin: #c2410c;
+            --field: #fff;
+            --pin-muted: #cfcabe;
+            --notice-bg: #e7f2ea;
+            --notice-ink: #1f7a4d;
+            color-scheme: light;
+        }
+
+        html[data-theme="dark"] {
+            --paper: #12110f;
+            --ink: #f6f4ef;
+            --muted: #cfcabe;
+            --line: #3a3834;
+            --card: #1c1b19;
+            --pin: #e85d2a;
+            --field: #2a2825;
+            --pin-muted: #5e5a54;
+            --notice-bg: #1a2e24;
+            --notice-ink: #b7e4c7;
+            color-scheme: dark;
         }
 
         * { box-sizing: border-box; }
@@ -82,6 +110,45 @@
 
         .links a.map-link:hover { background: #9a3412; }
 
+        .theme-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 2px;
+            padding: 6px 8px 6px 12px;
+            border: 0;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--ink);
+            font: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .theme-switch i {
+            position: relative;
+            display: block;
+            width: 36px;
+            height: 22px;
+            border-radius: 999px;
+            background: var(--line);
+        }
+
+        .theme-switch i::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--card);
+        }
+
+        html[data-theme="dark"] .theme-switch i { background: var(--pin); }
+        html[data-theme="dark"] .theme-switch i::after { transform: translateX(14px); background: #f6f4ef; }
+
         main {
             width: min(760px, calc(100% - 40px));
             margin: 0 auto;
@@ -130,8 +197,8 @@
             margin: 18px 0 0;
             padding: 12px 14px;
             border-radius: 12px;
-            background: #e7f2ea;
-            color: #1f7a4d;
+            background: var(--notice-bg);
+            color: var(--notice-ink);
             font-weight: 600;
         }
 
@@ -148,7 +215,7 @@
             padding: 12px 14px;
             border: 1px solid var(--line);
             border-radius: 12px;
-            background: #fff;
+            background: var(--field);
             color: var(--ink);
             font: inherit;
         }
@@ -252,5 +319,22 @@
         @yield('content')
     </main>
     @stack('scripts')
+    <script>
+        (function () {
+            var button = document.getElementById('theme-switch');
+            if (!button) return;
+            function paint(dark) {
+                if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+                else document.documentElement.removeAttribute('data-theme');
+                button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+            }
+            paint(document.documentElement.getAttribute('data-theme') === 'dark');
+            button.addEventListener('click', function () {
+                var dark = document.documentElement.getAttribute('data-theme') !== 'dark';
+                paint(dark);
+                try { localStorage.setItem('kostaa-theme', dark ? 'dark' : 'light'); } catch (e) {}
+            });
+        })();
+    </script>
 </body>
 </html>

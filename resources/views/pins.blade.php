@@ -43,7 +43,7 @@
             padding: 8px 10px;
             border: 1px solid var(--line);
             border-radius: 10px;
-            background: #fff;
+            background: var(--field);
             color: var(--ink);
             font: inherit;
             font-size: 14px;
@@ -114,7 +114,7 @@
         .replies article { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--paper); }
         .replies small { color: var(--muted); }
 
-        .map-col { overflow: hidden; border-right: 0; background: #d4d1cb; }
+        .map-col { overflow: hidden; border-right: 0; background: var(--line); }
         #pin-map { width: 100%; height: 100%; }
 
         .blip-icon { background: none; border: none; }
@@ -149,7 +149,7 @@
             font-weight: 600;
             line-height: 1.3;
         }
-        .bubble small { display: block; margin-top: 3px; color: #cfcabe; font-size: 11px; font-weight: 600; }
+        .bubble small { display: block; margin-top: 3px; color: var(--pin-muted); font-size: 11px; font-weight: 600; }
         .tail {
             width: 0;
             height: 0;
