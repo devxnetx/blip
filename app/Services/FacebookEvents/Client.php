@@ -75,6 +75,54 @@ class Client
         return array_values($unique);
     }
 
+    /**
+     * Wait for an actor run that is already going, then return every dataset row.
+     *
+     * @param  (callable(string): void)|null  $progress
+     * @return list<array<string, mixed>>
+     */
+    public function collectRun(string $runId, ?callable $progress = null): array
+    {
+        if (preg_match('/^[A-Za-z0-9]{10,32}$/', $runId) !== 1) {
+            throw new RuntimeException('The Facebook run id is not valid. The import stopped.');
+        }
+
+        $deadline = time() + 20 * 60;
+        $lastCount = null;
+
+        while (true) {
+            $run = $this->getJson('https://api.apify.com/v2/actor-runs/'.$runId);
+            $data = is_array($run['data'] ?? null) ? $run['data'] : [];
+            $status = (string) ($data['status'] ?? '');
+            $datasetId = (string) ($data['defaultDatasetId'] ?? '');
+            $count = 0;
+
+            if ($datasetId !== '') {
+                $meta = $this->getJson('https://api.apify.com/v2/datasets/'.$datasetId);
+                $count = (int) ($meta['data']['itemCount'] ?? 0);
+            }
+
+            if ($progress !== null && $count !== $lastCount) {
+                $progress(sprintf('ACTOR %s items=%d', $status !== '' ? $status : 'UNKNOWN', $count));
+                $lastCount = $count;
+            }
+
+            if (in_array($status, ['SUCCEEDED', 'FAILED', 'TIMED-OUT', 'ABORTED'], true)) {
+                if (preg_match('/^[A-Za-z0-9]{10,32}$/', $datasetId) !== 1) {
+                    throw new RuntimeException('Facebook events did not return a list. The import stopped.');
+                }
+
+                return $this->datasetItems($datasetId);
+            }
+
+            if ($status === '' || time() > $deadline) {
+                throw new RuntimeException('The Facebook run did not finish. The import stopped.');
+            }
+
+            sleep(15);
+        }
+    }
+
     public function image(string $url): ?string
     {
         if (! self::isCoverUrl($url)) {
@@ -188,6 +236,72 @@ class Client
             if (is_array($row)) {
                 $rows[] = $row;
             }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getJson(string $url): array
+    {
+        $token = config('services.apify.token');
+
+        if (! is_string($token) || $token === '') {
+            throw new RuntimeException('The Apify token is missing. The import stopped.');
+        }
+
+        if (! str_starts_with($url, 'https://api.apify.com/v2/')) {
+            throw new RuntimeException('Facebook events did not return a list. The import stopped.');
+        }
+
+        try {
+            $response = Http::withToken($token)
+                ->acceptJson()
+                ->connectTimeout(15)
+                ->timeout(60)
+                ->get($url);
+        } catch (ConnectionException) {
+            throw new RuntimeException('Facebook events did not return a list. The import stopped.');
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Facebook events did not return a list. The import stopped.');
+        }
+
+        $body = $response->json();
+
+        return is_array($body) ? $body : [];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function datasetItems(string $datasetId): array
+    {
+        $rows = [];
+        $offset = 0;
+
+        while (true) {
+            $page = $this->getJson('https://api.apify.com/v2/datasets/'.$datasetId.'/items?clean=1&offset='.$offset.'&limit=1000');
+            $list = array_is_list($page) ? $page : ($page['items'] ?? null);
+
+            if (! is_array($list) || ! array_is_list($list) || $list === []) {
+                break;
+            }
+
+            foreach ($list as $row) {
+                if (is_array($row)) {
+                    $rows[] = $row;
+                }
+            }
+
+            if (count($list) < 1000) {
+                break;
+            }
+
+            $offset += count($list);
         }
 
         return $rows;

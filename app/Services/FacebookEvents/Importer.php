@@ -125,6 +125,52 @@ class Importer
             throw new ImportHalted($exception->getMessage(), $counts);
         }
 
+        return $this->saveWideRows($city, $rows, $hash, $counts, $seen, $progress);
+    }
+
+    /**
+     * Store rows already collected for one city. Does not start another actor run.
+     *
+     * @param  (callable(string): void)|null  $progress
+     * @return array{upcoming: int, current: int, unassigned: int, skipped: int, hidden: int}
+     */
+    public function saveCollectedRun(string $slug, string $runId, ?callable $progress = null): array
+    {
+        $hash = hash('sha256', 'kostaa-import:facebook');
+        Device::record($hash, 'Facebook събития');
+        $this->eventCategory();
+        $this->openWindow = true;
+        $this->wideMatch = true;
+
+        $counts = [
+            'upcoming' => 0,
+            'current' => 0,
+            'unassigned' => 0,
+            'skipped' => 0,
+            'hidden' => 0,
+        ];
+        $seen = [];
+        $city = $this->cityBySlug($slug);
+
+        try {
+            $rows = $this->events->collectRun($runId, $progress);
+        } catch (RuntimeException $exception) {
+            throw new ImportHalted($exception->getMessage(), $counts);
+        }
+
+        return $this->saveWideRows($city, $rows, $hash, $counts, $seen, $progress);
+    }
+
+    /**
+     * @param  array{name: string, url: string, query: string, city_id: string, latitude: float, longitude: float, match: list<string>}  $city
+     * @param  list<array<string, mixed>>  $rows
+     * @param  array{upcoming: int, current: int, unassigned: int, skipped: int, hidden: int}  $counts
+     * @param  array<string, true>  $seen
+     * @param  (callable(string): void)|null  $progress
+     * @return array{upcoming: int, current: int, unassigned: int, skipped: int, hidden: int}
+     */
+    private function saveWideRows(array $city, array $rows, string $hash, array $counts, array $seen, ?callable $progress): array
+    {
         if ($progress !== null) {
             $progress(sprintf(
                 'EXTRACTED %s added=%d total=%d',

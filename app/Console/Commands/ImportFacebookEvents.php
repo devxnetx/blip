@@ -12,7 +12,7 @@ use RuntimeException;
 
 class ImportFacebookEvents extends Command
 {
-    protected $signature = 'pins:import-facebook {city?} {--wide : One city, every page, no date cap}';
+    protected $signature = 'pins:import-facebook {city?} {--wide : One city, every page, no date cap} {--run= : Import an actor run that is already going}';
 
     protected $description = 'Import public Facebook events for every map city into pins';
 
@@ -26,14 +26,15 @@ class ImportFacebookEvents extends Command
 
         $city = $this->argument('city');
         $wide = (bool) $this->option('wide');
+        $run = trim((string) $this->option('run'));
 
-        if ($wide && (! is_string($city) || trim($city) === '')) {
+        if (($wide || $run !== '') && (! is_string($city) || trim($city) === '')) {
             $this->error('Name the city for a wide import.');
 
             return self::FAILURE;
         }
 
-        if (is_string($city) && trim($city) !== '' && ! $wide) {
+        if (is_string($city) && trim($city) !== '' && ! $wide && $run === '') {
             $this->error('Pass --wide with the city.');
 
             return self::FAILURE;
@@ -62,9 +63,11 @@ class ImportFacebookEvents extends Command
                     fflush(STDOUT);
                 }
             };
-            $counts = $wide
-                ? $importer->runWide(trim((string) $city), $progress)
-                : $importer->run($progress);
+            $counts = $run !== ''
+                ? $importer->saveCollectedRun(trim((string) $city), $run, $progress)
+                : ($wide
+                    ? $importer->runWide(trim((string) $city), $progress)
+                    : $importer->run($progress));
             $import->complete($counts);
 
             $this->info(sprintf(

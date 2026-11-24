@@ -296,6 +296,49 @@ class FacebookImportTest extends TestCase
         $this->assertNull(Pin::query()->where('external_id', '17204')->first());
     }
 
+    public function test_an_existing_actor_run_is_imported_without_a_second_scrape(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        Http::fake(function (Request $request) {
+            $url = $request->url();
+
+            if (str_contains($url, '/actor-runs/Abcd1234Wxyz')) {
+                return Http::response([
+                    'data' => [
+                        'status' => 'SUCCEEDED',
+                        'defaultDatasetId' => 'Dataset123456',
+                    ],
+                ]);
+            }
+
+            if (str_contains($url, '/datasets/Dataset123456') && ! str_contains($url, '/items')) {
+                return Http::response(['data' => ['itemCount' => 1]]);
+            }
+
+            if (str_contains($url, '/datasets/Dataset123456/items')) {
+                $far = now()->addDays(120);
+
+                return Http::response([
+                    $this->event('17301', 'Още един концерт', $far, $far->copy()->addHours(3), '108597975837530', 'Stara Zagora, Bulgaria', 42.426, 25.635, '', null),
+                ]);
+            }
+
+            return Http::response('unexpected', 400);
+        });
+
+        $this->artisan('pins:import-facebook', ['city' => 'stara-zagora', '--run' => 'Abcd1234Wxyz'])
+            ->expectsOutputToContain('ACTOR SUCCEEDED items=1')
+            ->expectsOutputToContain('EXTRACTED Стара Загора added=1 total=1')
+            ->expectsOutputToContain('Upcoming 1, on the map now 0, unassigned 0, skipped 0, hidden 0.')
+            ->assertSuccessful();
+
+        $this->assertNotNull(Pin::query()->where('external_id', '17301')->first());
+        Http::assertNotSent(function (Request $request) {
+            return str_contains($request->url(), 'run-sync-get-dataset-items');
+        });
+    }
+
     public function test_only_a_facebook_cover_can_be_fetched(): void
     {
         $this->assertTrue(Client::isCoverUrl('https://scontent.xx.fbcdn.net/v/t39/cover.jpg'));
