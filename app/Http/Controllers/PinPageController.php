@@ -67,9 +67,14 @@ class PinPageController extends Controller
     public function sitemap(Request $request): Response
     {
         $root = rtrim($request->getSchemeAndHttpHost(), '/');
+        $pages = ['/', '/about', '/how', '/contact', '/support', '/map'];
+        $urls = array_map(
+            fn (string $path): array => ['loc' => $root.$path, 'lastmod' => null],
+            $pages,
+        );
 
         return response()
-            ->view('sitemap', ['urls' => PinPage::sitemapUrls($root)])
+            ->view('sitemap', ['urls' => array_merge($urls, PinPage::sitemapUrls($root))])
             ->header('Content-Type', 'application/xml; charset=UTF-8');
     }
 

@@ -148,8 +148,16 @@ class PinPageTest extends TestCase
         $this->get('/sitemap.xml')
             ->assertOk()
             ->assertHeader('content-type', 'application/xml; charset=UTF-8')
+            ->assertSee('/</loc>', false)
+            ->assertSee('/about</loc>', false)
+            ->assertSee('/how</loc>', false)
+            ->assertSee('/contact</loc>', false)
+            ->assertSee('/support</loc>', false)
+            ->assertSee('/map</loc>', false)
+            ->assertSee('/pins</loc>', false)
             ->assertSee(PinPage::path($live), false)
-            ->assertDontSee(PinPage::token($expired), false);
+            ->assertDontSee(PinPage::token($expired), false)
+            ->assertDontSee('/admin', false);
 
         $this->get('/robots.txt')
             ->assertOk()
