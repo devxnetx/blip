@@ -98,7 +98,7 @@ class PinPageController extends Controller
         $map = [
             'latitude' => $pin?->latitude ?? $city['latitude'] ?? 42.4258,
             'longitude' => $pin?->longitude ?? $city['longitude'] ?? 25.6345,
-            'zoom' => $pin !== null ? 15 : 12,
+            'zoom' => $pin !== null ? 17 : 12,
             'marked' => $pin !== null,
         ];
 

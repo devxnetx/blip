@@ -5,9 +5,10 @@
     <style>
         .board {
             display: grid;
-            grid-template-columns: 240px 320px minmax(300px, 1.15fr) minmax(280px, 1fr);
+            grid-template-columns: 200px 460px minmax(300px, 0.9fr) minmax(380px, 1.35fr);
+            width: 100%;
             height: 100%;
-            min-width: 1140px;
+            min-width: 1340px;
         }
 
         .col {
@@ -82,7 +83,24 @@
         .km { margin-top: 10px; font-size: 14px; font-weight: 700; }
         .km input { margin-top: 4px; }
 
-        .pin-row { display: block; padding: 12px 14px; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; }
+        .pin-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--line);
+            color: inherit;
+            text-decoration: none;
+        }
+        .pin-row img {
+            width: 72px;
+            height: 72px;
+            flex: none;
+            object-fit: cover;
+            border-radius: 12px;
+            background: var(--paper);
+        }
+        .pin-row .copy { min-width: 0; }
         .pin-row strong { display: block; font-size: 15px; line-height: 1.3; }
         .pin-row small { display: block; margin-top: 3px; }
 
@@ -98,6 +116,47 @@
 
         .map-col { overflow: hidden; border-right: 0; background: #d4d1cb; }
         #pin-map { width: 100%; height: 100%; }
+
+        .blip-icon { background: none; border: none; }
+        .bubble-wrap { display: flex; flex-direction: column; align-items: center; width: 240px; }
+        .bubble-card { display: flex; flex-direction: column; align-items: center; max-width: 240px; }
+        .bubble {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            max-width: 240px;
+            background: var(--ink);
+            color: var(--card);
+            border-radius: 14px;
+            padding: 8px;
+        }
+        .bubble img {
+            width: 72px;
+            height: 72px;
+            flex: none;
+            border-radius: 10px;
+            object-fit: cover;
+            display: block;
+            background: #3a3834;
+        }
+        .bubble .meta { min-width: 0; flex: 1; }
+        .bubble span {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+        .bubble small { display: block; margin-top: 3px; color: #cfcabe; font-size: 11px; font-weight: 600; }
+        .tail {
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-top: 8px solid var(--ink);
+        }
     </style>
     @if ($jsonLd)
         <script type="application/ld+json">{!! json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_PRETTY_PRINT) !!}</script>
@@ -146,8 +205,13 @@
             @if ($city)
                 @forelse ($pins as $row)
                     <a class="pin-row {{ $pin && $pin->is($row['pin']) ? 'on' : '' }}" href="{{ $row['path'] }}?{{ http_build_query($query) }}">
-                        <strong>{{ $row['pin']->message }}</strong>
-                        <small>{{ collect([\App\Models\Category::label($row['pin']->category), \App\Support\PinPage::distanceLabel($row['meters']), \App\Support\PinPage::whenLabel($row['pin'])])->filter(fn ($part) => $part !== '' && $part !== '—')->implode(' · ') }}</small>
+                        @if ($row['pin']->imageUrl())
+                            <img src="{{ $row['pin']->imageUrl() }}" alt="">
+                        @endif
+                        <span class="copy">
+                            <strong>{{ $row['pin']->message }}</strong>
+                            <small>{{ collect([\App\Models\Category::label($row['pin']->category), \App\Support\PinPage::distanceLabel($row['meters']), \App\Support\PinPage::whenLabel($row['pin'])])->filter(fn ($part) => $part !== '' && $part !== '—')->implode(' · ') }}</small>
+                        </span>
                     </a>
                 @empty
                     <p class="quiet" style="padding: 14px;">{{ $category ? 'Няма нищо в тази категория.' : 'Няма нищо в този радиус.' }}</p>
@@ -186,6 +250,29 @@
 
         <section class="col map-col" aria-label="Карта">
             <div id="pin-map" data-lat="{{ $map['latitude'] }}" data-lng="{{ $map['longitude'] }}" data-zoom="{{ $map['zoom'] }}" data-marked="{{ $map['marked'] ? '1' : '0' }}"></div>
+            @if ($pin)
+                <template id="pin-bubble">
+                    <div class="blip-icon">
+                        <div class="bubble-wrap">
+                            <div class="bubble-card">
+                                <div class="bubble">
+                                    @if ($pin->imageUrl())
+                                        <img src="{{ $pin->imageUrl() }}" alt="">
+                                    @endif
+                                    <div class="meta">
+                                        <span>{{ $pin->message }}</span>
+                                        @php($bubbleMeta = collect([\App\Models\Category::label($pin->category), \App\Support\PinPage::whenLabel($pin)])->filter(fn ($part) => $part !== '' && $part !== '—'))
+                                        @foreach ($bubbleMeta as $part)
+                                            <small>{{ $part }}</small>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <div class="tail"></div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            @endif
         </section>
     </div>
 @endsection
@@ -216,6 +303,7 @@
         const spot = document.getElementById('pin-map');
         const latitude = Number(spot.dataset.lat);
         const longitude = Number(spot.dataset.lng);
+        const marked = spot.dataset.marked === '1';
         const pageMap = new maplibregl.Map({
             container: spot,
             style: 'https://tiles.openfreemap.org/styles/liberty',
@@ -223,11 +311,15 @@
             zoom: Number(spot.dataset.zoom || 12),
             pitch: 42,
             bearing: -14,
+            padding: marked ? { bottom: 150 } : { bottom: 0 },
             attributionControl: true,
         });
         pageMap.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'bottom-right');
-        if (spot.dataset.marked === '1') {
-            new maplibregl.Marker({ color: '#c2410c' }).setLngLat([longitude, latitude]).addTo(pageMap);
+        const bubble = document.getElementById('pin-bubble');
+        if (marked && bubble) {
+            new maplibregl.Marker({ element: bubble.content.firstElementChild.cloneNode(true), anchor: 'bottom' })
+                .setLngLat([longitude, latitude])
+                .addTo(pageMap);
         }
         pageMap.on('load', () => pageMap.resize());
     </script>

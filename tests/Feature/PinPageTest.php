@@ -21,7 +21,10 @@ class PinPageTest extends TestCase
             'starts_at' => now()->addDay(),
             'expires_at' => now()->addDays(2),
         ]);
-        $sport = $this->pin('Мач в парка', 42.43, 25.64, ['category' => 'sport']);
+        $sport = $this->pin('Мач в парка', 42.43, 25.64, [
+            'category' => 'sport',
+            'image_path' => 'pins/match.jpg',
+        ]);
         $far = $this->pin('Далечен пин', 42.4758, 25.6345);
         $sofia = $this->pin('Софийска бележка', 42.6977, 23.3219);
         $secret = Reply::query()->create([
@@ -58,7 +61,8 @@ class PinPageTest extends TestCase
             ->assertDontSee($sofia->message)
             ->assertSee('Избери пин от списъка.')
             ->assertSee('Всички')
-            ->assertSee('href="'.$path, false);
+            ->assertSee('href="'.$path, false)
+            ->assertSee('/storage/pins/match.jpg', false);
 
         $this->get('/pins/stara-zagora?category=sport')
             ->assertOk()
@@ -83,7 +87,14 @@ class PinPageTest extends TestCase
             ->assertSee('"@type": "Event"', false)
             ->assertSee('OfflineEventAttendanceMode', false)
             ->assertSee('data-marked="1"', false)
+            ->assertSee('data-zoom="17"', false)
+            ->assertSee('class="bubble"', false)
             ->assertSee('Отвори в картата');
+
+        $this->get(PinPage::path($sport))
+            ->assertOk()
+            ->assertSee('class="bubble"', false)
+            ->assertSee('/storage/pins/match.jpg', false);
 
         $this->get('/pins/stara-zagora/wrong-name-'.$here->id)
             ->assertRedirect($path);
