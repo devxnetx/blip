@@ -125,10 +125,11 @@
             align-items: flex-start;
             gap: 8px;
             max-width: 240px;
-            background: var(--ink);
-            color: var(--card);
+            background: #1c1b19;
+            color: #f6f4ef;
             border-radius: 14px;
             padding: 8px;
+            box-shadow: 0 8px 18px rgba(28, 27, 25, 0.28);
         }
         .bubble img {
             width: 72px;
@@ -149,13 +150,13 @@
             font-weight: 600;
             line-height: 1.3;
         }
-        .bubble small { display: block; margin-top: 3px; color: var(--pin-muted); font-size: 11px; font-weight: 600; }
+        .bubble small { display: block; margin-top: 3px; color: #cfcabe; font-size: 11px; font-weight: 600; }
         .tail {
             width: 0;
             height: 0;
             border-left: 7px solid transparent;
             border-right: 7px solid transparent;
-            border-top: 8px solid var(--ink);
+            border-top: 8px solid #1c1b19;
         }
     </style>
     @if ($jsonLd)

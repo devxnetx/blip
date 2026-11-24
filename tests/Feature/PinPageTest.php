@@ -89,6 +89,7 @@ class PinPageTest extends TestCase
             ->assertSee('data-marked="1"', false)
             ->assertSee('data-zoom="17"', false)
             ->assertSee('class="bubble"', false)
+            ->assertSee('border-top: 8px solid #1c1b19', false)
             ->assertSee('Отвори в картата');
 
         $this->get(PinPage::path($sport))
