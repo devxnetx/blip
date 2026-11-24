@@ -87,6 +87,14 @@ class Client
      * @param  (callable(string): void)|null  $progress
      * @return list<array<string, mixed>>
      */
+    public function usageUsd(): float
+    {
+        $body = $this->getJson('https://api.apify.com/v2/users/me/usage/monthly');
+        $data = is_array($body['data'] ?? null) ? $body['data'] : [];
+
+        return (float) ($data['totalUsageCreditsUsdAfterVolumeDiscount'] ?? 0);
+    }
+
     public function collectRun(string $runId, ?callable $progress = null): array
     {
         if (preg_match('/^[A-Za-z0-9]{10,32}$/', $runId) !== 1) {

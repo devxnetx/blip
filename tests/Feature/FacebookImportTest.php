@@ -340,6 +340,10 @@ class FacebookImportTest extends TestCase
             $url = $request->url();
             $data = $request->data();
 
+            if (str_contains($url, '/usage/monthly')) {
+                return Http::response(['data' => ['totalUsageCreditsUsdAfterVolumeDiscount' => 0]]);
+            }
+
             if (str_contains($url, '/runs')) {
                 $this->assertSame(
                     'https://www.facebook.com/events/explore/sofia-bulgaria/106013482772674',
@@ -373,6 +377,7 @@ class FacebookImportTest extends TestCase
         });
 
         $this->artisan('pins:import-facebook', ['--wide' => true])
+            ->expectsOutputToContain('SPEND usd=0.00 limit=19.00')
             ->expectsOutputToContain('EXTRACTED София added=1 total=1')
             ->expectsOutputToContain('BUDGET Пловдив stopped total=1')
             ->assertSuccessful();
@@ -380,6 +385,30 @@ class FacebookImportTest extends TestCase
         $this->assertSame(1, Pin::query()->where('source', 'facebook')->count());
         Http::assertNotSent(function (Request $request) {
             return str_contains((string) ($request->data()['cityUrls'][0] ?? ''), 'plovdiv-bulgaria');
+        });
+    }
+
+    public function test_wide_import_stops_before_the_plan_limit(): void
+    {
+        config(['blip.facebook_usd_limit' => 18]);
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        Http::fake(function (Request $request) {
+            if (str_contains($request->url(), '/usage/monthly')) {
+                return Http::response(['data' => ['totalUsageCreditsUsdAfterVolumeDiscount' => 18.2]]);
+            }
+
+            return Http::response('unexpected', 400);
+        });
+
+        $this->artisan('pins:import-facebook', ['--wide' => true])
+            ->expectsOutputToContain('SPEND usd=18.20 limit=19.00')
+            ->expectsOutputToContain('BUDGET София stopped total=0')
+            ->expectsOutputToContain('Upcoming 0, on the map now 0, unassigned 0, skipped 0, hidden 0.')
+            ->assertSuccessful();
+
+        Http::assertNotSent(function (Request $request) {
+            return str_contains($request->url(), '/runs');
         });
     }
 

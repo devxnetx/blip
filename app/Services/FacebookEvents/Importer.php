@@ -159,14 +159,40 @@ class Importer
                 break;
             }
 
-            $allowance = intdiv($remaining, $left);
+            $spent = $this->events->usageUsd();
+            $limit = (float) config('blip.facebook_usd_limit', 18);
+            $each = (float) config('blip.facebook_usd_per_event', 0.003);
+
+            if ($progress !== null) {
+                $progress(sprintf('SPEND usd=%.2f limit=19.00', $spent));
+            }
+
+            if ($spent >= $limit || $each <= 0) {
+                if ($progress !== null) {
+                    $progress(sprintf('BUDGET %s stopped total=%d', $city['name'], $extracted));
+                }
+
+                break;
+            }
+
+            $affordable = (int) floor(($limit - $spent) / $each);
+            $room = min($remaining, max(0, $affordable));
+            $allowance = $left > 0 ? intdiv($room, $left) : 0;
             $left--;
 
-            if ($allowance < 1) {
+            if ($allowance < 1 && $room >= 1) {
                 $allowance = 1;
             }
 
-            $allowance = min($allowance, $remaining);
+            $allowance = min($allowance, $room);
+
+            if ($allowance < 1) {
+                if ($progress !== null) {
+                    $progress(sprintf('BUDGET %s stopped total=%d', $city['name'], $extracted));
+                }
+
+                break;
+            }
 
             try {
                 $rows = $this->events->wide($city, $this->wideQueries($city), $allowance, $progress);

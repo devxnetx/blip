@@ -24,6 +24,9 @@ return [
     // Gap between Facebook event reads. The whole run stops at this many actor results.
     'facebook_pause_ms' => (int) env('FACEBOOK_PAUSE_MS', 1500),
     'facebook_events_max_total' => max(0, (int) env('FACEBOOK_EVENTS_MAX_TOTAL', 10000)),
+    // Starter plan hard-stops at $19. $3 per 1,000 events. Leave a dollar of room.
+    'facebook_usd_limit' => 18.0,
+    'facebook_usd_per_event' => 0.003,
     'facebook_cities' => [
         [
             'name' => 'София',
