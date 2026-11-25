@@ -41,9 +41,7 @@ class CityNotifier
             return false;
         }
 
-        $when = ($pin->starts_at ?? $pin->created_at)?->timezone('Europe/Sofia')->format('d.m, H:i') ?? '';
-        $url = $this->root().'/map?pin='.$pin->id;
-        $content = "New pin was created: {$pin->message}\n{$when}\n{$url}";
+        $content = '**Току-що в '.$city['name'].':** '.$this->masked($this->plainTitle($pin), $this->pinUrl($pin));
 
         return $this->post($channel, $content);
     }

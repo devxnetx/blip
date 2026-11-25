@@ -117,16 +117,13 @@ class DiscordTodayTest extends TestCase
         ])->assertCreated();
 
         $id = $created->json('id');
-        $when = Pin::query()->findOrFail($id)->created_at->timezone('Europe/Sofia')->format('d.m, H:i');
 
-        Http::assertSent(function ($request) use ($id, $when): bool {
+        Http::assertSent(function ($request) use ($id): bool {
             if (! str_contains($request->url(), '/channels/111/messages')) {
                 return false;
             }
 
-            return $request['content'] === "New pin was created: Жива бележка\n"
-                .$when."\n"
-                .'https://kostaa.space/map?pin='.$id;
+            return $request['content'] === '**Току-що в Стара Загора:** [Жива бележка](<https://kostaa.space/map?pin='.$id.'>)';
         });
 
         $posts = fn () => collect(Http::recorded())
@@ -164,16 +161,13 @@ class DiscordTodayTest extends TestCase
         ])->assertCreated();
 
         $id = $created->json('id');
-        $when = Pin::query()->findOrFail($id)->created_at->timezone('Europe/Sofia')->format('d.m, H:i');
 
-        Http::assertSent(function ($request) use ($id, $when): bool {
+        Http::assertSent(function ($request) use ($id): bool {
             if (! str_contains($request->url(), '/channels/111/messages')) {
                 return false;
             }
 
-            return $request['content'] === "New pin was created: Пин от картата\n"
-                .$when."\n"
-                .'https://kostaa.space/map?pin='.$id;
+            return $request['content'] === '**Току-що в Стара Загора:** [Пин от картата](<https://kostaa.space/map?pin='.$id.'>)';
         });
     }
 
