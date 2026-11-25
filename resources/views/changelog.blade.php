@@ -1,7 +1,7 @@
 @extends('layouts.site')
 
 @section('content')
-    <h1>Промени</h1>
+    <h1>Changelog</h1>
     <p class="lede">Какво се промени в Kostaa.</p>
 
     @if ($entries->isEmpty())

@@ -414,7 +414,7 @@
                 <a href="{{ route('admin.imports') }}" @class(['on' => request()->routeIs('admin.imports')])>@include('admin.icon', ['name' => 'clock']) Импорти</a>
                 <a href="{{ route('admin.settings') }}" @class(['on' => request()->routeIs('admin.settings*')])>@include('admin.icon', ['name' => 'sliders']) Настройки</a>
                 <p class="nav-label">Development</p>
-                <a href="{{ route('admin.changelog') }}" @class(['on' => request()->routeIs('admin.changelog*')])>@include('admin.icon', ['name' => 'edit']) Промени</a>
+                <a href="{{ route('admin.changelog') }}" @class(['on' => request()->routeIs('admin.changelog*')])>@include('admin.icon', ['name' => 'edit']) Changelog</a>
                 <a href="https://trello.com/b/f7V0aAwm/kostaa" target="_blank" rel="noopener noreferrer">@include('admin.icon', ['name' => 'link']) Trello</a>
                 <a href="https://discord.com/channels/1574875809603133562" target="_blank" rel="noopener noreferrer">@include('admin.icon', ['name' => 'link']) Discord</a>
             </nav>

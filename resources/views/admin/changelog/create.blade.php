@@ -6,7 +6,7 @@
     <div class="page-head">
         <div>
             <h1>Нова промяна</h1>
-            <p class="lede">Заглавието и текстът отиват на страницата Промени и в Discord.</p>
+            <p class="lede">Заглавието и текстът отиват на страницата Changelog и в Discord.</p>
         </div>
         <div class="actions">
             <a href="{{ route('admin.changelog') }}">@include('admin.icon', ['name' => 'back']) Назад</a>

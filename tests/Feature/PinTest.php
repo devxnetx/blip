@@ -113,7 +113,7 @@ class PinTest extends TestCase
     {
         $this->get('/changelog')
             ->assertOk()
-            ->assertSee('Промени')
+            ->assertSee('Changelog')
             ->assertSee('Начало')
             ->assertSee('Как работи')
             ->assertSee('Контакт')

@@ -1,11 +1,11 @@
 @extends('admin.layout')
 
-@section('title', 'Промени')
+@section('title', 'Changelog')
 
 @section('content')
     <div class="page-head">
         <div>
-            <h1>Промени</h1>
+            <h1>Changelog</h1>
             <p class="lede">Публикуваната бележка се вижда на сайта и в Discord канала changelog. Черновата стои само тук.</p>
         </div>
         <div class="actions">

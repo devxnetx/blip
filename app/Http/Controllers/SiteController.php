@@ -21,7 +21,7 @@ class SiteController extends Controller
                 ->orderByDesc('id')
                 ->get(),
             'preview' => $this->preview(
-                'Промени — Kostaa',
+                'Changelog — Kostaa',
                 'Какво се промени в Kostaa.',
                 '/changelog',
             ),
