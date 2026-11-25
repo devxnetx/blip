@@ -168,7 +168,7 @@ class PinPageTest extends TestCase
             ->assertSee('/sitemap.xml', false);
     }
 
-    public function test_upcoming_time_is_relative_and_red_inside_twelve_hours(): void
+    public function test_upcoming_time_is_relative_and_red_inside_twenty_four_hours(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-11-25 10:00:00', 'Europe/Sofia'));
 
@@ -184,18 +184,25 @@ class PinPageTest extends TestCase
                 'starts_at' => $later,
                 'expires_at' => $later->copy()->addDay(),
             ]);
-            $edge = $this->pin('Точно дванадесет', 42.427, 25.636, [
+            $within = $this->pin('Точно дванадесет', 42.427, 25.636, [
                 'kind' => Pin::KIND_UPCOMING,
                 'starts_at' => now()->addHours(12)->utc(),
                 'expires_at' => now()->addHours(13)->utc(),
             ]);
+            $edge = $this->pin('Точно двадесет и четири', 42.428, 25.637, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => now()->addHours(24)->utc(),
+                'expires_at' => now()->addHours(25)->utc(),
+            ]);
 
             $this->assertTrue(PinPage::startsSoon($soon));
+            $this->assertTrue(PinPage::startsSoon($within));
             $this->assertFalse(PinPage::startsSoon($ahead));
             $this->assertFalse(PinPage::startsSoon($edge));
             $this->assertSame('след 3 часа в 13:00', PinPage::whenLabel($soon));
+            $this->assertSame('след 12 часа в 22:00', PinPage::whenLabel($within));
             $this->assertSame('след 2 дни в 19:00', PinPage::whenLabel($ahead));
-            $this->assertSame('след 12 часа в 22:00', PinPage::whenLabel($edge));
+            $this->assertSame('след 1 ден в 10:00', PinPage::whenLabel($edge));
             $this->assertStringNotContainsString('Предстоящо', PinPage::whenLabel($soon));
 
             $this->get(PinPage::path($soon))

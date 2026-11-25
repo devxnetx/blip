@@ -291,7 +291,7 @@ class PinPage
         }
 
         return $pin->kind === Pin::KIND_UPCOMING
-            && $pin->starts_at->lt(now()->addHours(12));
+            && $pin->starts_at->lt(now()->addHours(24));
     }
 
     private static function relativeStart(\DateTimeInterface $start): string

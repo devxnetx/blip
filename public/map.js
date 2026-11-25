@@ -294,7 +294,7 @@ function upcomingSoon(pin, now = Date.now()) {
     return false;
   }
   const ms = new Date(pin.starts_at).getTime() - now;
-  return ms > 0 && ms < 12 * 60 * 60 * 1000;
+  return ms > 0 && ms < 24 * 60 * 60 * 1000;
 }
 
 function eventStarted(pin, now = Date.now()) {
