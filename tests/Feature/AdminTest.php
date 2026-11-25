@@ -666,7 +666,11 @@ class AdminTest extends TestCase
             ->assertSee('Ограничението в дни не важи тук.')
             ->assertSee('Снимката на събитието се записва.')
             ->assertDontSee('Снимките от този сайт не се взимат.')
-            ->assertSeeInOrder(['Функции', 'Карта', 'Система', 'Импорти', 'Настройки'])
+            ->assertSeeInOrder(['Функции', 'Карта', 'Система', 'Импорти', 'Настройки', 'Development', 'Промени'])
+            ->assertSee('href="https://trello.com/b/f7V0aAwm/kostaa"', false)
+            ->assertSee('href="https://discord.com/channels/1574875809603133562"', false)
+            ->assertSee('Trello')
+            ->assertSee('Discord')
             ->assertSee('Дни напред')
             ->assertSee('value="40"', false);
 
