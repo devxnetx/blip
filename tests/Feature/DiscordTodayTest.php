@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Pin;
+use App\Models\User;
 use App\Services\Discord\CityNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Console\Scheduling\Schedule;
@@ -148,6 +149,32 @@ class DiscordTodayTest extends TestCase
         ])->assertCreated();
 
         $this->assertSame($before, $posts());
+    }
+
+    public function test_a_pin_dropped_on_the_map_is_announced(): void
+    {
+        $admin = User::query()->where('name', 'ZenSorcerer')->firstOrFail();
+
+        $created = $this->actingAs($admin)->postJson('/admin/pins', [
+            'message' => 'Пин от картата',
+            'latitude' => 42.4258,
+            'longitude' => 25.6345,
+            'duration' => '1h',
+            'category' => 'other',
+        ])->assertCreated();
+
+        $id = $created->json('id');
+        $when = Pin::query()->findOrFail($id)->created_at->timezone('Europe/Sofia')->format('d.m, H:i');
+
+        Http::assertSent(function ($request) use ($id, $when): bool {
+            if (! str_contains($request->url(), '/channels/111/messages')) {
+                return false;
+            }
+
+            return $request['content'] === "New pin was created: Пин от картата\n"
+                .$when."\n"
+                .'https://kostaa.space/map?pin='.$id;
+        });
     }
 
     public function test_the_city_reminder_runs_each_morning(): void

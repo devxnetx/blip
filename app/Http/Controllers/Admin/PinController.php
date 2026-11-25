@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\Pin;
+use App\Services\Discord\CityNotifier;
 use App\Models\PinImport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -136,6 +137,8 @@ class PinController extends Controller
             'longitude' => $data['longitude'],
             ...$schedule,
         ]);
+
+        app(CityNotifier::class)->announcePin($pin);
 
         return response()->json($pin->toApi(false), 201);
     }
