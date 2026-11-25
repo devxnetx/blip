@@ -9,6 +9,7 @@ use App\Models\Reply;
 use App\Models\Report;
 use App\Services\Discord\CityNotifier;
 use App\Support\MapCities;
+use App\Support\UpcomingHorizon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,8 @@ class PinController extends Controller
             ->whereBetween('longitude', [$bounds['west'], $bounds['east']])
             ->when(($bounds['period'] ?? null) === 'today', function ($query): void {
                 $query->whereNull('suppressed_at')->occursToday();
+            }, function ($query): void {
+                UpcomingHorizon::apply($query);
             })
             ->latest()
             ->limit(200)

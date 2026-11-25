@@ -117,7 +117,7 @@ class PinPageController extends Controller
         $km = (int) $request->query('km', 18);
         $km = max(1, min(30, $km));
 
-        $pins = $city === null ? [] : PinPage::pinsInCity($city, $category, $km, $cities);
+        $pins = $city === null ? [] : PinPage::pinsInCity($city, $category, $km, $cities, $pin?->id);
         $replies = $pin === null
             ? collect()
             : Reply::query()->where('pin_id', $pin->id)->where('author_only', false)->oldest()->get();

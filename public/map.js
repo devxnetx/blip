@@ -796,6 +796,14 @@ async function loadPins() {
       && new Date(pin.expires_at).getTime() > now
     ));
     pins = mergePins(pins, incoming, box, now);
+    if (
+      selected
+      && new Date(selected.expires_at).getTime() > now
+      && covers(selected, box)
+      && !pins.some((pin) => pin.id === selected.id)
+    ) {
+      pins.push(selected);
+    }
     banner.hidden = true;
     const view = {
       north: bounds.getNorth(),

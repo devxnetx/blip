@@ -116,7 +116,7 @@ class PinPage
      * @param  array{name: string, slug: string, latitude: float, longitude: float}  $city
      * @return list<array{pin: Pin, meters: float, path: string}>
      */
-    public static function pinsInCity(array $city, ?string $category, int $km, array $cities): array
+    public static function pinsInCity(array $city, ?string $category, int $km, array $cities, ?int $keepId = null): array
     {
         $boxKm = MapCities::RADIUS_METERS / 1000;
         $latPad = $boxKm / 111.32;
@@ -133,12 +133,24 @@ class PinPage
         }
 
         $limit = $km * 1000;
+        $crowded = UpcomingHorizon::isCrowded($city['name']);
+        $until = UpcomingHorizon::until();
         $rows = [];
 
         foreach ($query->get() as $pin) {
             $nearest = self::cityFor($pin, $cities);
 
             if ($nearest === null || $nearest['slug'] !== $city['slug'] || $nearest['meters'] > $limit) {
+                continue;
+            }
+
+            if (
+                $crowded
+                && $pin->id !== $keepId
+                && $pin->kind === Pin::KIND_UPCOMING
+                && $pin->starts_at !== null
+                && $pin->starts_at->gt($until)
+            ) {
                 continue;
             }
 
