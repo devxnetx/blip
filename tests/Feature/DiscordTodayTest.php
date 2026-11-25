@@ -68,7 +68,7 @@ class DiscordTodayTest extends TestCase
                 return false;
             }
 
-            return $request['content'] === "*Събития днес в* [Стара Загора](<https://kostaa.space/map?city=stara-zagora&period=today>)\n"
+            return $request['content'] === "Събития днес в [Стара Загора](<https://kostaa.space/map?city=stara-zagora&period=today>)\n"
                 ."Концерт на площада · [повече информация](<https://kostaa.space/map?pin={$concert->id}>)";
         });
     }
