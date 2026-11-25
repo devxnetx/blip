@@ -52,6 +52,17 @@ class BugSync
             }
 
             $names = $this->appliedNames($thread, $tags);
+            $body = null;
+
+            if ($names === []) {
+                $body = $this->messageBody($threadId);
+                $guessed = array_values(array_intersect($this->guessTags($title."\n".$body), array_values($tags)));
+
+                if ($guessed !== [] && $this->applyDiscordTags($threadId, $guessed, $tags)) {
+                    $names = $guessed;
+                }
+            }
+
             $card = TrelloBugCard::query()->where('discord_thread_id', $threadId)->first();
 
             if ($card !== null) {
@@ -72,7 +83,7 @@ class BugSync
                 continue;
             }
 
-            $created = $this->createCard($listId, $title, $this->description($threadId), $names);
+            $created = $this->createCard($listId, $title, $this->description($threadId, $body ?? $this->messageBody($threadId)), $names);
 
             if ($created === null) {
                 $counts['failed']++;
@@ -192,11 +203,84 @@ class BugSync
         return array_values($threads);
     }
 
-    private function description(string $threadId): string
+    /**
+     * @return list<string>
+     */
+    private function guessTags(string $text): array
+    {
+        $text = mb_strtolower($text, 'UTF-8');
+        $names = [];
+
+        if ($this->mentions($text, ['приложение', 'android', 'ios', 'iphone', 'телефон', 'мобилн', 'app'])) {
+            $names[] = 'приложение';
+        }
+
+        if ($this->mentions($text, ['сайт', 'уебсайт', 'брауз', 'уеб', 'web', 'website', 'chrome', 'firefox', 'safari', 'компютър', 'site'])) {
+            $names[] = 'сайт';
+        }
+
+        sort($names);
+
+        return $names;
+    }
+
+    /**
+     * @param  list<string>  $needles
+     */
+    private function mentions(string $text, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            $pattern = '/(?<![\p{L}\p{N}])'.preg_quote($needle, '/').'/u';
+
+            if (preg_match($pattern, $text) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<string>  $names
+     * @param  array<string, string>  $tags
+     */
+    private function applyDiscordTags(string $threadId, array $names, array $tags): bool
+    {
+        $byName = [];
+
+        foreach ($tags as $id => $name) {
+            $byName[mb_strtolower($name, 'UTF-8')] = (string) $id;
+        }
+
+        $ids = [];
+
+        foreach ($names as $name) {
+            $id = $byName[mb_strtolower($name, 'UTF-8')] ?? null;
+
+            if ($id !== null) {
+                $ids[] = $id;
+            }
+        }
+
+        if ($ids === []) {
+            return false;
+        }
+
+        $updated = $this->discordWrite('/channels/'.$threadId, ['applied_tags' => $ids]);
+
+        return is_array($updated);
+    }
+
+    private function messageBody(string $threadId): string
+    {
+        $message = $this->discord('/channels/'.$threadId.'/messages/'.$threadId);
+
+        return is_array($message) ? trim((string) ($message['content'] ?? '')) : '';
+    }
+
+    private function description(string $threadId, string $body): string
     {
         $link = 'https://discord.com/channels/'.$this->guildId().'/'.$threadId;
-        $message = $this->discord('/channels/'.$threadId.'/messages/'.$threadId);
-        $body = is_array($message) ? trim((string) ($message['content'] ?? '')) : '';
 
         if ($body === '') {
             return $link;
@@ -318,6 +402,37 @@ class BugSync
         if (! $response->successful()) {
             Log::warning('Discord bug read was refused.', [
                 'path' => strtok($path, '?'),
+                'status' => $response->status(),
+            ]);
+
+            return null;
+        }
+
+        $json = $response->json();
+
+        return is_array($json) ? $json : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     * @return array<string, mixed>|null
+     */
+    private function discordWrite(string $path, array $body): ?array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bot '.$this->discordToken(),
+                'User-Agent' => 'KostaaBot/1.0 (https://kostaa.space)',
+            ])->timeout(12)->acceptJson()->patch('https://discord.com/api/v10'.$path, $body);
+        } catch (\Throwable $exception) {
+            Log::warning('Discord bug tag failed.', ['path' => $path]);
+
+            return null;
+        }
+
+        if (! $response->successful()) {
+            Log::warning('Discord bug tag was refused.', [
+                'path' => $path,
                 'status' => $response->status(),
             ]);
 

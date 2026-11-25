@@ -11,6 +11,16 @@ class BugTrelloTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** @var array<string, mixed> */
+    private array $bugThread = [
+        'id' => '900',
+        'parent_id' => '1574990792634925096',
+        'name' => 'Картата не се отваря',
+        'applied_tags' => ['1575061005325705246'],
+    ];
+
+    private string $bugMessage = 'Става на телефона.';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -31,12 +41,7 @@ class BugTrelloTest extends TestCase
 
             if (str_contains($url, '/threads/active')) {
                 return Http::response([
-                    'threads' => [[
-                        'id' => '900',
-                        'parent_id' => '1574990792634925096',
-                        'name' => 'Картата не се отваря',
-                        'applied_tags' => ['1575061005325705246'],
-                    ]],
+                    'threads' => [$this->bugThread],
                 ]);
             }
 
@@ -54,11 +59,15 @@ class BugTrelloTest extends TestCase
                 ]);
             }
 
-            if (str_contains($url, '/messages/900')) {
+            if (str_contains($url, '/messages/')) {
                 return Http::response([
                     'id' => '900',
-                    'content' => 'Става на телефона.',
+                    'content' => $this->bugMessage,
                 ]);
+            }
+
+            if ($method === 'PATCH' && str_contains($url, '/channels/')) {
+                return Http::response(['id' => '901'], 200);
             }
 
             if (str_contains($url, '/lists')) {
@@ -75,7 +84,12 @@ class BugTrelloTest extends TestCase
             }
 
             if (str_contains($url, '/labels') && $method === 'POST') {
-                return Http::response(['id' => 'lab-site', 'name' => 'сайт', 'color' => 'blue'], 200);
+                $name = (string) $request['name'];
+
+                return Http::response([
+                    'id' => $name === 'приложение' ? 'lab-app' : 'lab-site',
+                    'name' => $name,
+                ], 200);
             }
 
             if (str_contains($url, '/cards') && $method === 'POST') {
@@ -139,6 +153,35 @@ class BugTrelloTest extends TestCase
             return $request->method() === 'PUT'
                 && str_contains($request->url(), '/cards/card-1')
                 && $request['idLabels'] === 'lab-site';
+        });
+    }
+
+    public function test_an_untagged_bug_is_tagged_in_discord_from_the_text(): void
+    {
+        $this->bugThread = [
+            'id' => '901',
+            'parent_id' => '1574990792634925096',
+            'name' => 'Не се пуска',
+            'applied_tags' => [],
+        ];
+        $this->bugMessage = 'Приложението спира след входа.';
+
+        $this->artisan('bugs:trello')
+            ->expectsOutput('CREATED 1 UPDATED 0 FAILED 0')
+            ->assertSuccessful();
+
+        $this->assertSame(['приложение'], TrelloBugCard::query()->firstOrFail()->tags);
+
+        Http::assertSent(function ($request): bool {
+            return $request->method() === 'PATCH'
+                && str_contains($request->url(), '/channels/901')
+                && $request['applied_tags'] === ['1575061028385984603'];
+        });
+
+        Http::assertSent(function ($request): bool {
+            return $request->method() === 'POST'
+                && str_contains($request->url(), '/cards')
+                && $request['idLabels'] === 'lab-app';
         });
     }
 }
