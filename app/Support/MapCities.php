@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Pin;
+use Illuminate\Support\Facades\Cache;
 
 class MapCities
 {
@@ -51,6 +52,14 @@ class MapCities
      * @return array<int, array{name: string, count: int}>
      */
     public static function counts(): array
+    {
+        return Cache::remember(MapCache::COUNTS, MapCache::SECONDS, fn (): array => self::countsNow());
+    }
+
+    /**
+     * @return array<int, array{name: string, count: int}>
+     */
+    private static function countsNow(): array
     {
         $cities = self::all();
         $counts = array_fill_keys(array_column($cities, 'name'), 0);

@@ -10,19 +10,15 @@ class CategoryController extends Controller
 {
     public function index(): JsonResponse
     {
-        $categories = Category::query()
-            ->where('listed', true)
-            ->orderBy('position')
-            ->orderBy('id')
-            ->get(['slug', 'name'])
-            ->map(fn (Category $category) => [
-                'id' => $category->slug,
-                'label' => $category->name,
+        $categories = collect(Category::listedOptions())
+            ->map(fn (string $name, string $slug): array => [
+                'id' => $slug,
+                'label' => $name,
             ])
             ->values();
 
         return response()->json([
             'categories' => $categories,
-        ]);
+        ])->header('Cache-Control', 'public, max-age=60');
     }
 }

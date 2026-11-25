@@ -22,4 +22,12 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+
+    # Scripts, styles, and pictures. Short on purpose while the site is changing.
+    RewriteCond %{REQUEST_URI} \.(js|css|png|jpe?g|webp|gif|svg|ico|woff2)$ [NC]
+    RewriteRule ^ - [E=kostaa_static:1]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=600" env=kostaa_static
 </IfModule>

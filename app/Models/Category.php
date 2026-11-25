@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -20,21 +21,23 @@ class Category extends Model
      */
     public static function options(): array
     {
-        try {
-            if (! Schema::hasTable('categories')) {
+        return Cache::remember('categories.options', 60, function (): array {
+            try {
+                if (! Schema::hasTable('categories')) {
+                    return Pin::CATEGORIES;
+                }
+            } catch (\Throwable) {
                 return Pin::CATEGORIES;
             }
-        } catch (\Throwable) {
-            return Pin::CATEGORIES;
-        }
 
-        $options = static::query()
-            ->orderBy('position')
-            ->orderBy('id')
-            ->pluck('name', 'slug')
-            ->all();
+            $options = static::query()
+                ->orderBy('position')
+                ->orderBy('id')
+                ->pluck('name', 'slug')
+                ->all();
 
-        return $options !== [] ? $options : Pin::CATEGORIES;
+            return $options !== [] ? $options : Pin::CATEGORIES;
+        });
     }
 
     /**
@@ -44,22 +47,30 @@ class Category extends Model
      */
     public static function listedOptions(): array
     {
-        try {
-            if (! Schema::hasTable('categories') || ! Schema::hasColumn('categories', 'listed')) {
+        return Cache::remember('categories.listed', 60, function (): array {
+            try {
+                if (! Schema::hasTable('categories') || ! Schema::hasColumn('categories', 'listed')) {
+                    return static::options();
+                }
+            } catch (\Throwable) {
                 return static::options();
             }
-        } catch (\Throwable) {
-            return static::options();
-        }
 
-        $options = static::query()
-            ->where('listed', true)
-            ->orderBy('position')
-            ->orderBy('id')
-            ->pluck('name', 'slug')
-            ->all();
+            $options = static::query()
+                ->where('listed', true)
+                ->orderBy('position')
+                ->orderBy('id')
+                ->pluck('name', 'slug')
+                ->all();
 
-        return $options !== [] ? $options : static::options();
+            return $options !== [] ? $options : static::options();
+        });
+    }
+
+    public static function forgetCache(): void
+    {
+        Cache::forget('categories.options');
+        Cache::forget('categories.listed');
     }
 
     public static function label(?string $slug): string
@@ -90,6 +101,12 @@ class Category extends Model
         }
 
         return $slug;
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => static::forgetCache());
+        static::deleted(fn () => static::forgetCache());
     }
 
     protected function casts(): array

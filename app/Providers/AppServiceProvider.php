@@ -4,12 +4,13 @@ namespace App\Providers;
 
 use App\Models\Category;
 use App\Models\ContactMessage;
+use App\Support\MapCache;
 use App\Support\PinPage;
 use App\Models\Device;
 use App\Models\Pin;
 use App\Models\Reply;
 use App\Models\Report;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -38,16 +39,22 @@ class AppServiceProvider extends ServiceProvider
         Reply::created($record);
         Report::created($record);
 
-        View::composer('admin.layout', function ($view): void {
-            $unread = 0;
+        $forgetMap = function (): void {
+            MapCache::forget();
+        };
+        Pin::saved($forgetMap);
+        Pin::deleted($forgetMap);
+        ContactMessage::saved(fn () => Cache::forget('admin.unread-contacts'));
+        ContactMessage::deleted(fn () => Cache::forget('admin.unread-contacts'));
 
-            try {
-                if (Schema::hasTable('contact_messages')) {
-                    $unread = ContactMessage::query()->whereNull('read_at')->count();
+        View::composer('admin.layout', function ($view): void {
+            $unread = Cache::remember('admin.unread-contacts', 30, function (): int {
+                try {
+                    return ContactMessage::query()->whereNull('read_at')->count();
+                } catch (\Throwable) {
+                    return 0;
                 }
-            } catch (\Throwable) {
-                $unread = 0;
-            }
+            });
 
             $view->with('unreadContacts', $unread);
         });

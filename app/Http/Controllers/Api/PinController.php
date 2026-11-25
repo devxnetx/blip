@@ -76,14 +76,16 @@ class PinController extends Controller
             ))
             ->values();
 
-        return response()->json(['pins' => $pins]);
+        return response()->json(['pins' => $pins])
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function cities(): JsonResponse
     {
         Pin::pruneExpired();
 
-        return response()->json(['cities' => MapCities::counts()]);
+        return response()->json(['cities' => MapCities::counts()])
+            ->header('Cache-Control', 'public, max-age=30');
     }
 
     public function latest(Request $request): JsonResponse
@@ -101,7 +103,8 @@ class PinController extends Controller
             ->map(fn (Pin $pin) => $pin->toApi(false))
             ->values();
 
-        return response()->json(['pins' => $pins]);
+        return response()->json(['pins' => $pins])
+            ->header('Cache-Control', 'public, max-age=20');
     }
 
     public function show(Request $request, Pin $pin): JsonResponse
@@ -121,7 +124,7 @@ class PinController extends Controller
 
         return response()->json([
             'pin' => $pin->toApi($mine, $replied, $reported),
-        ]);
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function store(Request $request): JsonResponse

@@ -653,7 +653,10 @@ class PinTest extends TestCase
             'expires_at' => now()->addHour(),
         ]);
 
-        $cities = collect($this->getJson('/api/cities')->assertOk()->json('cities'));
+        $citiesResponse = $this->getJson('/api/cities')->assertOk();
+        $this->assertStringContainsString('public', (string) $citiesResponse->headers->get('cache-control'));
+        $this->assertStringContainsString('max-age=30', (string) $citiesResponse->headers->get('cache-control'));
+        $cities = collect($citiesResponse->json('cities'));
 
         $this->assertSame(1, $cities->firstWhere('name', 'София')['count']);
         $this->assertSame(1, $cities->firstWhere('name', 'Варна')['count']);

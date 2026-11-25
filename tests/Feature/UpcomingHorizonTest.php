@@ -29,10 +29,15 @@ class UpcomingHorizonTest extends TestCase
             'west' => 23.2,
         ];
 
+        $map = $this->getJson('/api/pins?'.http_build_query($sofia))->assertOk();
+        $this->assertStringContainsString('private', (string) $map->headers->get('cache-control'));
+        $this->assertStringContainsString('no-store', (string) $map->headers->get('cache-control'));
+        $map->assertJsonFragment(['message' => $near->message])
+            ->assertJsonFragment(['message' => $note->message])
+            ->assertJsonMissing(['message' => $far->message]);
+
         $this->getJson('/api/pins?'.http_build_query($sofia))
             ->assertOk()
-            ->assertJsonFragment(['message' => $near->message])
-            ->assertJsonFragment(['message' => $note->message])
             ->assertJsonMissing(['message' => $far->message]);
 
         $this->getJson('/api/pins?'.http_build_query([

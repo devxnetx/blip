@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Pin;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class UpcomingHorizon
 {
@@ -27,6 +28,14 @@ class UpcomingHorizon
      * @return list<array{name: string, latitude: float, longitude: float}>
      */
     public static function crowded(): array
+    {
+        return Cache::remember(MapCache::CROWDED, MapCache::SECONDS, fn (): array => self::crowdedNow());
+    }
+
+    /**
+     * @return list<array{name: string, latitude: float, longitude: float}>
+     */
+    private static function crowdedNow(): array
     {
         $cities = MapCities::all();
         $counts = array_fill_keys(array_column($cities, 'name'), 0);

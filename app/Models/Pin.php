@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -452,6 +453,10 @@ class Pin extends Model
 
     public static function pruneExpired(): int
     {
+        if (! Cache::add('pins.prune', 1, 30)) {
+            return 0;
+        }
+
         $pins = static::query()
             ->where('expires_at', '<=', now())
             ->whereNotNull('image_path')
