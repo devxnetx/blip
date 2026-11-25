@@ -46,6 +46,24 @@ class Setting extends Model
         return max(1, min(90, $days > 0 ? $days : 14));
     }
 
+    public static function discordEveryHours(): int
+    {
+        return self::boundedHours('discord_live_every_hours', 3, 24);
+    }
+
+    public static function discordAheadHours(): int
+    {
+        return self::boundedHours('discord_live_ahead_hours', 3, 48);
+    }
+
+    private static function boundedHours(string $key, int $default, int $max): int
+    {
+        $raw = self::get($key);
+        $hours = $raw === null ? $default : (int) $raw;
+
+        return max(1, min($max, $hours > 0 ? $hours : $default));
+    }
+
     public static function importUntil(): Carbon
     {
         return now('Europe/Sofia')->startOfDay()->addDays(self::daysAhead())->utc();

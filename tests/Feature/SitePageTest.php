@@ -52,6 +52,8 @@ class SitePageTest extends TestCase
             ->from('/admin/settings')
             ->put('/admin/settings', [
                 'import_days_ahead' => 40,
+                'discord_live_every_hours' => 3,
+                'discord_live_ahead_hours' => 3,
                 'donate_revolut' => 'https://revolut.me/kostaa-test',
                 'donate_eth' => $eth,
                 'donate_sol' => $sol,

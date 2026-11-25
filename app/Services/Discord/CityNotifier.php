@@ -4,6 +4,7 @@ namespace App\Services\Discord;
 
 use App\Models\ChangelogEntry;
 use App\Models\Pin;
+use App\Models\Setting;
 use App\Support\ChangelogMarkdown;
 use App\Support\PinPage;
 use Illuminate\Support\Collection;
@@ -152,7 +153,7 @@ class CityNotifier
 
         $lines = $pins
             ->sortBy(fn (Pin $pin) => ($pin->starts_at ?? $pin->created_at)?->getTimestamp() ?? 0)
-            ->map(fn (Pin $pin): string => $this->plainTitle($pin).' · '.$this->masked('повече информация', $this->pinUrl($pin)))
+            ->map(fn (Pin $pin): string => $this->eventLine($pin))
             ->values()
             ->all();
 
@@ -169,6 +170,47 @@ class CityNotifier
         }
 
         return $sent;
+    }
+
+    /**
+     * @param  Collection<int, Pin>  $running
+     * @param  Collection<int, Pin>  $upcoming
+     */
+    public function postLive(array $city, Collection $running, Collection $upcoming, ?int $aheadHours = null): bool
+    {
+        if (! $this->enabled()) {
+            return false;
+        }
+
+        $channel = $this->channelId($city['name']);
+
+        if ($channel === null) {
+            Log::warning('Discord city channel is missing.', ['city' => $city['name']]);
+
+            return false;
+        }
+
+        $ahead = $aheadHours ?? Setting::discordAheadHours();
+        $heading = '**В момента в** '.$this->masked($city['name'], $this->cityUrl($city['slug']));
+        $lines = $this->sectionLines($running);
+        $lines[] = '';
+        $lines[] = '**Предстоящи до '.$this->hourPhrase($ahead).'**';
+        array_push($lines, ...$this->sectionLines($upcoming));
+
+        $sent = true;
+
+        foreach ($this->messages($heading, $lines) as $content) {
+            $sent = $this->post($channel, $content) && $sent;
+        }
+
+        return $sent;
+    }
+
+    public function cityUrl(string $slug): string
+    {
+        return $this->root().'/map?'.http_build_query([
+            'city' => $slug,
+        ]);
     }
 
     public static function channelName(string $cityName): string
@@ -228,31 +270,100 @@ class CityNotifier
         return $title !== '' ? $title : 'Пин';
     }
 
+    private function eventLine(Pin $pin): string
+    {
+        return $this->plainTitle($pin).' · '.$this->masked('повече информация', $this->pinUrl($pin));
+    }
+
+    /**
+     * @param  Collection<int, Pin>  $pins
+     * @return list<string>
+     */
+    private function sectionLines(Collection $pins): array
+    {
+        if ($pins->isEmpty()) {
+            return ['Няма събития.'];
+        }
+
+        return $pins->map(fn (Pin $pin): string => $this->plainTitle($pin).' · '.PinPage::whenLabel($pin).' · '.$this->masked('повече информация', $this->pinUrl($pin)))->values()->all();
+    }
+
+    private function hourPhrase(int $hours): string
+    {
+        return $hours === 1 ? '1 час' : $hours.' часа';
+    }
+
     /**
      * @return array<string, array{city: array{name: string, slug: string, latitude: float, longitude: float, find: string}, pins: Collection<int, Pin>}>
      */
     public function todayByCity(?string $slug = null): array
     {
-        $cities = PinPage::directory();
-        $wanted = null;
+        [$cities, $wanted] = $this->selectedCities($slug);
 
-        if ($slug !== null && $slug !== '') {
-            $wanted = PinPage::cityBySlug($cities, $slug);
-
-            if ($wanted === null) {
-                foreach ($cities as $city) {
-                    if (self::channelName($city['name']) === self::channelName($slug) || $city['name'] === $slug) {
-                        $wanted = $city;
-                        break;
-                    }
-                }
-            }
-
-            if ($wanted === null) {
-                return [];
-            }
+        if ($slug !== null && $slug !== '' && $wanted === null) {
+            return [];
         }
 
+        $pins = Pin::query()
+            ->onMap()
+            ->whereNull('suppressed_at')
+            ->occursToday()
+            ->get();
+
+        return $this->rowsFor($cities, $wanted, $pins);
+    }
+
+    /**
+     * Events that already started, and events that start within the ahead window.
+     *
+     * @return array<string, array{city: array{name: string, slug: string, latitude: float, longitude: float, find: string}, running: Collection<int, Pin>, upcoming: Collection<int, Pin>}>
+     */
+    public function liveByCity(?string $slug = null, ?int $aheadHours = null): array
+    {
+        [$cities, $wanted] = $this->selectedCities($slug);
+
+        if ($slug !== null && $slug !== '' && $wanted === null) {
+            return [];
+        }
+
+        $ahead = $aheadHours ?? Setting::discordAheadHours();
+        $pins = Pin::query()
+            ->onMap()
+            ->whereNull('suppressed_at')
+            ->whereNotNull('starts_at')
+            ->where('starts_at', '<=', now()->addHours($ahead))
+            ->get();
+
+        $rows = [];
+
+        foreach ($this->rowsFor($cities, $wanted, $pins) as $key => $row) {
+            $running = $row['pins']
+                ->filter(fn (Pin $pin): bool => $pin->starts_at !== null && $pin->starts_at->lte(now()))
+                ->sortBy(fn (Pin $pin) => $pin->starts_at?->getTimestamp() ?? 0)
+                ->values();
+            $upcoming = $row['pins']
+                ->filter(fn (Pin $pin): bool => $pin->starts_at !== null && $pin->starts_at->gt(now()))
+                ->sortBy(fn (Pin $pin) => $pin->starts_at?->getTimestamp() ?? 0)
+                ->values();
+
+            $rows[$key] = [
+                'city' => $row['city'],
+                'running' => $running,
+                'upcoming' => $upcoming,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array{name: string, slug: string, latitude: float, longitude: float, find: string}>  $cities
+     * @param  array{name: string, slug: string, latitude: float, longitude: float, find: string}|null  $wanted
+     * @param  Collection<int, Pin>  $pins
+     * @return array<string, array{city: array{name: string, slug: string, latitude: float, longitude: float, find: string}, pins: Collection<int, Pin>}>
+     */
+    private function rowsFor(array $cities, ?array $wanted, Collection $pins): array
+    {
         $buckets = [];
 
         foreach ($cities as $city) {
@@ -262,12 +373,6 @@ class CityNotifier
 
             $buckets[$city['slug']] = [];
         }
-
-        $pins = Pin::query()
-            ->onMap()
-            ->whereNull('suppressed_at')
-            ->occursToday()
-            ->get();
 
         foreach ($pins as $pin) {
             $city = PinPage::cityFor($pin, $cities);
@@ -293,6 +398,30 @@ class CityNotifier
         }
 
         return $rows;
+    }
+
+    /**
+     * @return array{0: list<array{name: string, slug: string, latitude: float, longitude: float, find: string}>, 1: array{name: string, slug: string, latitude: float, longitude: float, find: string}|null}
+     */
+    private function selectedCities(?string $slug): array
+    {
+        $cities = PinPage::directory();
+        $wanted = null;
+
+        if ($slug !== null && $slug !== '') {
+            $wanted = PinPage::cityBySlug($cities, $slug);
+
+            if ($wanted === null) {
+                foreach ($cities as $city) {
+                    if (self::channelName($city['name']) === self::channelName($slug) || $city['name'] === $slug) {
+                        $wanted = $city;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return [$cities, $wanted];
     }
 
     private function channelId(string $cityName): ?string

@@ -55,6 +55,16 @@
         <input id="import-days" name="import_days_ahead" type="number" min="1" max="90" value="{{ old('import_days_ahead', $days) }}" required>
         <p class="meta">Колко дни напред да се четат Спортен календар, EventiBG, Актуалните новини и Facebook. Купи билети чете целия предстоящ списък. Събитие, което трае цяла седмица, се записва веднъж.</p>
 
+        <h2>Discord</h2>
+        <p class="meta">Сутрешното съобщение в 08:00 остава. Отделно, всеки град получава едно съобщение за това, което върви сега, и за това, което започва скоро.</p>
+
+        <label for="discord-every">На всеки колко часа</label>
+        <input id="discord-every" name="discord_live_every_hours" type="number" min="1" max="24" value="{{ old('discord_live_every_hours', $discordEvery) }}" required>
+
+        <label for="discord-ahead">Колко часа напред</label>
+        <input id="discord-ahead" name="discord_live_ahead_hours" type="number" min="1" max="48" value="{{ old('discord_live_ahead_hours', $discordAhead) }}" required>
+        <p class="meta">Вторият списък е „Предстоящи до N часа“. Всеки ред е заглавие, оставащо време и връзка „повече информация“.</p>
+
         <h2>Сайт</h2>
         <p class="meta">Връзките се показват на страницата Контакт. Празно поле маха връзката от сайта.</p>
 

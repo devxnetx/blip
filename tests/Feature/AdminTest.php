@@ -672,12 +672,16 @@ class AdminTest extends TestCase
             ->assertSee('Trello')
             ->assertSee('Discord')
             ->assertSee('Дни напред')
+            ->assertSee('На всеки колко часа')
+            ->assertSee('Колко часа напред')
             ->assertSee('value="40"', false);
 
         $this->actingAs($admin)
             ->put('/admin/settings', [
                 'import_eventibg_enabled' => '1',
                 'import_days_ahead' => 7,
+                'discord_live_every_hours' => 6,
+                'discord_live_ahead_hours' => 4,
             ])
             ->assertRedirect('/admin/settings');
 
@@ -687,6 +691,8 @@ class AdminTest extends TestCase
         $this->assertFalse(Setting::enabled('import_aktualnitenovini_enabled'));
         $this->assertFalse(Setting::enabled('import_facebook_enabled'));
         $this->assertSame(7, Setting::daysAhead());
+        $this->assertSame(6, Setting::discordEveryHours());
+        $this->assertSame(4, Setting::discordAheadHours());
 
         $this->actingAs($admin)
             ->put('/admin/settings', [
