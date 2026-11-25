@@ -31,6 +31,14 @@ return [
     // City Discord channels. The token stays in the server .env.
     'discord_bot_token' => env('DISCORD_BOT_TOKEN'),
     'discord_guild_id' => env('DISCORD_GUILD_ID', '1574875809603133562'),
+    'discord_bug_channel_id' => env('DISCORD_BUG_CHANNEL_ID', '1574990792634925096'),
+
+    // Bug reports from the Discord forum land on this board. Secrets stay in the server .env.
+    'trello_key' => env('TRELLO_KEY'),
+    'trello_token' => env('TRELLO_TOKEN'),
+    'trello_secret' => env('TRELLO_SECRET'),
+    'trello_board' => env('TRELLO_BOARD', 'f7V0aAwm'),
+    'trello_bug_list' => env('TRELLO_BUG_LIST', 'To Do'),
     'facebook_cities' => [
         [
             'name' => 'София',

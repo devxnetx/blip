@@ -41,3 +41,8 @@ Schedule::command('pins:discord-today')
     ->timezone('Europe/Sofia')
     ->withoutOverlapping(30)
     ->appendOutputTo(storage_path('logs/discord-today.log'));
+
+Schedule::command('bugs:trello')
+    ->everyMinute()
+    ->withoutOverlapping(10)
+    ->appendOutputTo(storage_path('logs/trello-bugs.log'));

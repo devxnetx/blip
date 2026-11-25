@@ -40,6 +40,9 @@
         <env name="AKTUALNITENOVINI_PAUSE_MS" value="0"/>
         <env name="DISCORD_BOT_TOKEN" value=""/>
         <env name="DISCORD_GUILD_ID" value=""/>
+        <env name="TRELLO_KEY" value=""/>
+        <env name="TRELLO_TOKEN" value=""/>
+        <env name="TRELLO_SECRET" value=""/>
         <env name="FACEBOOK_PAUSE_MS" value="0"/>
         <env name="SCRAPELY_TOKEN" value="test-token"/>
         <env name="APIFY_TOKEN" value="test-token"/>
