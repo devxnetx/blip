@@ -420,20 +420,40 @@
 
         function upcomingLabel(pin) {
             if (!pin || pin.kind !== 'upcoming' || !pin.starts_at) return '';
-            if (new Date(pin.starts_at).getTime() <= Date.now()) return '';
             const date = new Date(pin.starts_at);
-            const minutes = Math.max(1, Math.round((date.getTime() - Date.now()) / 60000));
-            const clock = new Intl.DateTimeFormat('en-GB', {
+            const now = Date.now();
+            const ms = date.getTime() - now;
+            if (!Number.isFinite(ms) || ms <= 0) return '';
+            const partsOf = (value) => new Intl.DateTimeFormat('en-GB', {
                 timeZone: 'Europe/Sofia',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
                 hour: '2-digit',
                 minute: '2-digit',
                 hourCycle: 'h23',
-            }).format(date);
-            if (minutes < 60) return 'след ' + minutes + ' мин в ' + clock;
-            const hours = Math.max(1, Math.round(minutes / 60));
-            if (hours < 24) return 'след ' + hours + (hours === 1 ? ' час в ' : ' часа в ') + clock;
-            const days = Math.max(1, Math.round(minutes / 1440));
-            return 'след ' + days + (days === 1 ? ' ден в ' : ' дни в ') + clock;
+            }).formatToParts(value);
+            const piece = (parts, type) => {
+                const value = (parts.find((part) => part.type === type) || {}).value || '';
+                return type === 'hour' && value === '24' ? '00' : value;
+            };
+            const startParts = partsOf(date);
+            const nowParts = partsOf(new Date(now));
+            const startKey = piece(startParts, 'year') + '-' + piece(startParts, 'month') + '-' + piece(startParts, 'day');
+            const nowKey = piece(nowParts, 'year') + '-' + piece(nowParts, 'month') + '-' + piece(nowParts, 'day');
+            if (startKey === nowKey) {
+                const minutes = Math.max(1, Math.round(ms / 60000));
+                if (minutes < 60) return 'след ' + minutes + ' мин';
+                const hours = Math.max(1, Math.round(minutes / 60));
+                return 'след ' + hours + (hours === 1 ? ' час' : ' часа');
+            }
+            const hour = piece(startParts, 'hour');
+            const minute = piece(startParts, 'minute');
+            if (!hour || !minute) return '';
+            const clock = hour + ':' + minute;
+            const days = Math.round((Date.parse(startKey + 'T00:00:00Z') - Date.parse(nowKey + 'T00:00:00Z')) / 86400000);
+            if (days <= 1) return 'утре в ' + clock;
+            return 'след ' + days + ' дни в ' + clock;
         }
 
         function meta(pin) {

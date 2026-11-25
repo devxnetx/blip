@@ -78,7 +78,7 @@ class DiscordLiveTest extends TestCase
                 ->assertSuccessful();
 
             $this->assertSame('още 4 дни', PinPage::whenLabel($running));
-            $this->assertSame('след 2 часа в 18:10', PinPage::whenLabel($soon));
+            $this->assertSame('след 2 часа', PinPage::whenLabel($soon));
 
             Http::assertSent(function ($request) use ($running, $soon): bool {
                 if (! str_contains($request->url(), '/channels/111/messages')) {
@@ -89,7 +89,7 @@ class DiscordLiveTest extends TestCase
                     ."Киномания · още 4 дни · [повече информация](<https://kostaa.space/map?pin={$running->id}>)\n"
                     ."\n"
                     ."**Предстоящи до 3 часа**\n"
-                    ."Концерт довечера · след 2 часа в 18:10 · [повече информация](<https://kostaa.space/map?pin={$soon->id}>)";
+                    ."Концерт довечера · след 2 часа · [повече информация](<https://kostaa.space/map?pin={$soon->id}>)";
             });
 
             Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/channels/222/messages'));
@@ -122,7 +122,7 @@ class DiscordLiveTest extends TestCase
                     ."Няма събития.\n"
                     ."\n"
                     ."**Предстоящи до 6 часа**\n"
-                    ."Мач след пет часа · след 5 часа в 21:10 · [повече информация](<https://kostaa.space/map?pin={$soon->id}>)";
+                    ."Мач след пет часа · след 5 часа · [повече информация](<https://kostaa.space/map?pin={$soon->id}>)";
             });
         } finally {
             Carbon::setTestNow();

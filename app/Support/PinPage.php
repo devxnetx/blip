@@ -297,22 +297,29 @@ class PinPage
     private static function relativeStart(\DateTimeInterface $start): string
     {
         $sofia = Carbon::parse($start)->timezone('Europe/Sofia');
+        $today = now()->timezone('Europe/Sofia')->toDateString();
+        $startDate = $sofia->toDateString();
+
+        if ($startDate === $today) {
+            $minutes = max(1, (int) round(now()->diffInMinutes($sofia, true)));
+
+            if ($minutes < 60) {
+                return 'след '.$minutes.' мин';
+            }
+
+            $hours = max(1, (int) round($minutes / 60));
+
+            return 'след '.$hours.' '.($hours === 1 ? 'час' : 'часа');
+        }
+
         $clock = $sofia->format('H:i');
-        $minutes = max(1, (int) round(now()->diffInMinutes($sofia, true)));
+        $days = (int) round(Carbon::parse($today, 'UTC')->diffInDays(Carbon::parse($startDate, 'UTC')));
 
-        if ($minutes < 60) {
-            return 'след '.$minutes.' мин в '.$clock;
+        if ($days <= 1) {
+            return 'утре в '.$clock;
         }
 
-        $hours = max(1, (int) round($minutes / 60));
-
-        if ($hours < 24) {
-            return 'след '.$hours.' '.($hours === 1 ? 'час' : 'часа').' в '.$clock;
-        }
-
-        $days = max(1, (int) round($minutes / 1440));
-
-        return 'след '.$days.' '.($days === 1 ? 'ден' : 'дни').' в '.$clock;
+        return 'след '.$days.' дни в '.$clock;
     }
 
     public static function distanceLabel(float $meters): string

@@ -252,19 +252,42 @@ function timeLeft(expiresAt, now = Date.now()) {
   return `още ${dayLabel} и ${hourLabel}`;
 }
 
-function clockInSofia(date) {
-  const parts = new Intl.DateTimeFormat('en-GB', {
+function sofiaParts(date) {
+  return new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/Sofia',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(date);
-  const hour = parts.find((part) => part.type === 'hour')?.value || '';
-  const minute = parts.find((part) => part.type === 'minute')?.value || '';
+}
+
+function sofiaPart(parts, type) {
+  const value = parts.find((part) => part.type === type)?.value || '';
+  return type === 'hour' && value === '24' ? '00' : value;
+}
+
+function clockInSofia(date) {
+  const parts = sofiaParts(date);
+  const hour = sofiaPart(parts, 'hour');
+  const minute = sofiaPart(parts, 'minute');
   if (hour === '' || minute === '') {
     return '';
   }
   return `${hour}:${minute}`;
+}
+
+function sofiaDayKey(date) {
+  const parts = sofiaParts(date);
+  const year = sofiaPart(parts, 'year');
+  const month = sofiaPart(parts, 'month');
+  const day = sofiaPart(parts, 'day');
+  if (year === '' || month === '' || day === '') {
+    return '';
+  }
+  return `${year}-${month}-${day}`;
 }
 
 function relativeWhen(iso, now = Date.now()) {
@@ -273,20 +296,28 @@ function relativeWhen(iso, now = Date.now()) {
   if (!Number.isFinite(ms) || ms <= 0) {
     return '';
   }
+  const startKey = sofiaDayKey(date);
+  const nowKey = sofiaDayKey(new Date(now));
+  if (startKey === '' || nowKey === '') {
+    return '';
+  }
+  if (startKey === nowKey) {
+    const minutes = Math.max(1, Math.round(ms / 60000));
+    if (minutes < 60) {
+      return `след ${minutes} мин`;
+    }
+    const hours = Math.max(1, Math.round(minutes / 60));
+    return `след ${hours} ${hours === 1 ? 'час' : 'часа'}`;
+  }
   const clock = clockInSofia(date);
   if (!clock) {
     return '';
   }
-  const minutes = Math.max(1, Math.round(ms / 60000));
-  if (minutes < 60) {
-    return `след ${minutes} мин в ${clock}`;
+  const days = Math.round((Date.parse(`${startKey}T00:00:00Z`) - Date.parse(`${nowKey}T00:00:00Z`)) / 86400000);
+  if (days <= 1) {
+    return `утре в ${clock}`;
   }
-  const hours = Math.max(1, Math.round(minutes / 60));
-  if (hours < 24) {
-    return `след ${hours} ${hours === 1 ? 'час' : 'часа'} в ${clock}`;
-  }
-  const days = Math.max(1, Math.round(minutes / 1440));
-  return `след ${days} ${days === 1 ? 'ден' : 'дни'} в ${clock}`;
+  return `след ${days} дни в ${clock}`;
 }
 
 function upcomingSoon(pin, now = Date.now()) {

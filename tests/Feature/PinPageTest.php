@@ -80,7 +80,7 @@ class PinPageTest extends TestCase
             ->assertOk()
             ->assertSee('<h1>'.$here->message.'</h1>', false)
             ->assertSee('Голям концерт в центъра.')
-            ->assertSee('след 1 ден в')
+            ->assertSee('утре в')
             ->assertDontSee('Предстоящо')
             ->assertSee('публичен отговор')
             ->assertDontSee($secret->message)
@@ -199,21 +199,63 @@ class PinPageTest extends TestCase
             $this->assertTrue(PinPage::startsSoon($within));
             $this->assertFalse(PinPage::startsSoon($ahead));
             $this->assertFalse(PinPage::startsSoon($edge));
-            $this->assertSame('след 3 часа в 13:00', PinPage::whenLabel($soon));
-            $this->assertSame('след 12 часа в 22:00', PinPage::whenLabel($within));
+            $this->assertSame('след 3 часа', PinPage::whenLabel($soon));
+            $this->assertSame('след 12 часа', PinPage::whenLabel($within));
             $this->assertSame('след 2 дни в 19:00', PinPage::whenLabel($ahead));
-            $this->assertSame('след 1 ден в 10:00', PinPage::whenLabel($edge));
+            $this->assertSame('утре в 10:00', PinPage::whenLabel($edge));
             $this->assertStringNotContainsString('Предстоящо', PinPage::whenLabel($soon));
 
             $this->get(PinPage::path($soon))
                 ->assertOk()
-                ->assertSee('след 3 часа в', false)
+                ->assertSee('след 3 часа', false)
+                ->assertDontSee('след 3 часа в', false)
                 ->assertSee('class="soon"', false)
                 ->assertDontSee('Предстоящо');
 
             $this->get(PinPage::path($ahead))
                 ->assertOk()
                 ->assertSee('след 2 дни в 19:00', false);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_upcoming_time_follows_the_sofia_calendar_day(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-25 22:30:00', 'Europe/Sofia'));
+
+        try {
+            $tonight = $this->pin('До полунощ', 42.4258, 25.6345, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => Carbon::parse('2026-11-25 23:10:00', 'Europe/Sofia')->utc(),
+                'expires_at' => Carbon::parse('2026-11-26 01:00:00', 'Europe/Sofia')->utc(),
+            ]);
+            $hour = $this->pin('След час', 42.426, 25.635, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => Carbon::parse('2026-11-25 23:30:00', 'Europe/Sofia')->utc(),
+                'expires_at' => Carbon::parse('2026-11-26 01:00:00', 'Europe/Sofia')->utc(),
+            ]);
+            $tomorrow = $this->pin('След полунощ', 42.427, 25.636, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => Carbon::parse('2026-11-26 01:15:00', 'Europe/Sofia')->utc(),
+                'expires_at' => Carbon::parse('2026-11-26 03:00:00', 'Europe/Sofia')->utc(),
+            ]);
+            $later = $this->pin('След два дни рано', 42.428, 25.637, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => Carbon::parse('2026-11-27 08:00:00', 'Europe/Sofia')->utc(),
+                'expires_at' => Carbon::parse('2026-11-27 10:00:00', 'Europe/Sofia')->utc(),
+            ]);
+
+            $this->assertSame('след 40 мин', PinPage::whenLabel($tonight));
+            $this->assertSame('след 1 час', PinPage::whenLabel($hour));
+            $this->assertSame('утре в 01:15', PinPage::whenLabel($tomorrow));
+            $this->assertSame('след 2 дни в 08:00', PinPage::whenLabel($later));
+
+            $this->get('/pins/stara-zagora')
+                ->assertOk()
+                ->assertSee('след 40 мин', false)
+                ->assertSee('утре в 01:15', false)
+                ->assertSee('след 2 дни в 08:00', false);
         } finally {
             Carbon::setTestNow();
         }
