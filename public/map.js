@@ -89,6 +89,8 @@ const replyText = document.getElementById('reply-text');
 let pins = [];
 let markers = [];
 let selected = null;
+const pageParams = new URLSearchParams(window.location.search);
+let period = pageParams.get('period') === 'today' ? 'today' : '';
 let replies = [];
 let replyError = '';
 let listCenter = null;
@@ -117,6 +119,78 @@ function headers() {
     Accept: 'application/json',
     'X-Device-Id': deviceId(),
   };
+}
+
+function sofiaClock(utcMs) {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Sofia',
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const parts = {};
+  fmt.formatToParts(new Date(utcMs)).forEach((part) => {
+    parts[part.type] = part.value;
+  });
+  return Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+}
+
+function sofiaDayRange(now = new Date()) {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Sofia',
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = {};
+  fmt.formatToParts(now).forEach((part) => {
+    parts[part.type] = part.value;
+  });
+  const midnight = Date.UTC(+parts.year, +parts.month - 1, +parts.day, 0, 0, 0);
+  const nextMidnight = Date.UTC(+parts.year, +parts.month - 1, +parts.day + 1, 0, 0, 0);
+  const start = midnight - (sofiaClock(midnight) - midnight);
+  const end = nextMidnight - (sofiaClock(nextMidnight) - nextMidnight);
+  return { start, end: end - 1 };
+}
+
+function occursToday(pin) {
+  const startAt = Date.parse(pin.starts_at || pin.created_at);
+  const endAt = Date.parse(pin.expires_at);
+  if (!Number.isFinite(startAt) || !Number.isFinite(endAt)) {
+    return false;
+  }
+  const day = sofiaDayRange();
+  return startAt <= day.end && endAt > day.start;
+}
+
+function shownPins() {
+  return period === 'today' ? pins.filter(occursToday) : pins;
+}
+
+function cityBySlug(slug) {
+  const table = window.KOSTAA_CITY_SLUGS || {};
+  return CITIES.find((city) => table[city.name] === slug) || null;
+}
+
+function withPeriod(params) {
+  if (period === 'today') {
+    params.set('period', 'today');
+  }
+  return params;
+}
+
+function paintPeriod() {
+  const button = document.getElementById('period-today');
+  if (!button) {
+    return;
+  }
+  button.classList.toggle('on', period === 'today');
+  button.setAttribute('aria-pressed', period === 'today' ? 'true' : 'false');
 }
 
 async function readError(response) {
@@ -471,7 +545,7 @@ function markerElement(html, onClick) {
 function drawMarkers() {
   markers.forEach((marker) => marker.remove());
   markers = [];
-  const items = groupPins(pins, currentRegion());
+  const items = groupPins(shownPins(), currentRegion());
 
   items.clusters.forEach((cluster) => {
     const width = Math.max(46, 16 + String(cluster.count).length * 12);
@@ -682,12 +756,12 @@ async function loadPins() {
     west -= lngPad;
   }
   const box = { north, south, east, west };
-  const params = new URLSearchParams({
+  const params = withPeriod(new URLSearchParams({
     north: String(box.north),
     south: String(box.south),
     east: String(box.east),
     west: String(box.west),
-  });
+  }));
 
   try {
     const response = await fetch(`/api/pins?${params}`, { headers: headers() });
@@ -713,7 +787,7 @@ async function loadPins() {
       east: bounds.getEast(),
       west: bounds.getWest(),
     };
-    empty.hidden = pins.some((pin) => covers(pin, view));
+    empty.hidden = shownPins().some((pin) => covers(pin, view));
     if (selected) {
       const fresh = pins.find((pin) => pin.id === selected.id);
       if (fresh) {
@@ -1012,12 +1086,12 @@ async function loadNearby(kilometers) {
   const list = document.getElementById('nearby-list');
   status.textContent = 'Зарежда се...';
   const region = boxForRadius(listCenter.lat, listCenter.lng, kilometers);
-  const params = new URLSearchParams({
+  const params = withPeriod(new URLSearchParams({
     north: String(region.latitude + region.latitudeDelta / 2),
     south: String(region.latitude - region.latitudeDelta / 2),
     east: String(region.longitude + region.longitudeDelta / 2),
     west: String(region.longitude - region.longitudeDelta / 2),
-  });
+  }));
 
   try {
     const response = await fetch(`/api/pins?${params}`, { headers: headers() });
@@ -1049,7 +1123,10 @@ function renderNearbyList() {
   const status = document.getElementById('nearby-status');
   const list = document.getElementById('nearby-list');
   const kilometers = Number(document.getElementById('radius').value);
-  const rows = nearbyRows.filter((pin) => !listCategory || pin.category === listCategory);
+  const rows = nearbyRows.filter((pin) => (
+    (!listCategory || pin.category === listCategory)
+    && (period !== 'today' || occursToday(pin))
+  ));
   list.replaceChildren();
   rows.forEach((pin) => {
       const item = document.createElement('li');
@@ -1101,7 +1178,9 @@ function renderNearbyList() {
       item.append(button, actions);
       list.append(item);
     });
-  if (!nearbyRows.length) {
+  if (!rows.length && period === 'today') {
+    status.textContent = 'Няма събития за днес.';
+  } else if (!nearbyRows.length) {
     status.textContent = `Няма нищо в радиус от ${kilometers} км.`;
   } else if (!rows.length) {
     status.textContent = 'Няма нищо в тази категория.';
@@ -1120,6 +1199,23 @@ document.getElementById('category-filters').addEventListener('click', (event) =>
     item.classList.toggle('on', item === button);
   });
   renderNearbyList();
+});
+
+document.getElementById('period-today').addEventListener('click', () => {
+  period = period === 'today' ? '' : 'today';
+  const url = new URL(window.location.href);
+  if (period === 'today') {
+    url.searchParams.set('period', 'today');
+  } else {
+    url.searchParams.delete('period');
+  }
+  history.replaceState(null, '', url);
+  paintPeriod();
+  pins = [];
+  loadPins();
+  if (!nearbyEl.hidden && listCenter) {
+    loadNearby(Number(document.getElementById('radius').value));
+  }
 });
 
 document.getElementById('open-pins').addEventListener('click', () => {
@@ -1379,12 +1475,12 @@ toast.addEventListener('click', () => {
 
 async function scanNear(point) {
   const region = boxForRadius(point.lat, point.lng, NEAR_KM);
-  const params = new URLSearchParams({
+  const params = withPeriod(new URLSearchParams({
     north: String(region.latitude + region.latitudeDelta / 2),
     south: String(region.latitude - region.latitudeDelta / 2),
     east: String(region.longitude + region.longitudeDelta / 2),
     west: String(region.longitude - region.longitudeDelta / 2),
-  });
+  }));
   const response = await fetch(`/api/pins?${params}`, { headers: headers() });
   if (!response.ok) {
     return;
@@ -1688,13 +1784,35 @@ async function openLinkedPin() {
   }
 }
 
+function openTodayList(city) {
+  listCenter = { lat: city.latitude, lng: city.longitude };
+  const radius = document.getElementById('radius');
+  radius.value = '18';
+  document.getElementById('radius-label').innerHTML = '<b>18 км</b>';
+  closePanel();
+  document.getElementById('cities-modal').hidden = true;
+  nearbyEl.hidden = false;
+  loadNearby(18);
+}
+
 async function openOnCity() {
+  paintPeriod();
   if (holdLink) {
     const opened = await openLinkedPin();
     if (opened) {
       return;
     }
     holdLink = false;
+  }
+
+  const linked = cityBySlug(pageParams.get('city') || '');
+  if (linked) {
+    viewTouched = true;
+    showCity(linked.latitude, linked.longitude, { span: period === 'today' ? 0.32 : 0.08 });
+    if (period === 'today') {
+      openTodayList(linked);
+    }
+    return;
   }
 
   const staraZagora = CITIES.find((city) => city.name === 'Стара Загора');

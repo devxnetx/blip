@@ -343,6 +343,39 @@ class Pin extends Model
             ->where('expires_at', '>', now());
     }
 
+    /**
+     * The pin's window overlaps the Europe/Sofia calendar day.
+     * A scheduled event uses starts_at. A device note uses created_at.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    public static function sofiaDayBounds(?Carbon $moment = null): array
+    {
+        $day = ($moment ?? now())->copy()->timezone('Europe/Sofia');
+
+        return [
+            $day->copy()->startOfDay()->utc(),
+            $day->copy()->endOfDay()->utc(),
+        ];
+    }
+
+    public function scopeOccursToday(Builder $query, ?Carbon $moment = null): Builder
+    {
+        [$start, $end] = self::sofiaDayBounds($moment);
+
+        return $query->where(function (Builder $inner) use ($start, $end): void {
+            $inner->where(function (Builder $scheduled) use ($start, $end): void {
+                $scheduled->whereNotNull('starts_at')
+                    ->where('starts_at', '<=', $end)
+                    ->where('expires_at', '>', $start);
+            })->orWhere(function (Builder $posted) use ($start, $end): void {
+                $posted->whereNull('starts_at')
+                    ->where('created_at', '<=', $end)
+                    ->where('expires_at', '>', $start);
+            });
+        });
+    }
+
     protected function casts(): array
     {
         return [

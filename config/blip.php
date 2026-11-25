@@ -27,6 +27,10 @@ return [
     // Starter plan hard-stops at $19. $3 per 1,000 events. Leave a dollar of room.
     'facebook_usd_limit' => 18.0,
     'facebook_usd_per_event' => 0.003,
+
+    // City Discord channels. The token stays in the server .env.
+    'discord_bot_token' => env('DISCORD_BOT_TOKEN'),
+    'discord_guild_id' => env('DISCORD_GUILD_ID', '1574875809603133562'),
     'facebook_cities' => [
         [
             'name' => 'София',

@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\Pin;
 use App\Models\Reply;
 use App\Models\Report;
+use App\Services\Discord\CityNotifier;
 use App\Support\MapCities;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +26,7 @@ class PinController extends Controller
             'south' => ['required', 'numeric', 'between:-90,90'],
             'east' => ['required', 'numeric', 'between:-180,180'],
             'west' => ['required', 'numeric', 'between:-180,180'],
+            'period' => ['nullable', 'in:today'],
         ]);
 
         if ($bounds['north'] < $bounds['south'] || $bounds['east'] < $bounds['west']) {
@@ -41,6 +43,9 @@ class PinController extends Controller
             ->onMap()
             ->whereBetween('latitude', [$bounds['south'], $bounds['north']])
             ->whereBetween('longitude', [$bounds['west'], $bounds['east']])
+            ->when(($bounds['period'] ?? null) === 'today', function ($query): void {
+                $query->whereNull('suppressed_at')->occursToday();
+            })
             ->latest()
             ->limit(200)
             ->get();
@@ -179,6 +184,8 @@ class PinController extends Controller
             'image_path' => $path,
             ...Pin::locatedSchedule($kind, $startsAt, $data['duration']),
         ]);
+
+        app(CityNotifier::class)->announcePin($pin);
 
         return response()->json($pin->toApi(true), 201);
     }

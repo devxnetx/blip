@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Category;
 use App\Models\ContactMessage;
+use App\Support\PinPage;
 use App\Models\Device;
 use App\Models\Pin;
 use App\Models\Reply;
@@ -60,6 +61,9 @@ class AppServiceProvider extends ServiceProvider
                 'defaultCategory' => array_key_exists('other', $listed)
                     ? 'other'
                     : (array_key_first($listed) ?: 'other'),
+                'citySlugs' => collect(PinPage::directory())->mapWithKeys(
+                    fn (array $city): array => [$city['name'] => $city['slug']]
+                )->all(),
             ]);
         });
     }

@@ -750,6 +750,11 @@
             color: #fff;
         }
 
+        #period-today.on {
+            background: var(--ink);
+            color: #fff;
+        }
+
         #open-unassigned {
             background: var(--ink);
             color: #fff;
@@ -909,6 +914,7 @@
             <button class="city-pill" id="open-composer" type="button">Нов пин</button>
             <button class="city-pill" id="open-unassigned" type="button">Без място</button>
         @endauth
+        <button class="city-pill" id="period-today" type="button" aria-pressed="false">Днес</button>
         <button class="city-pill" id="open-pins" type="button">Пинове</button>
     </div>
     <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span></span></button>
@@ -1072,6 +1078,7 @@
     </aside>
 
     <script>window.KOSTAA_CATEGORIES = @json($categories, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);</script>
+    <script>window.KOSTAA_CITY_SLUGS = @json($citySlugs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);</script>
     <script src="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.js"></script>
     <script src="{{ asset('map.js') }}?v={{ filemtime(public_path('map.js')) }}"></script>
 </body>

@@ -35,3 +35,9 @@ Schedule::command('pins:import-kupibileti')
 Schedule::command('pins:promote-started')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::command('pins:discord-today')
+    ->dailyAt('08:00')
+    ->timezone('Europe/Sofia')
+    ->withoutOverlapping(30)
+    ->appendOutputTo(storage_path('logs/discord-today.log'));
