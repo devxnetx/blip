@@ -12,6 +12,7 @@ function categoryLabel(id) {
   return CATEGORIES[id] || '';
 }
 const REVEAL_DELTA = 0.012;
+const LINK_DELTA = 0.005;
 const CITIES = [
   { name: 'София', find: 'sofia sofiq', latitude: 42.6977, longitude: 23.3219 },
   { name: 'Пловдив', find: 'plovdiv', latitude: 42.1354, longitude: 24.7453 },
@@ -503,18 +504,30 @@ function groupPins(rows, region) {
 
   const clusters = [];
   const singles = [];
+  const openId = selected && selected.id ? selected.id : 0;
   cells.forEach((group, key) => {
-    if (group.length === 1) {
-      singles.push({ ...group[0], stackX: 0, stackY: 0, tail: 'center' });
+    let members = group;
+    if (openId) {
+      const open = group.find((pin) => pin.id === openId);
+      if (open && group.length > 1) {
+        singles.push({ ...open, stackX: 0, stackY: 0, tail: 'center' });
+        members = group.filter((pin) => pin.id !== openId);
+      }
+    }
+    if (members.length === 0) {
       return;
     }
-    const lats = group.map((pin) => pin.latitude);
-    const lngs = group.map((pin) => pin.longitude);
+    if (members.length === 1) {
+      singles.push({ ...members[0], stackX: 0, stackY: 0, tail: 'center' });
+      return;
+    }
+    const lats = members.map((pin) => pin.latitude);
+    const lngs = members.map((pin) => pin.longitude);
     clusters.push({
       id: key,
-      count: group.length,
-      latitude: lats.reduce((sum, value) => sum + value, 0) / group.length,
-      longitude: lngs.reduce((sum, value) => sum + value, 0) / group.length,
+      count: members.length,
+      latitude: lats.reduce((sum, value) => sum + value, 0) / members.length,
+      longitude: lngs.reduce((sum, value) => sum + value, 0) / members.length,
       latitudeSpan: Math.max(...lats) - Math.min(...lats),
       longitudeSpan: Math.max(...lngs) - Math.min(...lngs),
     });
@@ -1830,6 +1843,37 @@ function followCity() {
   });
 }
 
+function placeLinkedPin(pin) {
+  const latitude = Number(pin.latitude);
+  const longitude = Number(pin.longitude);
+  const zoom = zoomForDelta(latitude, LINK_DELTA);
+  let centerLng = longitude;
+  if (desktopBoot) {
+    const width = Math.max(map.getCanvas().clientWidth, 1);
+    const cos = Math.cos(latitude * Math.PI / 180);
+    const metersPerPixel = 156543.03392 * Math.max(cos, 0.01) / (2 ** zoom);
+    const shiftPx = Math.min(210, width * 0.18);
+    centerLng += (shiftPx * metersPerPixel) / (111320 * Math.max(Math.abs(cos), 0.2));
+  }
+  placed = true;
+  viewTouched = true;
+  introToken += 1;
+  const move = () => {
+    map.jumpTo({
+      center: [centerLng, latitude],
+      zoom,
+      pitch: Math.max(map.getPitch(), 48),
+      bearing: map.getBearing(),
+    });
+    drawMarkers();
+  };
+  if (map.isStyleLoaded()) {
+    move();
+    return;
+  }
+  map.once('load', move);
+}
+
 async function openLinkedPin() {
   const id = new URLSearchParams(window.location.search).get('pin');
   if (!id || !/^\d+$/.test(id)) {
@@ -1846,15 +1890,8 @@ async function openLinkedPin() {
       return false;
     }
     pins = [pin, ...pins.filter((item) => item.id !== pin.id)];
-    const span = 0.01;
-    frameMap(
-      Number(pin.longitude) - span / 2,
-      Number(pin.latitude) - span / 2,
-      Number(pin.longitude) + span / 2,
-      Number(pin.latitude) + span / 2,
-      0,
-    );
     openPin(pin);
+    placeLinkedPin(pin);
     hideBoot();
     return true;
   } catch {
