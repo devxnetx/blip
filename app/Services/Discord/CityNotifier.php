@@ -65,21 +65,21 @@ class CityNotifier
             return false;
         }
 
-        $titles = $pins
+        $lines = $pins
             ->sortBy(fn (Pin $pin) => ($pin->starts_at ?? $pin->created_at)?->getTimestamp() ?? 0)
-            ->map(fn (Pin $pin) => trim(str_replace(["\r", "\n"], ' ', $pin->message)))
-            ->filter(fn (string $title) => $title !== '')
+            ->map(fn (Pin $pin): string => $this->plainTitle($pin).' '.$this->masked('more info', $this->pinUrl($pin)))
             ->values()
             ->all();
 
-        $link = $this->root().'/map?'.http_build_query([
-            'city' => $city['slug'],
-            'period' => 'today',
-        ]);
+        $heading = $this->masked('Today in '.$city['name'].':', $this->todayUrl($city['slug']));
+
+        if ($lines === []) {
+            $lines = ['Няма събития за днес.'];
+        }
 
         $sent = true;
 
-        foreach ($this->messages($titles, $link) as $content) {
+        foreach ($this->messages($heading, $lines) as $content) {
             $sent = $this->post($channel, $content) && $sent;
         }
 
@@ -92,33 +92,54 @@ class CityNotifier
     }
 
     /**
-     * @param  list<string>  $titles
+     * @param  list<string>  $lines
      * @return list<string>
      */
-    public function messages(array $titles, string $link): array
+    public function messages(string $heading, array $lines): array
     {
-        if ($titles === []) {
-            return ["Няма събития за днес.\n".$link];
-        }
-
         $messages = [];
-        $current = '';
+        $current = $heading;
 
-        foreach ($titles as $title) {
-            $next = $current === '' ? $title : $current."\n".$title;
+        foreach ($lines as $line) {
+            $next = $current."\n".$line;
 
-            if (mb_strlen($next."\n".$link) > 1900 && $current !== '') {
+            if (mb_strlen($next) > 1900 && $current !== $heading && $current !== '') {
                 $messages[] = $current;
-                $current = $title;
+                $current = $line;
                 continue;
             }
 
             $current = $next;
         }
 
-        $messages[] = $current."\n".$link;
+        $messages[] = $current;
 
         return $messages;
+    }
+
+    public function masked(string $label, string $url): string
+    {
+        return '['.$label.'](<'.$url.'>)';
+    }
+
+    public function todayUrl(string $slug): string
+    {
+        return $this->root().'/map?'.http_build_query([
+            'city' => $slug,
+            'period' => 'today',
+        ]);
+    }
+
+    public function pinUrl(Pin $pin): string
+    {
+        return $this->root().'/map?pin='.$pin->id;
+    }
+
+    private function plainTitle(Pin $pin): string
+    {
+        $title = trim(str_replace(["\r", "\n", '[', ']'], ' ', $pin->message));
+
+        return $title !== '' ? $title : 'Пин';
     }
 
     /**

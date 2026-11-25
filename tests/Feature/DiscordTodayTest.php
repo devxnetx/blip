@@ -44,7 +44,7 @@ class DiscordTodayTest extends TestCase
 
     public function test_today_lists_titles_and_the_filtered_city_link(): void
     {
-        $this->pin('Концерт на площада', 42.4258, 25.6345, [
+        $concert = $this->pin('Концерт на площада', 42.4258, 25.6345, [
             'starts_at' => now()->subHour(),
             'expires_at' => now()->addHours(2),
         ]);
@@ -63,12 +63,13 @@ class DiscordTodayTest extends TestCase
             ->expectsOutputToContain('POSTED Стара Загора 1')
             ->assertSuccessful();
 
-        Http::assertSent(function ($request): bool {
+        Http::assertSent(function ($request) use ($concert): bool {
             if (! str_contains($request->url(), '/channels/111/messages')) {
                 return false;
             }
 
-            return $request['content'] === "Концерт на площада\nhttps://kostaa.space/map?city=stara-zagora&period=today";
+            return $request['content'] === "[Today in Стара Загора:](<https://kostaa.space/map?city=stara-zagora&period=today>)\n"
+                ."Концерт на площада [more info](<https://kostaa.space/map?pin={$concert->id}>)";
         });
     }
 
