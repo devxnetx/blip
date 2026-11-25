@@ -251,6 +251,51 @@ function timeLeft(expiresAt, now = Date.now()) {
   return `още ${dayLabel} и ${hourLabel}`;
 }
 
+function clockInSofia(date) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Sofia',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const hour = parts.find((part) => part.type === 'hour')?.value || '';
+  const minute = parts.find((part) => part.type === 'minute')?.value || '';
+  if (hour === '' || minute === '') {
+    return '';
+  }
+  return `${hour}:${minute}`;
+}
+
+function relativeWhen(iso, now = Date.now()) {
+  const date = new Date(iso);
+  const ms = date.getTime() - now;
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return '';
+  }
+  const clock = clockInSofia(date);
+  if (!clock) {
+    return '';
+  }
+  const minutes = Math.max(1, Math.round(ms / 60000));
+  if (minutes < 60) {
+    return `след ${minutes} мин в ${clock}`;
+  }
+  const hours = Math.max(1, Math.round(minutes / 60));
+  if (hours < 24) {
+    return `след ${hours} ${hours === 1 ? 'час' : 'часа'} в ${clock}`;
+  }
+  const days = Math.max(1, Math.round(minutes / 1440));
+  return `след ${days} ${days === 1 ? 'ден' : 'дни'} в ${clock}`;
+}
+
+function upcomingSoon(pin, now = Date.now()) {
+  if (!pin || pin.kind !== 'upcoming' || !pin.starts_at) {
+    return false;
+  }
+  const ms = new Date(pin.starts_at).getTime() - now;
+  return ms > 0 && ms < 12 * 60 * 60 * 1000;
+}
+
 function formatWhen(iso) {
   const date = new Date(iso);
   if (!Number.isFinite(date.getTime())) {
@@ -264,41 +309,13 @@ function formatWhen(iso) {
   }).format(date);
 }
 
-function formatPanelWhen(iso) {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) {
-    return '';
-  }
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/Sofia',
-    day: 'numeric',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(date);
-  const pick = (type) => parts.find((part) => part.type === type)?.value || '';
-  const day = pick('day');
-  const month = pick('month');
-  const hour = pick('hour');
-  const minute = pick('minute');
-  if (!day || !month || hour === '' || minute === '') {
-    return '';
-  }
-  return `${day}.${month}, ${hour}:${minute}`;
-}
-
 function panelWhen(pin) {
-  if (pin && pin.kind === 'upcoming' && pin.starts_at && new Date(pin.starts_at).getTime() > Date.now()) {
-    const when = formatPanelWhen(pin.starts_at);
-    return when ? `Предстоящо · ${when}` : 'Предстоящо';
-  }
-  return timeLeft(pin.expires_at);
+  return upcomingLabel(pin) || timeLeft(pin.expires_at);
 }
 
 function pinStackHeight(pin) {
   const when = pin.kind === 'upcoming' && pin.starts_at && new Date(pin.starts_at).getTime() > Date.now();
-  const text = 36 + (categoryLabel(pin.category) ? 16 : 0) + (when ? 32 : 0);
+  const text = 34 + (categoryLabel(pin.category) ? 14 : 0) + (when ? 14 : 0);
   const photo = safeUrl(pin.image_url) ? 72 : 0;
 
   return Math.max(text, photo) + 28;
@@ -350,8 +367,7 @@ function upcomingLabel(pin) {
   if (new Date(pin.starts_at).getTime() <= Date.now()) {
     return '';
   }
-  const when = formatWhen(pin.starts_at);
-  return when ? `Предстоящо · ${when}` : 'Предстоящо';
+  return relativeWhen(pin.starts_at);
 }
 
 function durationText(minutes) {
@@ -566,7 +582,7 @@ function drawMarkers() {
       ? `<img src="${safeUrl(pin.image_url)}" alt="">`
       : '';
     const kindHtml = kind ? `<small>${escapeHtml(kind)}</small>` : '';
-    const whenHtml = when ? `<small>${escapeHtml(when)}</small>` : '';
+    const whenHtml = when ? `<small class="${upcomingSoon(pin) ? 'soon' : ''}">${escapeHtml(when)}</small>` : '';
     const tailClass = pin.tail === 'right' || pin.tail === 'left' ? ` tail-${pin.tail}` : '';
     const element = markerElement(
       `<div class="bubble-wrap"><div class="bubble-card${tailClass}"><div class="bubble">${image}<div class="meta"><span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div></div><div class="tail"></div></div></div>`,
@@ -824,6 +840,7 @@ function renderPanel() {
   const whenText = panelWhen(selected);
   when.hidden = !whenText;
   when.textContent = whenText;
+  when.classList.toggle('soon', upcomingSoon(selected));
   const photo = document.getElementById('panel-photo');
   photo.hidden = !safeUrl(selected.image_url);
   photo.src = photo.hidden ? '' : selected.image_url;
@@ -1151,7 +1168,18 @@ function renderNearbyList() {
         copy.append(kind);
       }
       const meta = document.createElement('small');
-      meta.textContent = `${formatDistance(pin.km)} · ${upcomingLabel(pin) || timeLeft(pin.expires_at)}`;
+      const whenText = upcomingLabel(pin);
+      meta.append(`${formatDistance(pin.km)} · `);
+      if (whenText) {
+        const time = document.createElement('span');
+        time.textContent = whenText;
+        if (upcomingSoon(pin)) {
+          time.className = 'soon';
+        }
+        meta.append(time);
+      } else {
+        meta.append(timeLeft(pin.expires_at));
+      }
       copy.append(meta);
       button.append(copy);
       button.addEventListener('click', () => {

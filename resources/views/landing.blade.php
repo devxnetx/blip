@@ -421,13 +421,19 @@
         function upcomingLabel(pin) {
             if (!pin || pin.kind !== 'upcoming' || !pin.starts_at) return '';
             if (new Date(pin.starts_at).getTime() <= Date.now()) return '';
-            const formatted = new Intl.DateTimeFormat('bg-BG', {
-                day: 'numeric',
-                month: 'short',
+            const date = new Date(pin.starts_at);
+            const minutes = Math.max(1, Math.round((date.getTime() - Date.now()) / 60000));
+            const clock = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Europe/Sofia',
                 hour: '2-digit',
                 minute: '2-digit',
-            }).format(new Date(pin.starts_at));
-            return 'Предстоящо · ' + formatted;
+                hourCycle: 'h23',
+            }).format(date);
+            if (minutes < 60) return 'след ' + minutes + ' мин в ' + clock;
+            const hours = Math.max(1, Math.round(minutes / 60));
+            if (hours < 24) return 'след ' + hours + (hours === 1 ? ' час в ' : ' часа в ') + clock;
+            const days = Math.max(1, Math.round(minutes / 1440));
+            return 'след ' + days + (days === 1 ? ' ден в ' : ' дни в ') + clock;
         }
 
         function meta(pin) {

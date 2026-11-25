@@ -162,17 +162,33 @@
             display: block;
             background: #3a3834;
         }
-        .bubble .meta { min-width: 0; flex: 1; }
+        .bubble .meta {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            gap: 1px;
+            min-width: 0;
+            flex: 1 1 auto;
+            align-self: flex-start;
+        }
         .bubble span {
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            width: 100%;
+            max-height: 2.4em;
+            min-height: 0;
+            flex: 0 0 auto;
             font-size: 13px;
             font-weight: 600;
-            line-height: 1.3;
+            line-height: 1.2;
         }
-        .bubble small { display: block; margin-top: 3px; color: #cfcabe; font-size: 11px; font-weight: 600; }
+        .bubble small { display: block; flex: none; margin: 0; padding: 0; color: #cfcabe; font-size: 11px; font-weight: 600; line-height: 1.2; }
+        .bubble small.soon { color: #ff5c5c; }
+        .pin-head .soon, .pin-row .soon { color: #dc2626; }
+        .pin-row.on .soon { color: #ff8a8a; }
         .tail {
             width: 0;
             height: 0;
@@ -233,7 +249,12 @@
                         @endif
                         <span class="copy">
                             <strong>{{ $row['pin']->message }}</strong>
-                            <small>{{ collect([\App\Models\Category::label($row['pin']->category), \App\Support\PinPage::distanceLabel($row['meters']), \App\Support\PinPage::whenLabel($row['pin'])])->filter(fn ($part) => $part !== '' && $part !== '—')->implode(' · ') }}</small>
+                            <small>
+                                {{ collect([\App\Models\Category::label($row['pin']->category), \App\Support\PinPage::distanceLabel($row['meters'])])->filter(fn ($part) => $part !== '' && $part !== '—')->implode(' · ') }}
+                                @if (\App\Support\PinPage::whenLabel($row['pin']) !== '')
+                                    · <span @class(['soon' => \App\Support\PinPage::startsSoon($row['pin'])])>{{ \App\Support\PinPage::whenLabel($row['pin']) }}</span>
+                                @endif
+                            </small>
                         </span>
                     </a>
                 @empty
@@ -246,7 +267,12 @@
             @if ($pin)
                 <header class="pin-head">
                     <h1>{{ $pin->message }}</h1>
-                    <p class="meta">{{ collect([\App\Models\Category::label($pin->category), $city['name'] ?? null, \App\Support\PinPage::whenLabel($pin)])->filter(fn ($part) => $part !== '' && $part !== '—')->implode(' · ') }}</p>
+                    <p class="meta">
+                        {{ collect([\App\Models\Category::label($pin->category), $city['name'] ?? null])->filter(fn ($part) => $part !== '' && $part !== '—')->implode(' · ') }}
+                        @if (\App\Support\PinPage::whenLabel($pin) !== '')
+                            · <span @class(['soon' => \App\Support\PinPage::startsSoon($pin)])>{{ \App\Support\PinPage::whenLabel($pin) }}</span>
+                        @endif
+                    </p>
                 </header>
                 <div class="pin-body">
                     @if ($pin->imageUrl())
@@ -295,10 +321,12 @@
                                     @endif
                                     <div class="meta">
                                         <span>{{ $pin->message }}</span>
-                                        @php($bubbleMeta = collect([\App\Models\Category::label($pin->category), \App\Support\PinPage::whenLabel($pin)])->filter(fn ($part) => $part !== '' && $part !== '—'))
-                                        @foreach ($bubbleMeta as $part)
-                                            <small>{{ $part }}</small>
-                                        @endforeach
+                                        @if (\App\Models\Category::label($pin->category) !== '')
+                                            <small>{{ \App\Models\Category::label($pin->category) }}</small>
+                                        @endif
+                                        @if (\App\Support\PinPage::whenLabel($pin) !== '')
+                                            <small @class(['soon' => \App\Support\PinPage::startsSoon($pin)])>{{ \App\Support\PinPage::whenLabel($pin) }}</small>
+                                        @endif
                                     </div>
                                 </div>
                                 <div class="tail"></div>

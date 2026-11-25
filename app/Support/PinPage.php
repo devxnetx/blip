@@ -262,10 +262,39 @@ class PinPage
     public static function whenLabel(Pin $pin): string
     {
         if ($pin->kind === Pin::KIND_UPCOMING && $pin->starts_at !== null && $pin->starts_at->isFuture()) {
-            return 'Предстоящо · '.$pin->starts_at->timezone('Europe/Sofia')->format('d.m, H:i');
+            return self::relativeStart($pin->starts_at);
         }
 
         return self::timeLeft($pin->expires_at);
+    }
+
+    public static function startsSoon(Pin $pin): bool
+    {
+        return $pin->kind === Pin::KIND_UPCOMING
+            && $pin->starts_at !== null
+            && $pin->starts_at->isFuture()
+            && $pin->starts_at->lt(now()->addHours(12));
+    }
+
+    private static function relativeStart(\DateTimeInterface $start): string
+    {
+        $sofia = Carbon::parse($start)->timezone('Europe/Sofia');
+        $clock = $sofia->format('H:i');
+        $minutes = max(1, (int) round(now()->diffInMinutes($sofia, true)));
+
+        if ($minutes < 60) {
+            return 'след '.$minutes.' мин в '.$clock;
+        }
+
+        $hours = max(1, (int) round($minutes / 60));
+
+        if ($hours < 24) {
+            return 'след '.$hours.' '.($hours === 1 ? 'час' : 'часа').' в '.$clock;
+        }
+
+        $days = max(1, (int) round($minutes / 1440));
+
+        return 'след '.$days.' '.($days === 1 ? 'ден' : 'дни').' в '.$clock;
     }
 
     public static function distanceLabel(float $meters): string

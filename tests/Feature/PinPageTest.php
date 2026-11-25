@@ -6,6 +6,7 @@ use App\Models\Pin;
 use App\Models\Reply;
 use App\Support\PinPage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class PinPageTest extends TestCase
@@ -79,7 +80,8 @@ class PinPageTest extends TestCase
             ->assertOk()
             ->assertSee('<h1>'.$here->message.'</h1>', false)
             ->assertSee('Голям концерт в центъра.')
-            ->assertSee('Предстоящо')
+            ->assertSee('след 1 ден в')
+            ->assertDontSee('Предстоящо')
             ->assertSee('публичен отговор')
             ->assertDontSee($secret->message)
             ->assertDontSee($sofia->message)
@@ -164,6 +166,50 @@ class PinPageTest extends TestCase
             ->assertOk()
             ->assertSee('Sitemap:', false)
             ->assertSee('/sitemap.xml', false);
+    }
+
+    public function test_upcoming_time_is_relative_and_red_inside_twelve_hours(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-25 10:00:00', 'Europe/Sofia'));
+
+        try {
+            $soon = $this->pin('Скоро концерт', 42.4258, 25.6345, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => now()->addHours(3)->utc(),
+                'expires_at' => now()->addHours(4)->utc(),
+            ]);
+            $later = Carbon::parse('2026-11-27 19:00:00', 'Europe/Sofia')->utc();
+            $ahead = $this->pin('След два дни', 42.426, 25.635, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => $later,
+                'expires_at' => $later->copy()->addDay(),
+            ]);
+            $edge = $this->pin('Точно дванадесет', 42.427, 25.636, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => now()->addHours(12)->utc(),
+                'expires_at' => now()->addHours(13)->utc(),
+            ]);
+
+            $this->assertTrue(PinPage::startsSoon($soon));
+            $this->assertFalse(PinPage::startsSoon($ahead));
+            $this->assertFalse(PinPage::startsSoon($edge));
+            $this->assertSame('след 3 часа в 13:00', PinPage::whenLabel($soon));
+            $this->assertSame('след 2 дни в 19:00', PinPage::whenLabel($ahead));
+            $this->assertSame('след 12 часа в 22:00', PinPage::whenLabel($edge));
+            $this->assertStringNotContainsString('Предстоящо', PinPage::whenLabel($soon));
+
+            $this->get(PinPage::path($soon))
+                ->assertOk()
+                ->assertSee('след 3 часа в', false)
+                ->assertSee('class="soon"', false)
+                ->assertDontSee('Предстоящо');
+
+            $this->get(PinPage::path($ahead))
+                ->assertOk()
+                ->assertSee('след 2 дни в 19:00', false);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     /**
