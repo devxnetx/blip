@@ -212,6 +212,35 @@ class PinPageTest extends TestCase
         }
     }
 
+    public function test_started_event_shows_the_time_left_in_red(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-25 10:00:00', 'Europe/Sofia'));
+
+        try {
+            $started = $this->pin('Киномания', 42.4258, 25.6345, [
+                'kind' => Pin::KIND_NORMAL,
+                'category' => 'event',
+                'starts_at' => Carbon::parse('2026-11-17 18:30:00', 'Europe/Sofia')->utc(),
+                'duration_minutes' => 12 * 24 * 60,
+                'expires_at' => Carbon::parse('2026-11-29 10:55:00', 'Europe/Sofia')->utc(),
+            ]);
+            $note = $this->pin('Бележка без начало', 42.4262, 25.635, [
+                'kind' => Pin::KIND_NORMAL,
+            ]);
+
+            $this->assertTrue(PinPage::startsSoon($started));
+            $this->assertFalse(PinPage::startsSoon($note));
+            $this->assertSame('още 4 дни и 55 мин', PinPage::whenLabel($started));
+
+            $this->get(PinPage::path($started))
+                ->assertOk()
+                ->assertSee('още 4 дни и 55 мин', false)
+                ->assertSee('class="soon"', false);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $extra
      */

@@ -282,9 +282,15 @@ class PinPage
 
     public static function startsSoon(Pin $pin): bool
     {
+        if ($pin->starts_at === null) {
+            return false;
+        }
+
+        if (! $pin->starts_at->isFuture()) {
+            return $pin->expires_at === null || $pin->expires_at->isFuture();
+        }
+
         return $pin->kind === Pin::KIND_UPCOMING
-            && $pin->starts_at !== null
-            && $pin->starts_at->isFuture()
             && $pin->starts_at->lt(now()->addHours(12));
     }
 

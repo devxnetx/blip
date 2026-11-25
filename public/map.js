@@ -296,6 +296,14 @@ function upcomingSoon(pin, now = Date.now()) {
   return ms > 0 && ms < 12 * 60 * 60 * 1000;
 }
 
+function eventStarted(pin, now = Date.now()) {
+  if (!pin || !pin.starts_at) {
+    return false;
+  }
+  const start = new Date(pin.starts_at).getTime();
+  return Number.isFinite(start) && start <= now;
+}
+
 function formatWhen(iso) {
   const date = new Date(iso);
   if (!Number.isFinite(date.getTime())) {
@@ -313,12 +321,26 @@ function panelWhen(pin) {
   return upcomingLabel(pin) || timeLeft(pin.expires_at);
 }
 
-function pinStackHeight(pin) {
-  const when = pin.kind === 'upcoming' && pin.starts_at && new Date(pin.starts_at).getTime() > Date.now();
-  const text = 34 + (categoryLabel(pin.category) ? 14 : 0) + (when ? 14 : 0);
-  const photo = safeUrl(pin.image_url) ? 72 : 0;
+function bubbleWhen(pin, now = Date.now()) {
+  const upcoming = upcomingLabel(pin);
+  if (upcoming) {
+    return upcoming;
+  }
+  if (!eventStarted(pin, now)) {
+    return '';
+  }
+  const left = timeLeft(pin.expires_at, now);
+  return left === 'Изтече' ? '' : left;
+}
 
-  return Math.max(text, photo) + 28;
+function timeHot(pin, now = Date.now()) {
+  return upcomingSoon(pin, now) || (eventStarted(pin, now) && bubbleWhen(pin, now) !== '');
+}
+
+function pinStackHeight(pin) {
+  const text = 34 + (categoryLabel(pin.category) ? 14 : 0) + (bubbleWhen(pin) ? 14 : 0);
+
+  return text + 28;
 }
 
 const STACK_SIDE_BY_SIDE = 4;
@@ -558,6 +580,25 @@ function markerElement(html, onClick) {
   return element;
 }
 
+function fitBubblePhoto(element) {
+  const image = element.querySelector('.bubble img');
+  const meta = element.querySelector('.bubble .meta');
+  if (!image || !meta) {
+    return;
+  }
+  const apply = () => {
+    const height = meta.offsetHeight;
+    if (height > 0) {
+      image.style.width = `${height}px`;
+      image.style.height = `${height}px`;
+    }
+  };
+  apply();
+  if (document.fonts && document.fonts.status !== 'loaded') {
+    document.fonts.ready.then(apply).catch(() => {});
+  }
+}
+
 function drawMarkers() {
   markers.forEach((marker) => marker.remove());
   markers = [];
@@ -577,12 +618,12 @@ function drawMarkers() {
 
   items.singles.forEach((pin) => {
     const kind = categoryLabel(pin.category);
-    const when = upcomingLabel(pin);
+    const when = bubbleWhen(pin);
     const image = safeUrl(pin.image_url)
       ? `<img src="${safeUrl(pin.image_url)}" alt="">`
       : '';
     const kindHtml = kind ? `<small>${escapeHtml(kind)}</small>` : '';
-    const whenHtml = when ? `<small class="${upcomingSoon(pin) ? 'soon' : ''}">${escapeHtml(when)}</small>` : '';
+    const whenHtml = when ? `<small class="${timeHot(pin) ? 'soon' : ''}">${escapeHtml(when)}</small>` : '';
     const tailClass = pin.tail === 'right' || pin.tail === 'left' ? ` tail-${pin.tail}` : '';
     const element = markerElement(
       `<div class="bubble-wrap"><div class="bubble-card${tailClass}"><div class="bubble">${image}<div class="meta"><span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div></div><div class="tail"></div></div></div>`,
@@ -602,6 +643,7 @@ function drawMarkers() {
     })
       .setLngLat([pin.longitude, pin.latitude])
       .addTo(map);
+    fitBubblePhoto(element);
     marker.getElement().style.zIndex = String(1000 + (pin.stackY || 0) + (pin.stackX > 0 ? 1 : 0));
     markers.push(marker);
   });
@@ -848,7 +890,7 @@ function renderPanel() {
   const whenText = panelWhen(selected);
   when.hidden = !whenText;
   when.textContent = whenText;
-  when.classList.toggle('soon', upcomingSoon(selected));
+  when.classList.toggle('soon', timeHot(selected));
   const photo = document.getElementById('panel-photo');
   photo.hidden = !safeUrl(selected.image_url);
   photo.src = photo.hidden ? '' : selected.image_url;
@@ -1176,12 +1218,12 @@ function renderNearbyList() {
         copy.append(kind);
       }
       const meta = document.createElement('small');
-      const whenText = upcomingLabel(pin);
+      const whenText = bubbleWhen(pin);
       meta.append(`${formatDistance(pin.km)} · `);
       if (whenText) {
         const time = document.createElement('span');
         time.textContent = whenText;
-        if (upcomingSoon(pin)) {
+        if (timeHot(pin)) {
           time.className = 'soon';
         }
         meta.append(time);

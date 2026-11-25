@@ -75,8 +75,8 @@
         }
 
         .bubble img {
-            width: 72px;
-            height: 72px;
+            width: 0;
+            height: 0;
             flex: none;
             border-radius: 10px;
             object-fit: cover;

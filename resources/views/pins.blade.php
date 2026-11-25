@@ -154,8 +154,8 @@
             box-shadow: 0 8px 18px rgba(28, 27, 25, 0.28);
         }
         .bubble img {
-            width: 72px;
-            height: 72px;
+            width: 0;
+            height: 0;
             flex: none;
             border-radius: 10px;
             object-fit: cover;
@@ -432,10 +432,32 @@
         pageMap.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'bottom-right');
         const bubble = document.getElementById('pin-bubble');
         if (marked && bubble) {
-            new maplibregl.Marker({ element: bubble.content.firstElementChild.cloneNode(true), anchor: 'bottom' })
+            const element = bubble.content.firstElementChild.cloneNode(true);
+            new maplibregl.Marker({ element, anchor: 'bottom' })
                 .setLngLat([longitude, latitude])
                 .addTo(pageMap);
+            const image = element.querySelector('.bubble img');
+            const meta = element.querySelector('.bubble .meta');
+            const fitPhoto = () => {
+                if (!image || !meta) {
+                    return;
+                }
+                const height = meta.offsetHeight;
+                if (height > 0) {
+                    image.style.width = height + 'px';
+                    image.style.height = height + 'px';
+                }
+            };
+            fitPhoto();
+            if (document.fonts && document.fonts.status !== 'loaded') {
+                document.fonts.ready.then(fitPhoto).catch(() => {});
+            }
+            pageMap.on('load', () => {
+                pageMap.resize();
+                fitPhoto();
+            });
+        } else {
+            pageMap.on('load', () => pageMap.resize());
         }
-        pageMap.on('load', () => pageMap.resize());
     </script>
 @endpush
