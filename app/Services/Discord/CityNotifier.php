@@ -67,11 +67,11 @@ class CityNotifier
 
         $lines = $pins
             ->sortBy(fn (Pin $pin) => ($pin->starts_at ?? $pin->created_at)?->getTimestamp() ?? 0)
-            ->map(fn (Pin $pin): string => $this->plainTitle($pin).' '.$this->masked('more info', $this->pinUrl($pin)))
+            ->map(fn (Pin $pin): string => $this->plainTitle($pin).' · '.$this->masked('повече информация', $this->pinUrl($pin)))
             ->values()
             ->all();
 
-        $heading = $this->masked('Today in '.$city['name'].':', $this->todayUrl($city['slug']));
+        $heading = '*Събития днес в* '.$this->masked($city['name'], $this->todayUrl($city['slug']));
 
         if ($lines === []) {
             $lines = ['Няма събития за днес.'];
