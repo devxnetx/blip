@@ -1847,20 +1847,13 @@ function placeLinkedPin(pin) {
   const latitude = Number(pin.latitude);
   const longitude = Number(pin.longitude);
   const zoom = zoomForDelta(latitude, LINK_DELTA);
-  let centerLng = longitude;
-  if (desktopBoot) {
-    const width = Math.max(map.getCanvas().clientWidth, 1);
-    const cos = Math.cos(latitude * Math.PI / 180);
-    const metersPerPixel = 156543.03392 * Math.max(cos, 0.01) / (2 ** zoom);
-    const shiftPx = Math.min(210, width * 0.18);
-    centerLng += (shiftPx * metersPerPixel) / (111320 * Math.max(Math.abs(cos), 0.2));
-  }
   placed = true;
   viewTouched = true;
   introToken += 1;
   const move = () => {
+    map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
     map.jumpTo({
-      center: [centerLng, latitude],
+      center: [longitude, latitude],
       zoom,
       pitch: Math.max(map.getPitch(), 48),
       bearing: map.getBearing(),
