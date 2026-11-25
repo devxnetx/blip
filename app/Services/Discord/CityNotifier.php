@@ -2,7 +2,9 @@
 
 namespace App\Services\Discord;
 
+use App\Models\ChangelogEntry;
 use App\Models\Pin;
+use App\Support\ChangelogMarkdown;
 use App\Support\PinPage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -44,6 +46,91 @@ class CityNotifier
         $content = '**Току-що в '.$city['name'].':** '.$this->masked($this->plainTitle($pin), $this->pinUrl($pin));
 
         return $this->post($channel, $content);
+    }
+
+    /**
+     * Post or update the changelog channel. A forum channel gets one thread per entry.
+     */
+    public function syncChangelog(ChangelogEntry $entry): bool
+    {
+        if (! $this->enabled() || ! $entry->isPublished()) {
+            return false;
+        }
+
+        $channel = $this->changelogChannel();
+
+        if ($channel === null) {
+            Log::warning('Discord changelog channel is missing.');
+
+            return false;
+        }
+
+        $content = ChangelogMarkdown::message($entry->title, $entry->body, $this->changelogUrl($entry));
+
+        if ($entry->discord_channel_id !== null && $entry->discord_message_id !== null) {
+            $updated = $this->request('PATCH', '/channels/'.$entry->discord_channel_id.'/messages/'.$entry->discord_message_id, [
+                'content' => $content,
+            ]);
+
+            if (is_array($updated) && isset($updated['id'])) {
+                if ($entry->discord_is_thread) {
+                    $this->request('PATCH', '/channels/'.$entry->discord_channel_id, [
+                        'name' => $this->threadName($entry->title),
+                    ]);
+                }
+
+                return true;
+            }
+        }
+
+        if ($channel['type'] === 15) {
+            $created = $this->request('POST', '/channels/'.$channel['id'].'/threads', [
+                'name' => $this->threadName($entry->title),
+                'auto_archive_duration' => 10080,
+                'message' => ['content' => $content],
+            ]);
+
+            if (! is_array($created) || ! isset($created['id'])) {
+                return false;
+            }
+
+            $entry->discord_channel_id = (string) $created['id'];
+            $entry->discord_message_id = (string) ($created['message']['id'] ?? $created['id']);
+            $entry->discord_is_thread = true;
+            $entry->save();
+
+            return true;
+        }
+
+        $created = $this->request('POST', '/channels/'.$channel['id'].'/messages', [
+            'content' => $content,
+        ]);
+
+        if (! is_array($created) || ! isset($created['id'])) {
+            return false;
+        }
+
+        $entry->discord_channel_id = $channel['id'];
+        $entry->discord_message_id = (string) $created['id'];
+        $entry->discord_is_thread = false;
+        $entry->save();
+
+        return true;
+    }
+
+    public function removeChangelog(ChangelogEntry $entry): void
+    {
+        if ($this->enabled() && $entry->discord_channel_id !== null) {
+            if ($entry->discord_is_thread) {
+                $this->request('DELETE', '/channels/'.$entry->discord_channel_id);
+            } elseif ($entry->discord_message_id !== null) {
+                $this->request('DELETE', '/channels/'.$entry->discord_channel_id.'/messages/'.$entry->discord_message_id);
+            }
+        }
+
+        $entry->discord_channel_id = null;
+        $entry->discord_message_id = null;
+        $entry->discord_is_thread = false;
     }
 
     /**
@@ -104,6 +191,7 @@ class CityNotifier
             if (mb_strlen($next) > 1900 && $current !== $heading && $current !== '') {
                 $messages[] = $current;
                 $current = $line;
+
                 continue;
             }
 
@@ -227,6 +315,47 @@ class CityNotifier
     }
 
     /**
+     * @return array{id: string, type: int}|null
+     */
+    private function changelogChannel(): ?array
+    {
+        foreach ($this->channels() as $channel) {
+            $type = $channel['type'] ?? null;
+
+            if ($type !== 0 && $type !== 15) {
+                continue;
+            }
+
+            $name = mb_strtolower((string) ($channel['name'] ?? ''), 'UTF-8');
+
+            if ($name === 'changelog' || $name === 'chanelog') {
+                return [
+                    'id' => (string) $channel['id'],
+                    'type' => (int) $type,
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    private function changelogUrl(ChangelogEntry $entry): string
+    {
+        return $this->root().'/changelog#'.$entry->id;
+    }
+
+    private function threadName(string $title): string
+    {
+        $name = trim(str_replace(["\r", "\n"], ' ', $title));
+
+        if ($name === '') {
+            $name = 'Промяна';
+        }
+
+        return mb_substr($name, 0, 100);
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private function channels(): array
@@ -268,9 +397,13 @@ class CityNotifier
                     'User-Agent' => 'KostaaBot/1.0 (https://kostaa.space)',
                 ])->timeout(12)->acceptJson();
 
-                $response = $method === 'GET'
-                    ? $pending->get('https://discord.com/api/v10'.$path)
-                    : $pending->post('https://discord.com/api/v10'.$path, $body ?? []);
+                $url = 'https://discord.com/api/v10'.$path;
+                $response = match ($method) {
+                    'GET' => $pending->get($url),
+                    'PATCH' => $pending->patch($url, $body ?? []),
+                    'DELETE' => $pending->delete($url),
+                    default => $pending->post($url, $body ?? []),
+                };
             } catch (\Throwable $exception) {
                 Log::warning('Discord request failed.', ['path' => $path, 'error' => $exception->getMessage()]);
 
@@ -279,6 +412,7 @@ class CityNotifier
 
             if ($response->status() === 429 && $attempt < 2) {
                 usleep((int) (((float) $response->json('retry_after', 1) + 0.2) * 1000000));
+
                 continue;
             }
 
@@ -289,6 +423,10 @@ class CityNotifier
                 ]);
 
                 return null;
+            }
+
+            if ($method === 'DELETE') {
+                return ['deleted' => true];
             }
 
             $json = $response->json();

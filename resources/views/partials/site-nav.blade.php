@@ -10,7 +10,7 @@
     </div>
     <div class="links">
         <a href="{{ url('/') }}" @class(['is-on' => request()->is('/')])>Начало</a>
-        <a href="{{ route('about') }}" @class(['is-on' => request()->routeIs('about')])>За нас</a>
+        <a href="{{ route('changelog') }}" @class(['is-on' => request()->routeIs('changelog')])>Промени</a>
         <a href="{{ route('how') }}" @class(['is-on' => request()->routeIs('how')])>Как работи</a>
         <a href="{{ route('contact') }}" @class(['is-on' => request()->routeIs('contact')])>Контакт</a>
         <a href="{{ route('support') }}" @class(['is-on' => request()->routeIs('support')])>Подкрепи ни</a>

@@ -109,23 +109,23 @@ class PinTest extends TestCase
             ->assertJsonFragment(['message' => 'Older city note']);
     }
 
-    public function test_about_page_has_the_site_nav(): void
+    public function test_the_changelog_page_has_the_site_nav(): void
     {
-        $this->get('/about')
+        $this->get('/changelog')
             ->assertOk()
-            ->assertSee('За нас')
+            ->assertSee('Промени')
             ->assertSee('Начало')
             ->assertSee('Как работи')
             ->assertSee('Контакт')
             ->assertSee('Подкрепи ни')
             ->assertSee('Картата')
+            ->assertDontSee('За нас')
             ->assertSee('class="site-nav"', false)
             ->assertSee('id="theme-switch"', false)
             ->assertSee('Тъмен режим', false)
             ->assertSee('kostaa-theme', false)
             ->assertSee('class="map-link"', false)
-            ->assertSee('brand/icon-192.png', false)
-            ->assertSee('Няма нужда от профил', false);
+            ->assertSee('brand/icon-192.png', false);
     }
 
     public function test_the_desktop_map_views_pins_without_a_way_to_add_one(): void

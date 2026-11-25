@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChangelogEntry;
 use App\Models\ContactMessage;
 use App\Support\LinkPreview;
 use App\Support\SiteLinks;
@@ -11,13 +12,18 @@ use Illuminate\View\View;
 
 class SiteController extends Controller
 {
-    public function about(): View
+    public function changelog(): View
     {
-        return view('about', [
+        return view('changelog', [
+            'entries' => ChangelogEntry::query()
+                ->whereNotNull('published_at')
+                ->orderByDesc('published_at')
+                ->orderByDesc('id')
+                ->get(),
             'preview' => $this->preview(
-                'За нас — Kostaa',
-                'Kostaa е карта за кратки бележки и събития. Оставяш пин там, където стоиш.',
-                '/about',
+                'Промени — Kostaa',
+                'Какво се промени в Kostaa.',
+                '/changelog',
             ),
         ]);
     }

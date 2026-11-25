@@ -1,11 +1,12 @@
 <?php
 
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ChangelogController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\DeviceController;
 use App\Http\Controllers\Admin\PinController as AdminPinController;
-use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SessionController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\PinPageController;
 use App\Http\Controllers\SiteController;
@@ -26,7 +27,8 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/about', [SiteController::class, 'about'])->name('about');
+Route::get('/changelog', [SiteController::class, 'changelog'])->name('changelog');
+Route::redirect('/about', '/changelog', 301);
 Route::get('/how', [SiteController::class, 'how'])->name('how');
 Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
 Route::post('/contact', [SiteController::class, 'storeContact'])
@@ -68,6 +70,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/devices/{device}', [DeviceController::class, 'show'])->name('admin.devices.show');
     Route::post('/admin/devices/{device}/ban', [DeviceController::class, 'ban'])->name('admin.devices.ban');
     Route::post('/admin/devices/{device}/unban', [DeviceController::class, 'unban'])->name('admin.devices.unban');
+    Route::get('/admin/changelog', [ChangelogController::class, 'index'])->name('admin.changelog');
+    Route::get('/admin/changelog/create', [ChangelogController::class, 'create'])->name('admin.changelog.create');
+    Route::post('/admin/changelog/preview', [ChangelogController::class, 'preview'])->name('admin.changelog.preview');
+    Route::post('/admin/changelog', [ChangelogController::class, 'store'])->name('admin.changelog.store');
+    Route::get('/admin/changelog/{entry}/edit', [ChangelogController::class, 'edit'])->name('admin.changelog.edit');
+    Route::put('/admin/changelog/{entry}', [ChangelogController::class, 'update'])->name('admin.changelog.update');
+    Route::delete('/admin/changelog/{entry}', [ChangelogController::class, 'destroy'])->name('admin.changelog.destroy');
     Route::get('/admin/contacts', [ContactMessageController::class, 'index'])->name('admin.contacts');
     Route::get('/admin/contacts/{contactMessage}', [ContactMessageController::class, 'show'])->name('admin.contacts.show');
     Route::delete('/admin/contacts/{contactMessage}', [ContactMessageController::class, 'destroy'])->name('admin.contacts.destroy');

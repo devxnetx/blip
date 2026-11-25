@@ -132,7 +132,7 @@ class PinPageTest extends TestCase
             ->assertDontSee('class="pins-link"', false)
             ->assertSee('Виж картата');
 
-        $this->get('/about', ['User-Agent' => $iphone])
+        $this->get('/changelog', ['User-Agent' => $iphone])
             ->assertOk()
             ->assertDontSee('href="'.route('pins').'"', false);
     }
@@ -149,7 +149,8 @@ class PinPageTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'application/xml; charset=UTF-8')
             ->assertSee('/</loc>', false)
-            ->assertSee('/about</loc>', false)
+            ->assertSee('/changelog</loc>', false)
+            ->assertDontSee('/about</loc>', false)
             ->assertSee('/how</loc>', false)
             ->assertSee('/contact</loc>', false)
             ->assertSee('/support</loc>', false)
