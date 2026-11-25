@@ -71,7 +71,7 @@ class CityNotifier
             ->values()
             ->all();
 
-        $heading = 'Събития днес в '.$this->masked($city['name'], $this->todayUrl($city['slug']));
+        $heading = '**Събития днес в** '.$this->masked($city['name'], $this->todayUrl($city['slug']));
 
         if ($lines === []) {
             $lines = ['Няма събития за днес.'];
