@@ -26,7 +26,7 @@ class PinTest extends TestCase
             ->assertDontSee('Expo', false)
             ->assertDontSee('APK', false)
             ->assertSee('exp://jvjzxya-devxnetx-8081.exp.direct', false)
-            ->assertSee('https://expo.dev/artifacts/eas/LEjq1XFy2T8F_lM0ipt9tkKzhwKxf0Ch2bROjNcnBis.apk', false)
+            ->assertSee('https://expo.dev/artifacts/eas/VqULEX8iLSXqNtbO78vAZoc_y8QMjXuBYCwaMruoIVA.apk', false)
             ->assertDontSee('exp://u.expo.dev/update/01a1e4d4-a46f-7bac-9b48-48946b24bd2e', false)
             ->assertDontSee('https://apps.apple.com', false)
             ->assertDontSee('https://play.google.com/store', false)

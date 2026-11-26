@@ -6,7 +6,7 @@ return [
     'app_store_url' => env('APP_STORE_URL') ?: 'exp://jvjzxya-devxnetx-8081.exp.direct',
 
     // Android internal APK. Expo deletes this file on 2026-11-30.
-    'play_store_url' => env('PLAY_STORE_URL') ?: 'https://expo.dev/artifacts/eas/LEjq1XFy2T8F_lM0ipt9tkKzhwKxf0Ch2bROjNcnBis.apk',
+    'play_store_url' => env('PLAY_STORE_URL') ?: 'https://expo.dev/artifacts/eas/VqULEX8iLSXqNtbO78vAZoc_y8QMjXuBYCwaMruoIVA.apk',
 
     // Gap between requests to the sports calendar. Tests set this to 0.
     'sporten_pause_ms' => (int) env('SPORTEN_PAUSE_MS', 1500),
