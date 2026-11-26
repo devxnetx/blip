@@ -91,7 +91,7 @@ jobs:
             trap restore EXIT
             echo "BEFORE $(asweb "$HELPER" flag)"
             echo "SPEND_BEFORE $(asweb "$HELPER" spend)"
-            if ps -eo args= | grep -E '[p]ins:import-facebook' >/dev/null; then
+            if ps -eo comm=,args= | awk '$1 ~ /^php/ && index($0, "pins:import-facebook") { found=1 } END { exit found ? 0 : 1 }'; then
               echo "ALREADY RUNNING"
               exit 1
             fi
