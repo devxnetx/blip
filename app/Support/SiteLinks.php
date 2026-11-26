@@ -73,7 +73,7 @@ class SiteLinks
     }
 
     /**
-     * @return list<array{label: string, url: ?string}>
+     * @return list<array{id: string, label: string, url: ?string}>
      */
     public static function social(): array
     {
@@ -81,6 +81,7 @@ class SiteLinks
 
         foreach (self::SOCIAL as $key => $label) {
             $rows[] = [
+                'id' => substr($key, strlen('social_')),
                 'label' => $label,
                 'url' => self::httpUrl(Setting::get($key)),
             ];

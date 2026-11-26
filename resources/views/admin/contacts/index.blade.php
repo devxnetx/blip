@@ -20,6 +20,7 @@
                         <th>Статус</th>
                         <th>Име</th>
                         <th>Имейл</th>
+                        <th>Причина</th>
                         <th>Съобщение</th>
                         <th>Получено</th>
                         <th class="actions">Действия</th>
@@ -31,6 +32,7 @@
                             <td>@if ($message->isUnread())<span class="pill">Ново</span>@else Прочетено @endif</td>
                             <td>{{ $message->name }}</td>
                             <td>{{ $message->email }}</td>
+                            <td>{{ $message->reasonLabel() }}</td>
                             <td>{{ \Illuminate\Support\Str::limit($message->message, 80) }}</td>
                             <td class="date">{{ $message->created_at?->timezone('Europe/Sofia')->format('d.m.Y H:i') }}</td>
                             <td class="actions">

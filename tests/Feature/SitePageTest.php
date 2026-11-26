@@ -12,6 +12,15 @@ class SitePageTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_history_is_a_placeholder_page(): void
+    {
+        $this->get('/history')
+            ->assertOk()
+            ->assertSee('История')
+            ->assertSee('Миналите събития ще са тук.')
+            ->assertSee('href="'.route('history').'"', false);
+    }
+
     public function test_the_guide_explains_pins_upcoming_events_and_filters(): void
     {
         $this->get('/how')
@@ -30,7 +39,12 @@ class SitePageTest extends TestCase
             ->assertSee('Пет доклада')
             ->assertSee('class="map-link"', false)
             ->assertSee('brand/icon-192.png', false)
+            ->assertSee('<details class="block" open>', false)
             ->assertDontSee('Пин тук');
+
+        $html = $this->get('/how')->assertOk()->getContent();
+        $this->assertSame(1, substr_count($html, '<details class="block" open>'));
+        $this->assertSame(10, substr_count($html, '<details class="block"'));
     }
 
     public function test_support_hides_donation_details_until_they_are_saved(): void
@@ -70,8 +84,12 @@ class SitePageTest extends TestCase
 
         $this->get('/contact')
             ->assertOk()
+            ->assertSee('contact-grid', false)
+            ->assertSee('social-instagram', false)
             ->assertSee('https://instagram.com/kostaa.test', false)
-            ->assertSee('Още няма връзка.');
+            ->assertSee('Още няма връзка.')
+            ->assertSee('Колко е', false)
+            ->assertSee('Причина');
 
         $this->actingAs($admin)
             ->from('/admin/settings')
@@ -89,33 +107,58 @@ class SitePageTest extends TestCase
     {
         $this->get('/admin/contacts')->assertRedirect('/admin/login');
 
+        $this->get('/contact')->assertOk();
+        $check = session('contact_check');
+        $this->assertIsArray($check);
+
         $this->from('/contact')->post('/contact', [
             'name' => '  ',
             'email' => 'not-an-email',
             'message' => '',
+            'check' => $check['answer'],
+            'check_token' => $check['token'],
         ])->assertRedirect('/contact')
-            ->assertSessionHasErrors(['name', 'email', 'message']);
+            ->assertSessionHasErrors(['name', 'email', 'reason', 'message']);
 
         $this->assertSame(0, ContactMessage::query()->count());
 
         $this->post('/contact', [
             'name' => 'Ива',
             'email' => 'iva@example.com',
+            'reason' => 'map',
             'message' => 'Картата не зарежда този пин.',
+            'check' => $check['answer'],
+            'check_token' => $check['token'],
             'company' => 'spam-bot',
         ])->assertRedirect('/contact');
 
         $this->assertSame(0, ContactMessage::query()->count());
 
+        $this->from('/contact')->post('/contact', [
+            'name' => 'Ива',
+            'email' => 'iva@example.com',
+            'reason' => 'map',
+            'message' => 'Картата не зарежда този пин.',
+            'check' => '0',
+            'check_token' => $check['token'],
+        ])->assertRedirect('/contact')
+            ->assertSessionHasErrors('check');
+
+        $this->assertSame(0, ContactMessage::query()->count());
+
         $this->post('/contact', [
             'name' => 'Ива',
             'email' => 'iva@example.com',
+            'reason' => 'map',
             'message' => '<script>alert(1)</script> Картата не зарежда този пин.',
+            'check' => $check['answer'],
+            'check_token' => $check['token'],
         ])->assertRedirect('/contact')
             ->assertSessionHas('status');
 
         $stored = ContactMessage::query()->firstOrFail();
         $this->assertSame('Ива', $stored->name);
+        $this->assertSame('map', $stored->reason);
         $this->assertNull($stored->read_at);
 
         $admin = User::query()->where('name', 'ZenSorcerer')->firstOrFail();
@@ -126,12 +169,14 @@ class SitePageTest extends TestCase
             ->assertSee('Съобщения')
             ->assertSee('Ива')
             ->assertSee('iva@example.com')
+            ->assertSee('Нещо на картата')
             ->assertSee('Ново')
             ->assertSee('class="nav-count">1', false);
 
         $this->actingAs($admin)
             ->get('/admin/contacts/'.$stored->id)
             ->assertOk()
+            ->assertSee('Нещо на картата')
             ->assertSee('Картата не зарежда този пин.')
             ->assertDontSee('<script>', false);
 

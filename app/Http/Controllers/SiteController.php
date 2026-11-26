@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ChangelogEntry;
 use App\Models\ContactMessage;
+use App\Support\ContactCheck;
 use App\Support\LinkPreview;
 use App\Support\SiteLinks;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -43,6 +45,8 @@ class SiteController extends Controller
     {
         return view('contact', [
             'social' => SiteLinks::social(),
+            'reasons' => ContactMessage::REASONS,
+            'check' => ContactCheck::current(),
             'preview' => $this->preview(
                 'Контакт — Kostaa',
                 'Пиши ни за картата. Съобщението стига до админ панела.',
@@ -63,27 +67,60 @@ class SiteController extends Controller
             'name' => trim((string) $request->input('name')),
             'email' => trim((string) $request->input('email')),
             'message' => trim((string) $request->input('message')),
+            'check' => trim((string) $request->input('check')),
         ]);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:80'],
             'email' => ['required', 'string', 'email', 'max:160'],
+            'reason' => ['required', 'string', Rule::in(array_keys(ContactMessage::REASONS))],
             'message' => ['required', 'string', 'max:2000'],
+            'check' => ['required', 'string', 'max:8'],
+            'check_token' => ['required', 'string', 'max:40'],
         ], [
             'name.required' => 'Напиши име.',
             'name.max' => 'Името може да е до 80 знака.',
             'email.required' => 'Напиши имейл.',
             'email.email' => 'Имейлът не изглежда верен.',
             'email.max' => 'Имейлът е твърде дълъг.',
+            'reason.required' => 'Избери причина.',
+            'reason.in' => 'Избери причина.',
             'message.required' => 'Напиши съобщение.',
             'message.max' => 'Съобщението може да е до 2000 знака.',
+            'check.required' => 'Реши задачата.',
+            'check_token.required' => 'Зареди страницата отново и реши задачата.',
         ]);
 
-        ContactMessage::query()->create($data);
+        if (! ContactCheck::passes($data['check_token'], $data['check'])) {
+            return redirect()
+                ->route('contact')
+                ->withInput()
+                ->withErrors(['check' => 'Отговорът не е верен.']);
+        }
+
+        ContactCheck::forget();
+
+        ContactMessage::query()->create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'reason' => $data['reason'],
+            'message' => $data['message'],
+        ]);
 
         return redirect()
             ->route('contact')
             ->with('status', 'Съобщението е изпратено. Ще го прочетем.');
+    }
+
+    public function history(): View
+    {
+        return view('history', [
+            'preview' => $this->preview(
+                'История — Kostaa',
+                'Миналите събития ще са тук.',
+                '/history',
+            ),
+        ]);
     }
 
     public function support(): View

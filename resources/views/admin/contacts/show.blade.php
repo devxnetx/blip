@@ -7,7 +7,8 @@
         <div>
             <h1>{{ $contact->name }}</h1>
             <p class="lede">
-                <a href="mailto:{{ $contact->email }}">{{ $contact->email }}</a>
+                {{ $contact->reasonLabel() }}
+                · <a href="mailto:{{ $contact->email }}">{{ $contact->email }}</a>
                 · {{ $contact->created_at?->timezone('Europe/Sofia')->format('d.m.Y H:i') }}
             </p>
         </div>
