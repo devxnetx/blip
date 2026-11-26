@@ -43,7 +43,7 @@ class DiscordLive extends Command
         foreach ($rows as $row) {
             $count = $row['running']->count() + $row['upcoming']->count();
 
-            if ($count === 0 && ! $named) {
+            if ($row['upcoming']->isEmpty()) {
                 $this->line('SKIP '.$row['city']['name']);
                 continue;
             }

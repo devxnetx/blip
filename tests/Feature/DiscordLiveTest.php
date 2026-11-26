@@ -153,14 +153,49 @@ class DiscordLiveTest extends TestCase
                 'starts_at' => now()->subHour(),
                 'expires_at' => now()->addHour(),
             ]);
+            $this->pin('Скорошен мач', 42.426, 25.635, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => now()->addHours(2),
+                'expires_at' => now()->addHours(4),
+            ]);
+            $this->pin('Софийско сега', 42.6977, 23.3219, [
+                'starts_at' => now()->subHour(),
+                'expires_at' => now()->addHour(),
+            ]);
 
             $this->artisan('pins:discord-live')
-                ->expectsOutputToContain('POSTED Стара Загора 1')
+                ->expectsOutputToContain('POSTED Стара Загора 2')
                 ->expectsOutputToContain('SKIP София')
                 ->assertSuccessful();
 
             Http::assertSent(fn ($request): bool => str_contains($request->url(), '/channels/111/messages'));
             Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/channels/222/messages'));
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_a_city_with_nothing_starting_soon_is_not_posted(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-25 16:10:00', 'Europe/Sofia'));
+
+        try {
+            $this->pin('Само течащо', 42.4258, 25.6345, [
+                'starts_at' => now()->subHour(),
+                'expires_at' => now()->addHours(4),
+            ]);
+            $this->pin('След прозореца', 42.426, 25.635, [
+                'kind' => Pin::KIND_UPCOMING,
+                'starts_at' => now()->addHours(5),
+                'expires_at' => now()->addHours(8),
+            ]);
+
+            $this->artisan('pins:discord-live', ['city' => 'stara-zagora'])
+                ->expectsOutputToContain('SKIP Стара Загора')
+                ->doesntExpectOutputToContain('POSTED')
+                ->assertSuccessful();
+
+            Http::assertNothingSent();
         } finally {
             Carbon::setTestNow();
         }
