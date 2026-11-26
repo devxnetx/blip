@@ -1,0 +1,114 @@
+name: Report midnight shows
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Write the three hour length
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Count midnight pins that still last all day
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          APPLY: ${{ inputs.apply }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SSH_FINGERPRINT }}
+          port: 22
+          command_timeout: 10m
+          envs: APPLY
+          script: |
+            set -eu
+            cat > /tmp/kostaa-midnight-report.php << 'PHP'
+            <?php
+
+            use App\Models\Pin;
+            use Illuminate\Contracts\Console\Kernel;
+            use Illuminate\Support\Facades\DB;
+
+            require '/var/www/kostaa/vendor/autoload.php';
+            $app = require '/var/www/kostaa/bootstrap/app.php';
+            $app->make(Kernel::class)->bootstrap();
+
+            $apply = getenv('APPLY') === 'yes';
+            $now = now();
+            $groups = [];
+            $leave = [];
+            $ids = [];
+            $fixLive = 0;
+
+            Pin::query()
+                ->whereNotNull('starts_at')
+                ->whereNotNull('source')
+                ->where('source', '!=', '')
+                ->whereRaw("TIME(starts_at) IN ('21:00:00', '22:00:00')")
+                ->select(['id', 'source', 'message', 'starts_at', 'expires_at', 'duration_minutes'])
+                ->orderBy('id')
+                ->chunkById(500, function ($pins) use (&$groups, &$leave, &$ids, &$fixLive, $now): void {
+                    foreach ($pins as $pin) {
+                        $sofia = $pin->starts_at->copy()->timezone('Europe/Sofia');
+                        if ($sofia->format('H:i:s') !== '00:00:00') {
+                            continue;
+                        }
+
+                        $minutes = (int) $pin->duration_minutes;
+                        $live = $pin->expires_at !== null && $pin->expires_at->greaterThan($now);
+                        $key = $pin->source.' | '.$minutes.' | '.($live ? 'live' : 'past');
+                        $groups[$key] = ($groups[$key] ?? 0) + 1;
+
+                        if ($minutes >= 1439 && $minutes <= 1440) {
+                            $ids[] = $pin->id;
+                            if ($live) {
+                                $fixLive++;
+                                if ($fixLive <= 25) {
+                                    echo 'FIX '.$pin->id.' '.$pin->source.' '.$minutes.' '.$sofia->format('Y-m-d H:i').' '.$pin->message."\n";
+                                }
+                            }
+                            continue;
+                        }
+
+                        if ($live && count($leave) < 25) {
+                            $leave[] = $pin->id.' '.$pin->source.' '.$minutes.' '.$sofia->format('Y-m-d H:i').' '.$pin->message;
+                        }
+                    }
+                });
+
+            ksort($groups);
+            echo "GROUPS\n";
+            foreach ($groups as $key => $count) {
+                echo $count.' '.$key."\n";
+            }
+            echo 'WOULD_FIX '.count($ids)."\n";
+            echo 'WOULD_FIX_LIVE '.$fixLive."\n";
+            echo "LEFT_LIVE\n";
+            foreach ($leave as $line) {
+                echo $line."\n";
+            }
+
+            if (! $apply) {
+                echo "APPLY no\n";
+                return;
+            }
+
+            $updated = 0;
+            foreach (array_chunk($ids, 200) as $chunk) {
+                $updated += Pin::query()->whereIn('id', $chunk)->update([
+                    'duration_minutes' => 180,
+                    'expires_at' => DB::raw('DATE_ADD(starts_at, INTERVAL 3 HOUR)'),
+                ]);
+            }
+            echo 'UPDATED '.$updated."\n";
+            PHP
+            cd /var/www/kostaa
+            sudo -u www-data env APPLY="${APPLY:-no}" /usr/bin/php8.4 /tmp/kostaa-midnight-report.php
+            rm -f /tmp/kostaa-midnight-report.php
