@@ -97,7 +97,7 @@ jobs:
             fi
             asweb "$HELPER" unlock
             asweb "$HELPER" on
-            for city in kazanlak veliko-tarnovo sliven yambol burgas; do
+            for city in plovdiv varna sofia; do
               echo "CITY_START $city"
               before=$(asweb "$HELPER" spend)
               echo "SPEND_CITY_BEFORE $city $before"

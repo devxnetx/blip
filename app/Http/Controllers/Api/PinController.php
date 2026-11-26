@@ -28,6 +28,7 @@ class PinController extends Controller
             'east' => ['required', 'numeric', 'between:-180,180'],
             'west' => ['required', 'numeric', 'between:-180,180'],
             'period' => ['nullable', 'in:today'],
+            'ahead' => ['nullable', 'integer', 'between:1,30'],
         ]);
 
         if ($bounds['north'] < $bounds['south'] || $bounds['east'] < $bounds['west']) {
@@ -48,6 +49,13 @@ class PinController extends Controller
                 $query->whereNull('suppressed_at')->occursToday();
             }, function ($query): void {
                 UpcomingHorizon::apply($query);
+            })
+            ->when(isset($bounds['ahead']), function ($query) use ($bounds): void {
+                $until = now()->addDays((int) $bounds['ahead']);
+                $query->where(function ($keep) use ($until): void {
+                    $keep->whereNull('starts_at')
+                        ->orWhere('starts_at', '<=', $until);
+                });
             })
             ->latest()
             ->limit(200)

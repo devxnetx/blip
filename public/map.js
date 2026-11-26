@@ -169,8 +169,30 @@ function occursToday(pin) {
   return startAt <= day.end && endAt > day.start;
 }
 
+const AHEAD_MS = 10 * 24 * 60 * 60 * 1000;
+
+function desktopMap() {
+  return window.matchMedia('(min-width: 801px)').matches;
+}
+
+function startsWithinAhead(pin, now = Date.now()) {
+  if (!pin.starts_at) {
+    return true;
+  }
+  const start = Date.parse(pin.starts_at);
+  if (!Number.isFinite(start) || start <= now) {
+    return true;
+  }
+  return start <= now + AHEAD_MS;
+}
+
 function shownPins() {
-  return period === 'today' ? pins.filter(occursToday) : pins;
+  const rows = period === 'today' ? pins.filter(occursToday) : pins;
+  if (period === 'today' || !desktopMap()) {
+    return rows;
+  }
+  const now = Date.now();
+  return rows.filter((pin) => pin.id === selected?.id || startsWithinAhead(pin, now));
 }
 
 function cityBySlug(slug) {
@@ -181,9 +203,19 @@ function cityBySlug(slug) {
 function withPeriod(params) {
   if (period === 'today') {
     params.set('period', 'today');
+  } else if (desktopMap()) {
+    params.set('ahead', '10');
   }
   return params;
 }
+
+window.matchMedia('(min-width: 801px)').addEventListener('change', () => {
+  loadPins();
+  const radius = document.getElementById('radius');
+  if (radius && listCenter) {
+    loadNearby(Number(radius.value));
+  }
+});
 
 function paintPeriod() {
   const button = document.getElementById('period-today');
@@ -1234,9 +1266,11 @@ function renderNearbyList() {
   const status = document.getElementById('nearby-status');
   const list = document.getElementById('nearby-list');
   const kilometers = Number(document.getElementById('radius').value);
+  const now = Date.now();
   const rows = nearbyRows.filter((pin) => (
     (!listCategory || pin.category === listCategory)
     && (period !== 'today' || occursToday(pin))
+    && (period === 'today' || !desktopMap() || pin.id === selected?.id || startsWithinAhead(pin, now))
   ));
   list.replaceChildren();
   rows.forEach((pin) => {

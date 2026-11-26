@@ -64,6 +64,36 @@ class UpcomingHorizonTest extends TestCase
             ->assertSee($near->message);
     }
 
+    public function test_the_desktop_map_asks_for_events_within_ten_days(): void
+    {
+        $soon = $this->event('До десет дни', 42.6977, 23.3219, now()->addDays(9));
+        $edge = $this->event('Точно на десетия ден', 42.698, 23.322, now()->addDays(10));
+        $running = $this->event('Вече върви', 42.6975, 23.3215, now()->subDay());
+        $note = $this->note('Бележка сега', 42.6976, 23.3218);
+        $later = $this->event('След единадесет дни', 42.699, 23.323, now()->addDays(11));
+        $bounds = [
+            'north' => 42.8,
+            'south' => 42.6,
+            'east' => 23.5,
+            'west' => 23.2,
+            'ahead' => 10,
+        ];
+
+        $this->getJson('/api/pins?'.http_build_query($bounds))
+            ->assertOk()
+            ->assertJsonFragment(['message' => $soon->message])
+            ->assertJsonFragment(['message' => $edge->message])
+            ->assertJsonFragment(['message' => $running->message])
+            ->assertJsonFragment(['message' => $note->message])
+            ->assertJsonMissing(['message' => $later->message]);
+
+        unset($bounds['ahead']);
+
+        $this->getJson('/api/pins?'.http_build_query($bounds))
+            ->assertOk()
+            ->assertJsonFragment(['message' => $later->message]);
+    }
+
     public function test_fifty_upcoming_events_still_show_the_later_ones(): void
     {
         $far = $this->event('Още се вижда', 42.6977, 23.3219, now()->addMonths(5));
