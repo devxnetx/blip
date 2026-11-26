@@ -52,8 +52,9 @@ class AktualnitenoviniImportTest extends TestCase
         $this->assertTrue(Storage::disk('public')->exists('pins/aktualnitenovini-9001.jpg'));
         $this->assertSame('https://aktualnitenovini.com/events/irina-florin/', $upcoming->source_url);
         $this->assertSame('00:00', $upcoming->starts_at->timezone('Europe/Sofia')->format('H:i'));
+        $this->assertSame(180, $upcoming->duration_minutes);
+        $this->assertTrue($upcoming->expires_at->equalTo($upcoming->starts_at->copy()->addHours(3)));
         $this->assertTrue($upcoming->starts_at->isFuture());
-        $this->assertTrue($upcoming->expires_at->greaterThan($upcoming->starts_at));
         $this->assertEqualsWithDelta(42.697, $upcoming->latitude, 0.00001);
         $this->assertEqualsWithDelta(23.322, $upcoming->longitude, 0.00001);
         $this->assertTrue($upcoming->isPublic());
@@ -354,7 +355,7 @@ class AktualnitenoviniImportTest extends TestCase
     private function events(): array
     {
         $tomorrow = now('Europe/Sofia')->addDay()->startOfDay();
-        $today = now('Europe/Sofia')->startOfDay();
+        $running = now('Europe/Sofia')->subHour()->startOfMinute();
         $yesterday = now('Europe/Sofia')->subDay()->startOfDay();
         $edge = Setting::importUntil();
         $inside = Setting::importUntil()->copy()->subDays(2);
@@ -362,7 +363,7 @@ class AktualnitenoviniImportTest extends TestCase
         return [
             $this->event('9001', 'Ирина Флорин &#8211; клуб', $tomorrow, $tomorrow->copy()->setTime(23, 59, 0), 'CLUB FOMO, София, ул. „Позитано“ 1000 / тел. 0885 520 550', null, 'https://aktualnitenovini.com/events/irina-florin/', 'irina-florin', '<p>Концертът е в <b>клуб FOMO</b>.</p>', 'https://aktualnitenovini.com/wp-content/uploads/2026/09/irina-florin-konczert.jpg'),
             $this->event('9001', 'Ирина Флорин &#8211; клуб', $tomorrow, $tomorrow->copy()->setTime(23, 59, 0), 'CLUB FOMO, София, ул. „Позитано“ 1000 / тел. 0885 520 550', null, 'https://aktualnitenovini.com/events/irina-florin/', 'irina-florin', '<p>Концертът е в <b>клуб FOMO</b>.</p>', 'https://aktualnitenovini.com/wp-content/uploads/2026/09/irina-florin-konczert.jpg'),
-            $this->event('9002', 'Джена', $today, $today->copy()->endOfDay(), 'CLUB FOMO, София, ул. „Позитано“ 1000 / тел. 0885 520 550', null, 'https://aktualnitenovini.com/events/dzhena/', 'dzhena', '', null),
+            $this->event('9002', 'Джена', $running, $running->copy()->addHours(4), 'CLUB FOMO, София, ул. „Позитано“ 1000 / тел. 0885 520 550', null, 'https://aktualnitenovini.com/events/dzhena/', 'dzhena', '', null),
             $this->event('9003', 'Светла Дукатева', $tomorrow, $tomorrow->copy()->setTime(23, 59, 0), null, null, 'https://aktualnitenovini.com/events/svetla/', 'svetla', '', 'https://aktualnitenovini.com/wp-content/uploads/2026/03/svetla.png'),
             $this->event('9004', 'Приключило', $yesterday, $yesterday->copy()->setTime(23, 59, 0), 'CLUB FOMO, София, ул. „Позитано“ 1000', null, 'https://aktualnitenovini.com/events/ended/', 'ended', '', null),
             $this->event('9005', 'Твърде напред', $edge, $edge->copy()->addDay(), 'CLUB FOMO, София, ул. „Позитано“ 1000', null, 'https://aktualnitenovini.com/events/later/', 'later', '', null),

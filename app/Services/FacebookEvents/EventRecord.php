@@ -2,6 +2,7 @@
 
 namespace App\Services\FacebookEvents;
 
+use App\Support\ShowLength;
 use Illuminate\Support\Carbon;
 
 class EventRecord
@@ -71,17 +72,14 @@ class EventRecord
     {
         $end = self::moment($event['end_time'] ?? null);
 
-        if ($end !== null && $end->greaterThan($startsAt)) {
-            return $end;
+        if ($end === null || ! $end->greaterThan($startsAt)) {
+            $minutes = self::durationMinutes($event['duration'] ?? null);
+            $end = $minutes !== null
+                ? $startsAt->copy()->addMinutes($minutes)
+                : $startsAt->copy()->addHours(3);
         }
 
-        $minutes = self::durationMinutes($event['duration'] ?? null);
-
-        if ($minutes !== null) {
-            return $startsAt->copy()->addMinutes($minutes);
-        }
-
-        return $startsAt->copy()->addHours(3);
+        return ShowLength::shortenPlaceholder($startsAt, $end);
     }
 
     private static function moment(mixed $value): ?Carbon

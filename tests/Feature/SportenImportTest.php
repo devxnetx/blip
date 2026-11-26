@@ -245,6 +245,32 @@ class SportenImportTest extends TestCase
         $this->assertTrue($event->endsAt->greaterThan($event->startsAt));
     }
 
+    public function test_a_midnight_event_without_an_end_lasts_three_hours(): void
+    {
+        $day = now('Europe/Sofia')->addDays(4)->format('d-m-Y');
+        $html = '<h1>Концерт</h1>'
+            .'<p><strong>Начало:</strong> '.$day.' от 00:00 ч.</p>';
+
+        $event = (new EventPageParser)->parse($html, 'https://sportenkalendar.bg/sybitie/koncert-55');
+
+        $this->assertNotNull($event);
+        $this->assertSame('00:00:00', $event->startsAt->timezone('Europe/Sofia')->format('H:i:s'));
+        $this->assertTrue($event->endsAt->equalTo($event->startsAt->copy()->addHours(3)));
+    }
+
+    public function test_a_midnight_event_keeps_a_real_end(): void
+    {
+        $day = now('Europe/Sofia')->addDays(4)->format('d-m-Y');
+        $html = '<h1>Турнир</h1>'
+            .'<p><strong>Начало:</strong> '.$day.' от 00:00 ч.</p>'
+            .'<p><strong>Край:</strong> '.$day.' до 18:00 ч.</p>';
+
+        $event = (new EventPageParser)->parse($html, 'https://sportenkalendar.bg/sybitie/turnir-56');
+
+        $this->assertNotNull($event);
+        $this->assertSame('18:00:00', $event->endsAt->timezone('Europe/Sofia')->format('H:i:s'));
+    }
+
     public function test_only_a_specific_bulgarian_address_is_pinned(): void
     {
         $street = NominatimGeocoder::pointFromPayload([[

@@ -2,6 +2,7 @@
 
 namespace App\Services\AktualniteNovini;
 
+use App\Support\ShowLength;
 use Illuminate\Support\Carbon;
 
 class EventRecord
@@ -32,8 +33,12 @@ class EventRecord
         }
 
         if ($endsAt === null || $endsAt->lessThanOrEqualTo($startsAt)) {
-            $endsAt = $startsAt->copy()->addDay()->subSecond();
+            $endsAt = ShowLength::startsAtSofiaMidnight($startsAt)
+                ? $startsAt->copy()->addHours(3)
+                : $startsAt->copy()->addDay()->subSecond();
         }
+
+        $endsAt = ShowLength::shortenPlaceholder($startsAt, $endsAt);
 
         $venue = is_array($event['venue'] ?? null) ? $event['venue'] : [];
         $place = VenueLine::place(

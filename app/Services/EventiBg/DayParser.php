@@ -2,6 +2,7 @@
 
 namespace App\Services\EventiBg;
 
+use App\Support\ShowLength;
 use Illuminate\Support\Carbon;
 
 class DayParser
@@ -70,6 +71,8 @@ class DayParser
         if ($endsAt->lessThanOrEqualTo($startsAt)) {
             $endsAt = $endsAt->copy()->addDay();
         }
+
+        $endsAt = ShowLength::shortenPlaceholder($startsAt, $endsAt);
 
         if ($endsAt->lessThanOrEqualTo($startsAt)) {
             return null;

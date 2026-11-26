@@ -3,6 +3,7 @@
 namespace App\Services\KupiBileti;
 
 use App\Services\SportenKalendar\NominatimGeocoder;
+use App\Support\ShowLength;
 use Illuminate\Support\Carbon;
 
 class EventPage
@@ -41,6 +42,8 @@ class EventPage
                 $endsAt = $startsAt->copy()->addHours(3);
             }
         }
+
+        $endsAt = ShowLength::shortenPlaceholder($startsAt, $endsAt);
 
         $location = is_array($event['location'] ?? null) ? $event['location'] : [];
         $street = self::card($html, 'address');

@@ -207,7 +207,8 @@ class EventibgImportTest extends TestCase
         $this->assertSame('2026-12-06 10:00:00', $events[0]->endsAt->utc()->format('Y-m-d H:i:s'));
         $this->assertSame('vtori', $events[1]->slug);
         $this->assertNull($events[1]->latitude);
-        $this->assertSame('2026-12-06 21:59:00', $events[1]->endsAt->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-12-05 22:00:00', $events[1]->startsAt->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-12-06 01:00:00', $events[1]->endsAt->utc()->format('Y-m-d H:i:s'));
     }
 
     public function test_a_named_hall_replaces_the_town_coordinate(): void

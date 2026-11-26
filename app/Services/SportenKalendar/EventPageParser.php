@@ -2,6 +2,7 @@
 
 namespace App\Services\SportenKalendar;
 
+use App\Support\ShowLength;
 use Illuminate\Support\Carbon;
 
 class EventPageParser
@@ -30,6 +31,8 @@ class EventPageParser
         if ($endsAt === null || $endsAt->lessThanOrEqualTo($startsAt)) {
             $endsAt = $startsAt->copy()->addDay();
         }
+
+        $endsAt = ShowLength::shortenPlaceholder($startsAt, $endsAt);
 
         $sportSlug = null;
         $sportName = null;
