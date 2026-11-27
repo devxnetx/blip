@@ -33,6 +33,8 @@ class PinTest extends TestCase
             ->assertSee('Пинове')
             ->assertSee('href="'.route('pins').'"', false)
             ->assertSee('class="discord-link"', false)
+            ->assertSee('aria-label="Discord"', false)
+            ->assertDontSee('>Discord<', false)
             ->assertSee('https://discord.com/channels/1574875809603133562', false)
             ->assertSeeInOrder(['class="discord-link"', 'class="pins-link"', 'class="view-map"'], false)
             ->assertDontSee('За нас')
