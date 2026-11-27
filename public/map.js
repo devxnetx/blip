@@ -92,6 +92,8 @@ let markers = [];
 let selected = null;
 const pageParams = new URLSearchParams(window.location.search);
 let period = pageParams.get('period') === 'today' ? 'today' : '';
+let desktopAhead = '10';
+let listCity = '';
 let phoneAhead = '4';
 if (!window.matchMedia('(min-width: 801px)').matches) {
   const asked = pageParams.get('ahead');
@@ -176,13 +178,11 @@ function occursToday(pin) {
   return startAt <= day.end && endAt > day.start;
 }
 
-const AHEAD_MS = 10 * 24 * 60 * 60 * 1000;
-
 function desktopMap() {
   return window.matchMedia('(min-width: 801px)').matches;
 }
 
-function startsWithinAhead(pin, now = Date.now()) {
+function startsWithinDays(pin, days, now = Date.now()) {
   if (!pin.starts_at) {
     return true;
   }
@@ -190,7 +190,35 @@ function startsWithinAhead(pin, now = Date.now()) {
   if (!Number.isFinite(start) || start <= now) {
     return true;
   }
-  return start <= now + AHEAD_MS;
+  return start <= now + days * 24 * 60 * 60 * 1000;
+}
+
+const CITY_RADIUS_KM = 18;
+
+function cityNameFor(pin) {
+  let best = '';
+  let bestKm = CITY_RADIUS_KM;
+  CITIES.forEach((city) => {
+    const km = kmBetween(pin.latitude, pin.longitude, city.latitude, city.longitude);
+    if (km <= bestKm) {
+      bestKm = km;
+      best = city.name;
+    }
+  });
+  return best;
+}
+
+function matchesDesktopFilters(pin) {
+  if (!desktopMap()) {
+    return true;
+  }
+  if (listCategory && pin.category !== listCategory) {
+    return false;
+  }
+  if (listCity && cityNameFor(pin) !== listCity) {
+    return false;
+  }
+  return true;
 }
 
 function phoneWindowMs() {
@@ -202,10 +230,16 @@ function phoneWindowMs() {
 
 function pinInWindow(pin, now = Date.now()) {
   if (desktopMap()) {
+    if (!matchesDesktopFilters(pin)) {
+      return false;
+    }
     if (period === 'today') {
       return occursToday(pin);
     }
-    return pin.id === selected?.id || startsWithinAhead(pin, now);
+    if (desktopAhead === 'all') {
+      return true;
+    }
+    return pin.id === selected?.id || startsWithinDays(pin, Number(desktopAhead), now);
   }
   const limit = phoneWindowMs();
   if (limit == null || pin.id === selected?.id || !pin.starts_at) {
@@ -232,8 +266,8 @@ function withPeriod(params) {
   if (desktopMap()) {
     if (period === 'today') {
       params.set('period', 'today');
-    } else {
-      params.set('ahead', '10');
+    } else if (desktopAhead !== 'all') {
+      params.set('ahead', String(desktopAhead));
     }
     return params;
   }
@@ -243,22 +277,42 @@ function withPeriod(params) {
   return params;
 }
 
+function placeFilterTools() {
+  const tools = document.getElementById('nearby-tools');
+  if (!tools) {
+    return;
+  }
+  if (desktopMap()) {
+    document.getElementById('filter-mount').append(tools);
+    return;
+  }
+  const status = document.getElementById('nearby-status');
+  status.parentElement.insertBefore(tools, status);
+}
+
+function setPinsOpen(open) {
+  placeFilterTools();
+  nearbyEl.hidden = !open;
+  const filters = document.getElementById('map-filters');
+  const split = open && desktopMap();
+  filters.hidden = !split;
+  nearbyEl.classList.toggle('split', split);
+}
+
 window.matchMedia('(min-width: 801px)').addEventListener('change', () => {
+  placeFilterTools();
+  if (!nearbyEl.hidden) {
+    setPinsOpen(true);
+  } else {
+    document.getElementById('map-filters').hidden = true;
+    nearbyEl.classList.remove('split');
+  }
   loadPins();
   const radius = document.getElementById('radius');
   if (radius && listCenter) {
     loadNearby(Number(radius.value));
   }
 });
-
-function paintPeriod() {
-  const button = document.getElementById('period-today');
-  if (!button) {
-    return;
-  }
-  button.classList.toggle('on', period === 'today');
-  button.setAttribute('aria-pressed', period === 'today' ? 'true' : 'false');
-}
 
 function paintPhoneAhead() {
   document.querySelectorAll('#phone-time button').forEach((button) => {
@@ -1060,7 +1114,7 @@ async function openPin(pin) {
   document.getElementById('reply-count').textContent = '0/200';
   document.getElementById('reply-form-error').hidden = true;
   document.getElementById('copy-status').hidden = true;
-  nearbyEl.hidden = true;
+  setPinsOpen(false);
   panel.hidden = false;
   const scroller = panel.querySelector('.pin-scroll');
   if (scroller) {
@@ -1354,7 +1408,7 @@ function renderNearbyList() {
       copy.append(meta);
       button.append(copy);
       button.addEventListener('click', () => {
-        nearbyEl.hidden = true;
+        setPinsOpen(false);
         if (focusPin(pin)) {
           openPin(pin);
           return;
@@ -1397,6 +1451,9 @@ document.getElementById('category-filters').addEventListener('click', (event) =>
   document.querySelectorAll('#category-filters button').forEach((item) => {
     item.classList.toggle('on', item === button);
   });
+  if (desktopMap()) {
+    drawMarkers();
+  }
   renderNearbyList();
 });
 
@@ -1408,17 +1465,71 @@ function reloadForWindow() {
   }
 }
 
-document.getElementById('period-today').addEventListener('click', () => {
-  period = period === 'today' ? '' : 'today';
+function paintDesktopTime() {
+  document.querySelectorAll('#desktop-time button').forEach((button) => {
+    const on = period !== 'today' && button.dataset.ahead === String(desktopAhead);
+    button.classList.toggle('on', on);
+    button.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+
+document.getElementById('desktop-time').addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button || !document.getElementById('desktop-time').contains(button)) {
+    return;
+  }
+  period = '';
+  desktopAhead = button.dataset.ahead;
   const url = new URL(window.location.href);
-  if (period === 'today') {
-    url.searchParams.set('period', 'today');
+  url.searchParams.delete('period');
+  if (desktopAhead === '10') {
+    url.searchParams.delete('ahead');
   } else {
-    url.searchParams.delete('period');
+    url.searchParams.set('ahead', desktopAhead);
   }
   history.replaceState(null, '', url);
-  paintPeriod();
+  paintDesktopTime();
   reloadForWindow();
+});
+
+function paintCityFilter() {
+  document.querySelectorAll('#city-filters button').forEach((button) => {
+    button.classList.toggle('on', (button.dataset.city || '') === listCity);
+  });
+}
+
+function renderCityFilters() {
+  const root = document.getElementById('city-filters');
+  const all = root.querySelector('[data-city=""]');
+  const buttons = CITIES.map((city) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.city = city.name;
+    button.textContent = city.name;
+    return button;
+  });
+  root.replaceChildren(all, ...buttons);
+  paintCityFilter();
+}
+
+document.getElementById('city-filters').addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button || !document.getElementById('city-filters').contains(button)) {
+    return;
+  }
+  listCity = button.dataset.city || '';
+  paintCityFilter();
+  drawMarkers();
+  renderNearbyList();
+  if (!listCity) {
+    return;
+  }
+  const city = CITIES.find((item) => item.name === listCity);
+  if (!city) {
+    return;
+  }
+  viewTouched = true;
+  showCity(city.latitude, city.longitude);
 });
 
 document.getElementById('phone-time').addEventListener('click', (event) => {
@@ -1445,7 +1556,7 @@ function openNearby() {
   closePanel();
   closeUnassigned();
   document.getElementById('cities-modal').hidden = true;
-  nearbyEl.hidden = false;
+  setPinsOpen(true);
   loadNearby(Number(document.getElementById('radius').value));
 }
 
@@ -1453,7 +1564,11 @@ document.getElementById('open-pins').addEventListener('click', openNearby);
 document.getElementById('open-list').addEventListener('click', openNearby);
 
 document.getElementById('nearby-close').addEventListener('click', () => {
-  nearbyEl.hidden = true;
+  setPinsOpen(false);
+});
+
+document.getElementById('filters-close').addEventListener('click', () => {
+  setPinsOpen(false);
 });
 
 document.getElementById('radius').addEventListener('input', (event) => {
@@ -1505,7 +1620,7 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     setAdminMenu(false);
     closePanel();
-    nearbyEl.hidden = true;
+    setPinsOpen(false);
     closeUnassigned();
     document.getElementById('cities-modal').hidden = true;
   }
@@ -1582,7 +1697,7 @@ async function loadCityCounts() {
 function openCities() {
   setAdminMenu(false);
   closePanel();
-  nearbyEl.hidden = true;
+  setPinsOpen(false);
   closeUnassigned();
   document.getElementById('city-search').value = '';
   renderCityChoices();
@@ -1908,7 +2023,7 @@ function goToCity(city) {
   viewTouched = true;
   forgetView();
   document.getElementById('cities-modal').hidden = true;
-  nearbyEl.hidden = true;
+  setPinsOpen(false);
   closePanel();
   closeUnassigned();
   showCity(city.latitude, city.longitude);
@@ -2056,13 +2171,13 @@ function openTodayList(city) {
   document.getElementById('radius-label').innerHTML = '<b>18 км</b>';
   closePanel();
   document.getElementById('cities-modal').hidden = true;
-  nearbyEl.hidden = false;
+  setPinsOpen(true);
   loadNearby(18);
 }
 
 async function openOnCity() {
-  paintPeriod();
   paintPhoneAhead();
+  paintDesktopTime();
   if (holdLink) {
     const opened = await openLinkedPin();
     if (opened) {
@@ -2087,6 +2202,8 @@ async function openOnCity() {
 
 setInterval(() => loadPins(), 20000);
 setInterval(watchNearby, 20000);
+placeFilterTools();
+renderCityFilters();
 openOnCity();
 watchNearby();
 
@@ -2174,7 +2291,7 @@ if (composer && openComposer) {
 
   openComposer.addEventListener('click', () => {
     panel.hidden = true;
-    nearbyEl.hidden = true;
+    setPinsOpen(false);
     const cities = document.getElementById('cities-modal');
     if (cities) {
       cities.hidden = true;
@@ -2379,7 +2496,7 @@ if (unassignedEl && openUnassigned) {
 
   openUnassigned.addEventListener('click', () => {
     panel.hidden = true;
-    nearbyEl.hidden = true;
+    setPinsOpen(false);
     document.getElementById('cities-modal').hidden = true;
     if (composer) {
       composer.hidden = true;

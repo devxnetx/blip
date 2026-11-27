@@ -762,14 +762,44 @@
             color: #fff;
         }
 
-        #period-today.on {
+        #open-unassigned {
+            display: none;
             background: var(--ink);
             color: #fff;
         }
 
-        #open-unassigned {
-            background: var(--ink);
-            color: #fff;
+        .filter-label {
+            margin: 14px 0 8px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .filter-scroll {
+            overflow: auto;
+            flex: 1;
+            min-height: 0;
+        }
+
+        @media (min-width: 801px) {
+            #open-unassigned {
+                display: inline-flex;
+                align-items: center;
+                position: fixed;
+                z-index: 600;
+                right: 76px;
+                bottom: 24px;
+                height: 48px;
+            }
+
+            #map-filters {
+                width: min(320px, calc(50vw - 28px));
+            }
+
+            #nearby.split {
+                width: min(380px, calc(50vw - 28px));
+                right: calc(16px + min(320px, 50vw - 28px) + 12px);
+            }
         }
 
         #unassigned:not([hidden]) { overflow: auto; }
@@ -997,7 +1027,7 @@
 
         @media (max-width: 800px) {
             #boot { display: none !important; }
-            .map-top, .admin-dock, .admin-scrim { display: none !important; }
+            .map-top, .admin-dock, .admin-scrim, #map-filters, #open-unassigned { display: none !important; }
             .maplibregl-ctrl-bottom-left { display: none; }
             .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
 
@@ -1116,9 +1146,7 @@
         <div class="top-right">
         @auth
             <button class="city-pill" id="open-composer" type="button">Нов пин</button>
-            <button class="city-pill" id="open-unassigned" type="button">Без място</button>
         @endauth
-        <button class="city-pill" id="period-today" type="button" aria-pressed="false">Днес</button>
         <button class="city-pill" id="open-pins" type="button">Пинове</button>
         </div>
     </header>
@@ -1145,6 +1173,9 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
         </div>
+    @endauth
+    @auth
+        <button class="city-pill" id="open-unassigned" type="button">Без място</button>
     @endauth
     <div class="phone-dock">
         <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span class="locate-simple"></span><span class="locate-cross" aria-hidden="true"><i class="ring"></i><i class="h"></i><i class="v"></i><i class="dot"></i></span></button>
@@ -1205,16 +1236,38 @@
             <h2>Наблизо</h2>
             <button class="linkish" id="nearby-close" type="button">Затвори</button>
         </div>
-        <p id="radius-label"><b>5 км</b></p>
-        <input id="radius" type="range" min="1" max="30" step="1" value="5" aria-label="Радиус в километри">
-        <div class="filters" id="category-filters">
-            <button type="button" class="on" data-category="">Всички</button>
-            @foreach ($listedCategories as $slug => $name)
-                <button type="button" data-category="{{ $slug }}">{{ $name }}</button>
-            @endforeach
+        <div id="nearby-tools">
+            <p id="radius-label"><b>5 км</b></p>
+            <input id="radius" type="range" min="1" max="30" step="1" value="5" aria-label="Радиус в километри">
+            <div class="filters" id="category-filters">
+                <button type="button" class="on" data-category="">Всички</button>
+                @foreach ($listedCategories as $slug => $name)
+                    <button type="button" data-category="{{ $slug }}">{{ $name }}</button>
+                @endforeach
+            </div>
         </div>
         <p class="faint" id="nearby-status"></p>
         <ul id="nearby-list"></ul>
+    </section>
+
+    <section class="nearby" id="map-filters" hidden>
+        <div class="row">
+            <h2>Филтри</h2>
+            <button class="linkish" id="filters-close" type="button">Затвори</button>
+        </div>
+        <div class="filter-scroll">
+            <div id="filter-mount"></div>
+            <p class="filter-label">Време</p>
+            <div class="filters" id="desktop-time">
+                <button type="button" data-ahead="4">Тия дни</button>
+                <button type="button" data-ahead="10" class="on" aria-pressed="true">10 дни</button>
+                <button type="button" data-ahead="all">Всичко</button>
+            </div>
+            <p class="filter-label">Градове</p>
+            <div class="filters" id="city-filters">
+                <button type="button" class="on" data-city="">Всички</button>
+            </div>
+        </div>
     </section>
 
     <section class="nearby" id="cities-modal" hidden>

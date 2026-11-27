@@ -103,7 +103,9 @@ class DiscordTodayTest extends TestCase
 
         $this->get('/map?city=stara-zagora&period=today')
             ->assertOk()
-            ->assertSee('id="period-today"', false)
+            ->assertDontSee('id="period-today"', false)
+            ->assertSee('id="map-filters"', false)
+            ->assertSee('id="desktop-time"', false)
             ->assertSee('stara-zagora', false);
     }
 
