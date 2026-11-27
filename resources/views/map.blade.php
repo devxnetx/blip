@@ -179,7 +179,8 @@
 
         #panel-message { flex: 1; min-width: 0; }
 
-        #nearby-list button span { display: flex; flex-direction: column; min-width: 0; }
+        #nearby-list .pin-open > span { display: flex; flex-direction: column; min-width: 0; }
+        #nearby-list .pin-open small { white-space: nowrap; }
 
         .home, .hud, .banner, .empty, .panel, .nearby, .toast {
             position: fixed;
@@ -297,6 +298,7 @@
         .nearby[hidden],
         .install[hidden],
         .admin-scrim[hidden],
+        .list-menu[hidden],
         #boot[hidden] {
             display: none !important;
         }
@@ -655,8 +657,7 @@
             margin-top: 12px;
         }
 
-        .share-row button,
-        #nearby-list .pin-actions button {
+        .share-row button {
             margin: 0;
             padding: 8px 14px;
             border: 1.5px solid var(--pin);
@@ -670,8 +671,7 @@
             cursor: pointer;
         }
 
-        .share-row button:hover,
-        #nearby-list .pin-actions button:hover {
+        .share-row button:hover {
             background: rgba(194, 65, 12, 0.08);
         }
 
@@ -697,12 +697,49 @@
             cursor: pointer;
         }
 
-        #nearby-list .pin-actions {
+        .more-dots {
+            width: 36px;
+            height: 36px;
+            flex: none;
+            border: 0;
+            border-radius: 18px;
+            background: transparent;
+            color: var(--ink);
+            font: inherit;
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .list-menu {
+            position: fixed;
+            z-index: 800;
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            flex: none;
+            min-width: 148px;
+            padding: 6px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 10px 24px rgba(28, 27, 25, 0.16);
         }
+
+        .list-menu button {
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--ink);
+            padding: 8px 12px;
+            font: inherit;
+            font-weight: 700;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .list-menu button:hover { background: rgba(28, 27, 25, 0.06); }
+        .list-menu button.danger { color: #dc2626; }
+        .list-menu button:disabled { color: var(--faint); cursor: default; }
 
         #nearby-list img {
             width: 48px;
@@ -1248,6 +1285,11 @@
         </div>
         <p class="faint" id="nearby-status"></p>
         <ul id="nearby-list"></ul>
+        <div class="list-menu" id="list-menu" hidden>
+            <button type="button" data-act="copy">Копирай</button>
+            <button type="button" data-act="share">Сподели</button>
+            <button type="button" data-act="report" class="danger">Докладвай</button>
+        </div>
     </section>
 
     <section class="nearby" id="map-filters" hidden>

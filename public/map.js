@@ -1276,12 +1276,15 @@ document.getElementById('reply-form').addEventListener('submit', async (event) =
   }
 });
 
-document.getElementById('report').addEventListener('click', async () => {
-  if (!selected || !window.confirm('Докладваш ли този пин? Пет доклада от различни хора го махат.')) {
+async function reportPin(pin) {
+  if (!pin || pin.imported || pin.mine || pin.reported) {
+    return;
+  }
+  if (!window.confirm('Докладваш ли този пин? Пет доклада от различни хора го махат.')) {
     return;
   }
   try {
-    const response = await fetch(`/api/pins/${selected.id}/report`, {
+    const response = await fetch(`/api/pins/${pin.id}/report`, {
       method: 'POST',
       headers: headers(),
     });
@@ -1290,14 +1293,24 @@ document.getElementById('report').addEventListener('click', async () => {
     }
     const body = await response.json();
     if (body.deleted) {
-      dropPinFromMap(selected.id);
+      nearbyRows = nearbyRows.filter((row) => row.id !== pin.id);
+      dropPinFromMap(pin.id);
+      renderNearbyList();
       return;
     }
-    selected = { ...selected, reported: true };
-    renderPanel();
+    nearbyRows = nearbyRows.map((row) => (row.id === pin.id ? { ...row, reported: true } : row));
+    if (selected && selected.id === pin.id) {
+      selected = { ...selected, reported: true };
+      renderPanel();
+    }
+    renderNearbyList();
   } catch (err) {
     window.alert(err.message || 'Пинът не можа да бъде докладван.');
   }
+}
+
+document.getElementById('report').addEventListener('click', () => {
+  reportPin(selected);
 });
 
 document.getElementById('remove').addEventListener('click', async () => {
@@ -1360,7 +1373,37 @@ async function loadNearby(kilometers) {
   }
 }
 
+let listMenuPin = null;
+
+function closeListMenu() {
+  document.getElementById('list-menu').hidden = true;
+  listMenuPin = null;
+}
+
+function toggleListMenu(anchor, pin) {
+  const menu = document.getElementById('list-menu');
+  if (listMenuPin && listMenuPin.id === pin.id && !menu.hidden) {
+    closeListMenu();
+    return;
+  }
+  listMenuPin = pin;
+  const report = menu.querySelector('[data-act="report"]');
+  const canReport = !pin.imported && !pin.mine;
+  report.hidden = !canReport;
+  report.disabled = Boolean(pin.reported);
+  report.textContent = pin.reported ? 'Докладвано' : 'Докладвай';
+  menu.hidden = false;
+  const rect = anchor.getBoundingClientRect();
+  const height = menu.offsetHeight;
+  const top = rect.bottom + 6 + height > window.innerHeight - 8
+    ? Math.max(8, rect.top - height - 6)
+    : rect.bottom + 6;
+  menu.style.top = `${top}px`;
+  menu.style.left = `${Math.max(8, rect.right - menu.offsetWidth)}px`;
+}
+
 function renderNearbyList() {
+  closeListMenu();
   const status = document.getElementById('nearby-status');
   const list = document.getElementById('nearby-list');
   const kilometers = Number(document.getElementById('radius').value);
@@ -1408,6 +1451,7 @@ function renderNearbyList() {
       copy.append(meta);
       button.append(copy);
       button.addEventListener('click', () => {
+        closeListMenu();
         setPinsOpen(false);
         if (focusPin(pin)) {
           openPin(pin);
@@ -1415,20 +1459,16 @@ function renderNearbyList() {
         }
         map.panTo([pin.longitude, pin.latitude]);
       });
-      const actions = document.createElement('div');
-      actions.className = 'pin-actions';
-      const copyLink = document.createElement('button');
-      copyLink.type = 'button';
-      copyLink.dataset.label = 'Копирай';
-      copyLink.textContent = 'Копирай';
-      copyLink.addEventListener('click', () => copyPinLink(pin, copyLink));
-      const shareLink = document.createElement('button');
-      shareLink.type = 'button';
-      shareLink.dataset.label = 'Сподели';
-      shareLink.textContent = 'Сподели';
-      shareLink.addEventListener('click', () => sharePin(pin, shareLink));
-      actions.append(copyLink, shareLink);
-      item.append(button, actions);
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'more-dots';
+      more.textContent = '⋯';
+      more.setAttribute('aria-label', 'Още');
+      more.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleListMenu(more, pin);
+      });
+      item.append(button, more);
       list.append(item);
     });
   if (!rows.length && period === 'today') {
@@ -1441,6 +1481,35 @@ function renderNearbyList() {
     status.textContent = '';
   }
 }
+
+document.getElementById('list-menu').addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  const pin = listMenuPin;
+  if (!button || !pin) {
+    return;
+  }
+  if (button.dataset.act === 'copy') {
+    button.dataset.label = 'Копирай';
+    copyPinLink(pin, button);
+    return;
+  }
+  closeListMenu();
+  if (button.dataset.act === 'share') {
+    sharePin(pin);
+  } else if (button.dataset.act === 'report') {
+    reportPin(pin);
+  }
+});
+
+document.getElementById('nearby-list').addEventListener('scroll', closeListMenu);
+
+document.addEventListener('click', (event) => {
+  const menu = document.getElementById('list-menu');
+  if (menu.hidden || menu.contains(event.target) || event.target.closest('.more-dots')) {
+    return;
+  }
+  closeListMenu();
+});
 
 document.getElementById('category-filters').addEventListener('click', (event) => {
   const button = event.target.closest('button');
@@ -1618,6 +1687,7 @@ if (adminCog) {
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
+    closeListMenu();
     setAdminMenu(false);
     closePanel();
     setPinsOpen(false);
