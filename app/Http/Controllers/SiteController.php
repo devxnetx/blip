@@ -6,6 +6,7 @@ use App\Models\ChangelogEntry;
 use App\Models\ContactMessage;
 use App\Support\ContactCheck;
 use App\Support\LinkPreview;
+use App\Support\PinPage;
 use App\Support\SiteLinks;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\RedirectResponse;
@@ -110,6 +111,18 @@ class SiteController extends Controller
         return redirect()
             ->route('contact')
             ->with('status', 'Съобщението е изпратено. Ще го прочетем.');
+    }
+
+    public function karta(): View
+    {
+        return view('karta', [
+            'groups' => PinPage::guide(),
+            'preview' => $this->preview(
+                'Карта — Kostaa',
+                'Страници, градове и категории.',
+                '/sitemap',
+            ),
+        ]);
     }
 
     public function history(): View

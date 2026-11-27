@@ -36,6 +36,7 @@ Route::post('/contact', [SiteController::class, 'storeContact'])
     ->name('contact.store');
 Route::get('/support', [SiteController::class, 'support'])->name('support');
 Route::get('/history', [SiteController::class, 'history'])->name('history');
+Route::get('/sitemap', [SiteController::class, 'karta'])->name('karta');
 Route::get('/pins', [PinPageController::class, 'index'])->name('pins');
 Route::get('/pins/{city}', [PinPageController::class, 'city'])->where('city', '[a-z0-9-]+')->name('pins.city');
 Route::get('/pins/{city}/{pin}', [PinPageController::class, 'show'])->where(['city' => '[a-z0-9-]+', 'pin' => '[a-z0-9-]+'])->name('pins.show');

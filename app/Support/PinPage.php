@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Category;
 use App\Models\Pin;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -165,6 +166,51 @@ class PinPage
         usort($rows, fn (array $a, array $b): int => $a['meters'] <=> $b['meters']);
 
         return $rows;
+    }
+
+    /**
+     * Pages, cities, and categories. External links stay out of the XML file.
+     *
+     * @return list<array{title: string, links: list<array{label: string, path: string}>}>
+     */
+    public static function guide(): array
+    {
+        $pages = [
+            ['label' => 'Начало', 'path' => '/'],
+            ['label' => 'Картата', 'path' => '/map'],
+            ['label' => 'Пинове', 'path' => '/pins'],
+            ['label' => 'Changelog', 'path' => '/changelog'],
+            ['label' => 'Как работи', 'path' => '/how'],
+            ['label' => 'Контакт', 'path' => '/contact'],
+            ['label' => 'Подкрепи ни', 'path' => '/support'],
+            ['label' => 'История', 'path' => '/history'],
+            ['label' => 'Карта', 'path' => '/sitemap'],
+            ['label' => 'Discord', 'path' => 'https://discord.com/channels/1574875809603133562'],
+        ];
+
+        $categories = [];
+
+        foreach (Category::listedOptions() as $slug => $name) {
+            $categories[] = [
+                'label' => $name,
+                'path' => '/pins?'.http_build_query(['category' => $slug]),
+            ];
+        }
+
+        $cities = [];
+
+        foreach (self::directory() as $city) {
+            $cities[] = [
+                'label' => $city['name'],
+                'path' => '/pins/'.$city['slug'],
+            ];
+        }
+
+        return [
+            ['title' => 'Страници', 'links' => $pages],
+            ['title' => 'Градове', 'links' => $cities],
+            ['title' => 'Категории', 'links' => $categories],
+        ];
     }
 
     /**

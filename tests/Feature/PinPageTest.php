@@ -157,10 +157,28 @@ class PinPageTest extends TestCase
             ->assertSee('/contact</loc>', false)
             ->assertSee('/support</loc>', false)
             ->assertSee('/map</loc>', false)
+            ->assertSee('/history</loc>', false)
+            ->assertSee('/sitemap</loc>', false)
             ->assertSee('/pins</loc>', false)
+            ->assertSee('/pins?category=seeking</loc>', false)
+            ->assertSee('/pins/stara-zagora</loc>', false)
+            ->assertDontSee('discord.com', false)
             ->assertSee(PinPage::path($live), false)
             ->assertDontSee(PinPage::token($expired), false)
             ->assertDontSee('/admin', false);
+
+        $this->get('/sitemap')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/html; charset=UTF-8')
+            ->assertSee('Страници')
+            ->assertSee('Градове')
+            ->assertSee('Категории')
+            ->assertSee('Стара Загора')
+            ->assertSee('Търся')
+            ->assertSee('Как работи')
+            ->assertSee('/pins/stara-zagora', false)
+            ->assertSee('/pins?category=seeking', false)
+            ->assertDontSee('<urlset', false);
 
         $this->get('/robots.txt')
             ->assertOk()

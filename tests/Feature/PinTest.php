@@ -120,6 +120,7 @@ class PinTest extends TestCase
             ->assertSee('Подкрепи ни')
             ->assertSee('Картата')
             ->assertSee('История')
+            ->assertSee('Карта')
             ->assertSee('Discord')
             ->assertDontSee('За нас')
             ->assertSee('class="site-nav"', false)
