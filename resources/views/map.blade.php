@@ -240,7 +240,7 @@
 
         #open-list { display: none; }
 
-        #locate span {
+        .locate-simple {
             display: block;
             width: 16px;
             height: 16px;
@@ -248,6 +248,12 @@
             border: 2px solid var(--ink);
             border-radius: 8px;
         }
+
+        .locate-cross { display: none; }
+
+        .phone-time { display: none; }
+
+        .phone-dock { display: contents; }
 
         .bars { width: 18px; margin: 0 auto; }
 
@@ -991,19 +997,103 @@
 
         @media (max-width: 800px) {
             #boot { display: none !important; }
-            .city-bar { display: none; }
-            #open-cities-mobile { display: inline-flex; align-items: center; }
-            body:has(#install:not([hidden])) #locate { bottom: 148px; }
-            body.admin .map-top { flex-wrap: wrap; }
-            body.admin .top-right {
-                flex: 1 0 100%;
-                margin-left: 0;
-                justify-content: flex-end;
-                flex-wrap: wrap;
-            }
+            .map-top, .admin-dock, .admin-scrim { display: none !important; }
             .maplibregl-ctrl-bottom-left { display: none; }
             .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
 
+            .phone-time {
+                position: fixed;
+                z-index: 600;
+                top: max(8px, env(safe-area-inset-top));
+                left: 12px;
+                display: flex;
+                gap: 8px;
+            }
+
+            .phone-time button {
+                border: 1px solid rgba(28, 27, 25, 0.16);
+                border-radius: 999px;
+                background: #fff;
+                color: #1c1b19;
+                min-height: 36px;
+                padding: 0 14px;
+                font: inherit;
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.32);
+            }
+
+            .phone-time button.on {
+                background: #1c1b19;
+                border-color: #1c1b19;
+                color: #fff;
+            }
+
+            .phone-dock {
+                position: fixed;
+                z-index: 600;
+                right: 16px;
+                bottom: max(16px, env(safe-area-inset-bottom));
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 8px;
+            }
+
+            body:has(#install:not([hidden])) .phone-dock { bottom: 156px; }
+
+            #locate, #open-list {
+                position: static;
+                background: #1c1b19;
+                color: #f6f4ef;
+                border: 1px solid rgba(28, 27, 25, 0.16);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.32);
+            }
+
+            #open-list { display: grid; place-items: center; }
+
+            .locate-simple { display: none; }
+
+            .locate-cross {
+                display: block;
+                position: relative;
+                width: 22px;
+                height: 22px;
+            }
+
+            .locate-cross i {
+                position: absolute;
+                background: #f6f4ef;
+                border-radius: 1px;
+            }
+
+            .locate-cross .ring {
+                top: 3px;
+                left: 3px;
+                width: 16px;
+                height: 16px;
+                border: 2px solid #f6f4ef;
+                border-radius: 8px;
+                background: transparent;
+            }
+
+            .locate-cross .h { top: 10px; left: 0; width: 22px; height: 2px; }
+            .locate-cross .v { top: 0; left: 10px; width: 2px; height: 22px; }
+            .locate-cross .dot { top: 9px; left: 9px; width: 4px; height: 4px; border-radius: 2px; }
+
+            #open-cities-mobile {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 48px;
+                padding: 0 18px;
+                border: 1px solid rgba(28, 27, 25, 0.16);
+                background: #1c1b19;
+                color: #f6f4ef;
+                font-size: 16px;
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.32);
+            }
         }
     </style>
 </head>
@@ -1019,7 +1109,6 @@
     <header class="map-top">
         <div class="top-left">
             <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
-            <button class="city-pill" id="open-cities-mobile" type="button">Градове</button>
         </div>
         <nav class="city-bar" id="city-bar" aria-label="Градове">
             <button class="city-pill" id="open-cities" type="button">Още</button>
@@ -1033,6 +1122,11 @@
         <button class="city-pill" id="open-pins" type="button">Пинове</button>
         </div>
     </header>
+    <div class="phone-time" id="phone-time" role="group" aria-label="Кога">
+        <button type="button" data-ahead="4" class="on" aria-pressed="true">Тия дни</button>
+        <button type="button" data-ahead="10" aria-pressed="false">10 дни</button>
+        <button type="button" data-ahead="all" aria-pressed="false">Всичко</button>
+    </div>
     @auth
         @include('admin.icons')
         <button class="admin-scrim" id="admin-scrim" type="button" hidden aria-label="Затвори админ менюто"></button>
@@ -1052,8 +1146,11 @@
             </button>
         </div>
     @endauth
-    <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span></span></button>
-    <button class="hud" id="open-list" type="button" hidden aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
+    <div class="phone-dock">
+        <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span class="locate-simple"></span><span class="locate-cross" aria-hidden="true"><i class="ring"></i><i class="h"></i><i class="v"></i><i class="dot"></i></span></button>
+        <button class="hud" id="open-list" type="button" aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
+        <button class="city-pill" id="open-cities-mobile" type="button">Градове</button>
+    </div>
     <button class="toast" id="toast" type="button" hidden></button>
     <button class="banner" id="banner" type="button" hidden>Картата не успя да зареди пиновете. Опитай пак.</button>
     <p class="empty" id="empty" hidden>Нищо в този изглед.</p>

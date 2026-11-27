@@ -92,6 +92,13 @@ let markers = [];
 let selected = null;
 const pageParams = new URLSearchParams(window.location.search);
 let period = pageParams.get('period') === 'today' ? 'today' : '';
+let phoneAhead = '4';
+if (!window.matchMedia('(min-width: 801px)').matches) {
+  const asked = pageParams.get('ahead');
+  if (asked === '4' || asked === '10' || asked === 'all') {
+    phoneAhead = asked;
+  }
+}
 let replies = [];
 let replyError = '';
 let listCenter = null;
@@ -186,13 +193,34 @@ function startsWithinAhead(pin, now = Date.now()) {
   return start <= now + AHEAD_MS;
 }
 
-function shownPins() {
-  const rows = period === 'today' ? pins.filter(occursToday) : pins;
-  if (period === 'today' || !desktopMap()) {
-    return rows;
+function phoneWindowMs() {
+  if (phoneAhead === 'all') {
+    return null;
   }
+  return Number(phoneAhead) * 24 * 60 * 60 * 1000;
+}
+
+function pinInWindow(pin, now = Date.now()) {
+  if (desktopMap()) {
+    if (period === 'today') {
+      return occursToday(pin);
+    }
+    return pin.id === selected?.id || startsWithinAhead(pin, now);
+  }
+  const limit = phoneWindowMs();
+  if (limit == null || pin.id === selected?.id || !pin.starts_at) {
+    return true;
+  }
+  const start = Date.parse(pin.starts_at);
+  if (!Number.isFinite(start) || start <= now) {
+    return true;
+  }
+  return start <= now + limit;
+}
+
+function shownPins() {
   const now = Date.now();
-  return rows.filter((pin) => pin.id === selected?.id || startsWithinAhead(pin, now));
+  return pins.filter((pin) => pinInWindow(pin, now));
 }
 
 function cityBySlug(slug) {
@@ -201,10 +229,16 @@ function cityBySlug(slug) {
 }
 
 function withPeriod(params) {
-  if (period === 'today') {
-    params.set('period', 'today');
-  } else if (desktopMap()) {
-    params.set('ahead', '10');
+  if (desktopMap()) {
+    if (period === 'today') {
+      params.set('period', 'today');
+    } else {
+      params.set('ahead', '10');
+    }
+    return params;
+  }
+  if (phoneAhead !== 'all') {
+    params.set('ahead', phoneAhead);
   }
   return params;
 }
@@ -224,6 +258,14 @@ function paintPeriod() {
   }
   button.classList.toggle('on', period === 'today');
   button.setAttribute('aria-pressed', period === 'today' ? 'true' : 'false');
+}
+
+function paintPhoneAhead() {
+  document.querySelectorAll('#phone-time button').forEach((button) => {
+    const on = button.dataset.ahead === phoneAhead;
+    button.classList.toggle('on', on);
+    button.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
 }
 
 async function readError(response) {
@@ -766,7 +808,9 @@ function drawEdges() {
   if (width < 20 || height < 20) {
     return;
   }
-  const pad = { top: 72, right: 72, bottom: 110, left: 72 };
+  const pad = desktopMap()
+    ? { top: 72, right: 72, bottom: 110, left: 72 }
+    : { top: 64, right: 36, bottom: 190, left: 36 };
   const chips = [];
   groupPins(pins, region).clusters.forEach((cluster) => {
     const point = map.project([cluster.longitude, cluster.latitude]);
@@ -1269,8 +1313,7 @@ function renderNearbyList() {
   const now = Date.now();
   const rows = nearbyRows.filter((pin) => (
     (!listCategory || pin.category === listCategory)
-    && (period !== 'today' || occursToday(pin))
-    && (period === 'today' || !desktopMap() || pin.id === selected?.id || startsWithinAhead(pin, now))
+    && pinInWindow(pin, now)
   ));
   list.replaceChildren();
   rows.forEach((pin) => {
@@ -1357,6 +1400,14 @@ document.getElementById('category-filters').addEventListener('click', (event) =>
   renderNearbyList();
 });
 
+function reloadForWindow() {
+  pins = [];
+  loadPins();
+  if (!nearbyEl.hidden && listCenter) {
+    loadNearby(Number(document.getElementById('radius').value));
+  }
+}
+
 document.getElementById('period-today').addEventListener('click', () => {
   period = period === 'today' ? '' : 'today';
   const url = new URL(window.location.href);
@@ -1367,21 +1418,39 @@ document.getElementById('period-today').addEventListener('click', () => {
   }
   history.replaceState(null, '', url);
   paintPeriod();
-  pins = [];
-  loadPins();
-  if (!nearbyEl.hidden && listCenter) {
-    loadNearby(Number(document.getElementById('radius').value));
-  }
+  reloadForWindow();
 });
 
-document.getElementById('open-pins').addEventListener('click', () => {
+document.getElementById('phone-time').addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button || !document.getElementById('phone-time').contains(button)) {
+    return;
+  }
+  phoneAhead = button.dataset.ahead;
+  const url = new URL(window.location.href);
+  url.searchParams.delete('period');
+  if (phoneAhead === '4') {
+    url.searchParams.delete('ahead');
+  } else {
+    url.searchParams.set('ahead', phoneAhead);
+  }
+  history.replaceState(null, '', url);
+  paintPhoneAhead();
+  reloadForWindow();
+});
+
+function openNearby() {
   listCenter = map.getCenter();
+  setAdminMenu(false);
   closePanel();
   closeUnassigned();
   document.getElementById('cities-modal').hidden = true;
   nearbyEl.hidden = false;
   loadNearby(Number(document.getElementById('radius').value));
-});
+}
+
+document.getElementById('open-pins').addEventListener('click', openNearby);
+document.getElementById('open-list').addEventListener('click', openNearby);
 
 document.getElementById('nearby-close').addEventListener('click', () => {
   nearbyEl.hidden = true;
@@ -1993,6 +2062,7 @@ function openTodayList(city) {
 
 async function openOnCity() {
   paintPeriod();
+  paintPhoneAhead();
   if (holdLink) {
     const opened = await openLinkedPin();
     if (opened) {
