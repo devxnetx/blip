@@ -52,10 +52,7 @@
 
         .social-instagram { background: linear-gradient(135deg, #f9ce34, #ee2a7b 55%, #6228d7); }
         .social-facebook { background: #1877f2; }
-        .social-telegram { background: #2aabee; }
-        .social-tiktok { background: #111; }
-
-        html[data-theme="dark"] .social-tiktok { background: #f6f4ef; color: #111; }
+        .social-discord { background: #5865F2; }
 
         .social-copy { display: flex; flex-direction: column; min-width: 0; }
         .social-copy strong { font-size: 16px; }
@@ -90,8 +87,7 @@
     <svg class="nav-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <symbol id="social-instagram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></symbol>
         <symbol id="social-facebook" viewBox="0 0 24 24" fill="currentColor"><path d="M14.5 8.5V6.8c0-.7.5-1.1 1.2-1.1H17V3h-2.1C12.4 3 11 4.5 11 6.7v1.8H9v2.8h2V21h3.2v-9.7h2.2l.4-2.8h-2.6z"/></symbol>
-        <symbol id="social-telegram" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 4.3 3.7 11.2c-1.2.5-1.2 1.1-.2 1.4l4.6 1.4 1.8 5.4c.2.6.1.9.7.9.4 0 .6-.2.9-.5l2.5-2.4 4.6 3.4c.8.5 1.4.2 1.6-.8l2.9-13.6c.3-1.2-.4-1.7-1.6-1.3zM9.2 13.6l8.8-5.5c.4-.3.8-.1.5.2l-7.5 6.8-.3 3.2-1.5-4.7z"/></symbol>
-        <symbol id="social-tiktok" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3h2.2a5.2 5.2 0 0 0 3.6 3.4v2.3a7.4 7.4 0 0 1-3.6-1v6.6a5.7 5.7 0 1 1-5.7-5.7c.3 0 .6 0 .9.1v2.5a3.2 3.2 0 1 0 2.2 3.1V3z"/></symbol>
+        <symbol id="social-discord" viewBox="0 0 24 24" fill="currentColor"><path d="M19.27 5.33A17.4 17.4 0 0 0 15 4a.1.1 0 0 0-.1.05c-.18.33-.39.76-.53 1.09a16.1 16.1 0 0 0-4.74 0c-.14-.34-.36-.76-.54-1.09A.1.1 0 0 0 9 4a17.4 17.4 0 0 0-4.27 1.33.09.09 0 0 0-.04.03C2.2 9.05 1.5 12.67 1.84 16.24c0 .03.02.06.05.07 1.8 1.32 3.53 2.12 5.24 2.65a.1.1 0 0 0 .11-.04c.4-.55.76-1.13 1.07-1.74a.1.1 0 0 0-.05-.14 11.2 11.2 0 0 1-1.53-.73.1.1 0 0 1-.01-.17c.1-.08.2-.16.3-.24a.1.1 0 0 1 .1-.01c3.2 1.46 6.66 1.46 9.82 0a.1.1 0 0 1 .1.01c.1.08.2.16.3.24a.1.1 0 0 1-.01.17c-.49.28-1 .52-1.53.73a.1.1 0 0 0-.05.14c.32.61.68 1.19 1.07 1.74a.1.1 0 0 0 .11.04c1.72-.53 3.45-1.33 5.24-2.65a.1.1 0 0 0 .05-.07c.41-4.2-.69-7.79-2.9-10.88a.08.08 0 0 0-.04-.03zM8.52 14.1c-.96 0-1.75-.88-1.75-1.96s.77-1.96 1.75-1.96 1.76.88 1.75 1.96c0 1.08-.77 1.96-1.75 1.96zm6.96 0c-.96 0-1.75-.88-1.75-1.96s.78-1.96 1.75-1.96 1.75.88 1.75 1.96c.01 1.08-.78 1.96-1.75 1.96z"/></symbol>
     </svg>
 
     <h1>Контакт</h1>

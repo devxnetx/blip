@@ -87,7 +87,11 @@ class SitePageTest extends TestCase
             ->assertSee('contact-grid', false)
             ->assertSee('social-instagram', false)
             ->assertSee('https://instagram.com/kostaa.test', false)
+            ->assertSee('social-discord', false)
+            ->assertSee('https://discord.com/channels/1574875809603133562', false)
             ->assertSee('Още няма връзка.')
+            ->assertDontSee('Telegram')
+            ->assertDontSee('TikTok')
             ->assertSee('Колко е', false)
             ->assertSee('Причина');
 

@@ -6,14 +6,14 @@ use App\Models\Setting;
 
 class SiteLinks
 {
+    public const DISCORD = 'https://discord.com/channels/1574875809603133562';
+
     /**
      * @var array<string, string>
      */
     public const SOCIAL = [
         'social_instagram' => 'Instagram',
         'social_facebook' => 'Facebook',
-        'social_telegram' => 'Telegram',
-        'social_tiktok' => 'TikTok',
     ];
 
     /**
@@ -24,8 +24,6 @@ class SiteLinks
         return [
             'social_instagram',
             'social_facebook',
-            'social_telegram',
-            'social_tiktok',
             'donate_revolut',
             'donate_eth',
             'donate_sol',
@@ -86,6 +84,12 @@ class SiteLinks
                 'url' => self::httpUrl(Setting::get($key)),
             ];
         }
+
+        $rows[] = [
+            'id' => 'discord',
+            'label' => 'Discord',
+            'url' => self::DISCORD,
+        ];
 
         return $rows;
     }
