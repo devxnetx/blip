@@ -641,6 +641,8 @@ class AdminTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/pins?kind=unassigned')
             ->assertOk()
+            ->assertSee('id="theme-switch"', false)
+            ->assertSee('Тъмен режим', false)
             ->assertSee('Събор в Малево')
             ->assertSee('EventiBG')
             ->assertSee('https://eventibg.com/event/sabor-malevo', false)

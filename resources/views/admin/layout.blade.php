@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="bg">
 <head>
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem('kostaa-theme');
+                var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+            } catch (e) {}
+        })();
+    </script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Админ') — Kostaa</title>
@@ -17,6 +26,20 @@
             --card: #f6f4ef;
             --pin: #c2410c;
             --line: #d9d6d0;
+            --field: #fff;
+            color-scheme: light;
+        }
+
+        html[data-theme="dark"] {
+            --paper: #12110f;
+            --ink: #f6f4ef;
+            --muted: #cfcabe;
+            --faint: #8a847b;
+            --card: #1c1b19;
+            --pin: #e85d2a;
+            --line: #3a3834;
+            --field: #2a2825;
+            color-scheme: dark;
         }
 
         * { box-sizing: border-box; }
@@ -46,17 +69,60 @@
             height: 100vh;
         }
 
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-right: 4px;
+        }
+
         .mark {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex: 1;
+            min-width: 0;
             color: var(--ink);
             font-weight: 700;
             font-size: 22px;
             letter-spacing: -0.04em;
             text-decoration: none;
-            padding: 0 12px;
+            padding: 0 0 0 12px;
         }
+
+        .theme-switch {
+            display: inline-flex;
+            align-items: center;
+            flex: none;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .theme-switch i {
+            position: relative;
+            display: block;
+            width: 36px;
+            height: 22px;
+            border-radius: 999px;
+            background: var(--line);
+        }
+
+        .theme-switch i::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--card);
+        }
+
+        html[data-theme="dark"] .theme-switch i { background: var(--pin); }
+        html[data-theme="dark"] .theme-switch i::after { transform: translateX(14px); background: #f6f4ef; }
 
         .mark img { width: 28px; height: 28px; border-radius: 8px; display: block; }
 
@@ -89,6 +155,16 @@
             text-align: left;
             padding: 10px 12px;
             cursor: pointer;
+        }
+
+        .side .theme-switch {
+            display: inline-flex;
+            gap: 0;
+            width: auto;
+            padding: 0;
+            border-radius: 0;
+            background: transparent;
+            font-weight: 400;
         }
 
         .side nav a.on { background: var(--ink); color: var(--card); }
@@ -163,7 +239,7 @@
             gap: 6px;
             border: 0;
             border-radius: 999px;
-            background: #fff;
+            background: var(--field);
             color: var(--ink);
             font: inherit;
             font-weight: 700;
@@ -208,8 +284,11 @@
             margin: 0 0 16px;
         }
 
-        .status { background: #e7f0e4; }
-        .error { background: #fde8e2; }
+        .status { background: #e7f0e4; color: #1c1b19; }
+        .error { background: #fde8e2; color: #1c1b19; }
+
+        html[data-theme="dark"] .status { background: #1a2e24; color: #b7e4c7; }
+        html[data-theme="dark"] .error { background: #3a221c; color: #f6f4ef; }
 
         table { width: 100%; border-collapse: collapse; }
 
@@ -273,9 +352,13 @@
             font-size: 13px;
             font-weight: 700;
             background: #e7f0e4;
+            color: #1c1b19;
         }
 
         .pill.off { background: #fde8e2; color: var(--pin); }
+
+        html[data-theme="dark"] .pill { background: #1a2e24; color: #b7e4c7; }
+        html[data-theme="dark"] .pill.off { background: #3a221c; color: #e85d2a; }
 
         label { display: block; margin-top: 12px; font-weight: 700; }
 
@@ -284,7 +367,7 @@
             margin-top: 6px;
             border: 0;
             border-radius: 14px;
-            background: #fff;
+            background: var(--field);
             padding: 12px 14px;
             font: inherit;
             color: var(--ink);
@@ -319,7 +402,7 @@
         .pager a, .pager span {
             display: inline-block;
             border-radius: 999px;
-            background: #fff;
+            background: var(--field);
             color: var(--ink);
             font-weight: 700;
             text-decoration: none;
@@ -381,7 +464,7 @@
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: #fff;
+            background: var(--field);
         }
 
         .switch input:checked + i { background: var(--ink); }
@@ -401,7 +484,10 @@
     @include('admin.icons')
     <div class="shell">
         <aside class="side">
-            <a class="mark" href="{{ route('admin.devices') }}"><img src="{{ asset('brand/icon-192.png') }}" alt="" width="28" height="28"><span><i>KO</i>staa</span></a>
+            <div class="brand-row">
+                <a class="mark" href="{{ route('admin.devices') }}"><img src="{{ asset('brand/icon-192.png') }}" alt="" width="28" height="28"><span><i>KO</i>staa</span></a>
+                <button type="button" class="theme-switch" id="theme-switch" aria-pressed="false" aria-label="Тъмен режим"><i aria-hidden="true"></i></button>
+            </div>
             <nav>
                 @include('admin.nav')
             </nav>
@@ -423,5 +509,22 @@
             @yield('content')
         </main>
     </div>
+    <script>
+        (function () {
+            var button = document.getElementById('theme-switch');
+            if (!button) return;
+            function paint(dark) {
+                if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+                else document.documentElement.removeAttribute('data-theme');
+                button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+            }
+            paint(document.documentElement.getAttribute('data-theme') === 'dark');
+            button.addEventListener('click', function () {
+                var dark = document.documentElement.getAttribute('data-theme') !== 'dark';
+                paint(dark);
+                try { localStorage.setItem('kostaa-theme', dark ? 'dark' : 'light'); } catch (e) {}
+            });
+        })();
+    </script>
 </body>
 </html>
