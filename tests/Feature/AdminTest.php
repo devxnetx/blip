@@ -165,6 +165,13 @@ class AdminTest extends TestCase
             ->assertSee('Забрани устройството')
             ->assertSee('id="pick-spot"', false);
 
+        $this->actingAs($admin)
+            ->get('/pins')
+            ->assertOk()
+            ->assertSee('id="admin-cog"', false)
+            ->assertSee('id="admin-menu"', false)
+            ->assertSee('Устройства');
+
         $created = $this->actingAs($admin)->postJson('/admin/pins', [
             'message' => 'Admin placed this',
             'latitude' => 42.4258,

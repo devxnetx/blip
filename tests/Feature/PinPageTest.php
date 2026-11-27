@@ -52,7 +52,8 @@ class PinPageTest extends TestCase
             ->assertSee('Избери град, после пин.')
             ->assertSee('Пинове')
             ->assertSee('class="map-link"', false)
-            ->assertSee('id="pin-map"', false);
+            ->assertSee('id="pin-map"', false)
+            ->assertDontSee('id="admin-cog"', false);
 
         $this->get('/pins/stara-zagora')
             ->assertOk()

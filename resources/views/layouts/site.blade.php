@@ -30,6 +30,7 @@
             --pin-muted: #cfcabe;
             --notice-bg: #e7f2ea;
             --notice-ink: #1f7a4d;
+            --faint: #8a847b;
             color-scheme: light;
         }
 
@@ -44,6 +45,7 @@
             --pin-muted: #5e5a54;
             --notice-bg: #1a2e24;
             --notice-ink: #b7e4c7;
+            --faint: #8a847b;
             color-scheme: dark;
         }
 
@@ -325,11 +327,132 @@
             min-height: 0;
             overflow: auto;
         }
+
+        .admin-scrim {
+            position: fixed;
+            inset: 0;
+            z-index: 740;
+            border: 0;
+            padding: 0;
+            background: rgba(28, 27, 25, 0.28);
+            cursor: pointer;
+        }
+
+        .admin-scrim[hidden] { display: none !important; }
+
+        .admin-dock {
+            position: fixed;
+            z-index: 750;
+            top: 50%;
+            left: 0;
+            display: flex;
+            align-items: center;
+            transform: translate(-100%, -50%) translateX(44px);
+            transition: transform 0.2s ease;
+        }
+
+        .admin-dock.is-open { transform: translate(0, -50%); }
+
+        .admin-cog {
+            width: 44px;
+            height: 64px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            border: 0;
+            border-radius: 0 14px 14px 0;
+            background: var(--pin);
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 2px 8px 18px rgba(28, 27, 25, 0.22);
+        }
+
+        .admin-cog svg { width: 22px; height: 22px; display: block; }
+        .admin-cog:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+        .admin-menu {
+            width: min(280px, calc(100vw - 60px));
+            max-height: calc(100vh - 32px);
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 14px 12px;
+            background: var(--card);
+            color: var(--ink);
+            border-radius: 0 18px 18px 0;
+            box-shadow: 0 18px 40px rgba(28, 27, 25, 0.2);
+        }
+
+        .admin-menu .nav-label {
+            margin: 14px 12px 2px;
+            color: var(--faint);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .admin-menu .nav-label:first-child { margin-top: 0; }
+
+        .admin-menu a,
+        .admin-menu button {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            border: 0;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--ink);
+            font: inherit;
+            font-weight: 700;
+            text-decoration: none;
+            text-align: left;
+            padding: 10px 12px;
+            cursor: pointer;
+        }
+
+        .admin-menu a.on { background: var(--ink); color: var(--card); }
+        .admin-menu a.map-link { color: var(--pin); }
+        .admin-menu a.on.map-link { color: var(--card); }
+
+        .admin-menu .nav-count {
+            margin-left: auto;
+            min-width: 20px;
+            padding: 1px 6px;
+            border-radius: 999px;
+            background: var(--pin);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .admin-menu a.on .nav-count { background: var(--card); color: var(--ink); }
+        .admin-menu .icon { width: 18px; height: 18px; flex: none; display: block; }
+        .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+        .admin-foot {
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid var(--line);
+        }
+
+        .admin-foot .who {
+            display: block;
+            padding: 0 12px 4px;
+            color: var(--muted);
+            font-weight: 700;
+        }
     </style>
     @stack('head')
 </head>
 <body @class(['is-wide' => $wide ?? false])>
     @include('partials.site-nav')
+    @auth
+        @include('partials.admin-dock')
+    @endauth
     <main @class(['is-wide' => $wide ?? false])>
         @yield('content')
     </main>
@@ -344,6 +467,26 @@
                 button.setAttribute('aria-pressed', dark ? 'true' : 'false');
             }
             paint(document.documentElement.getAttribute('data-theme') === 'dark');
+            var dock = document.getElementById('admin-dock');
+            var cog = document.getElementById('admin-cog');
+            if (dock && cog) {
+                var menu = document.getElementById('admin-menu');
+                var scrim = document.getElementById('admin-scrim');
+                function setAdminMenu(open) {
+                    dock.classList.toggle('is-open', open);
+                    cog.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    menu.setAttribute('aria-hidden', open ? 'false' : 'true');
+                    menu.inert = !open;
+                    scrim.hidden = !open;
+                }
+                cog.addEventListener('click', function () {
+                    setAdminMenu(!dock.classList.contains('is-open'));
+                });
+                scrim.addEventListener('click', function () { setAdminMenu(false); });
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') setAdminMenu(false);
+                });
+            }
             button.addEventListener('click', function () {
                 var dark = document.documentElement.getAttribute('data-theme') !== 'dark';
                 paint(dark);

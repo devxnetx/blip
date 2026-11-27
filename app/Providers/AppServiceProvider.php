@@ -57,8 +57,8 @@ class AppServiceProvider extends ServiceProvider
             });
         };
 
-        View::composer('admin.layout', function ($view) use ($unreadContacts): void {
-            $view->with('unreadContacts', $unreadContacts());
+        View::composer(['admin.layout', 'layouts.site'], function ($view) use ($unreadContacts): void {
+            $view->with('unreadContacts', auth()->check() ? $unreadContacts() : 0);
         });
 
         View::composer(['map', 'landing'], function ($view) use ($unreadContacts): void {
