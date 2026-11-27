@@ -97,9 +97,18 @@
 
         .brand i { color: var(--pin); font-style: normal; }
 
+        .nav-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+        .nav-icon { width: 16px; height: 16px; flex: none; display: block; }
+
         .links { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
+        .links-place { margin-left: 4px; }
+
         .links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             padding: 8px 12px;
             border-radius: 999px;
             color: var(--ink);
@@ -110,12 +119,19 @@
 
         .links a.is-on { background: var(--ink); color: var(--card); }
 
-        .links a.map-link {
-            background: var(--pin);
-            color: #fff;
+        .links-place a {
+            color: var(--pin);
+            background: rgba(194, 65, 12, 0.14);
         }
 
-        .links a.map-link:hover { background: #9a3412; }
+        .links-place a:hover { background: rgba(194, 65, 12, 0.24); }
+
+        .links-place a.discord-link {
+            color: #5865f2;
+            background: rgba(88, 101, 242, 0.14);
+        }
+
+        .links-place a.discord-link:hover { background: rgba(88, 101, 242, 0.24); }
 
         .theme-switch {
             display: inline-flex;
@@ -209,7 +225,7 @@
             font-size: 14px;
         }
 
-        form.block input, form.block textarea {
+        form.block input, form.block textarea, form.block select {
             width: 100%;
             margin-top: 6px;
             padding: 12px 14px;
@@ -247,9 +263,9 @@
             border: 1.5px solid var(--pin);
         }
 
-        .socials, .pays { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 12px; }
+        .pays { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 12px; }
 
-        .socials li, .pay {
+        .pay {
             display: flex;
             justify-content: space-between;
             gap: 16px;
@@ -260,9 +276,7 @@
             border-radius: 16px;
         }
 
-        .socials a { color: var(--pin); font-weight: 700; }
-
-        .socials em, .pay em { color: var(--muted); font-style: normal; }
+        .pay em { color: var(--muted); font-style: normal; }
 
         .pay { display: block; }
 
@@ -290,9 +304,10 @@
         }
 
         @media (max-width: 800px) {
-            .site-nav { align-items: flex-start; padding: 12px 14px; }
+            .site-nav { align-items: flex-start; flex-wrap: wrap; padding: 12px 14px; }
+            .brand-side, .links { width: 100%; }
+            .links-place { margin-left: 0; }
             main { width: min(760px, calc(100% - 28px)); padding-top: 32px; }
-            .socials li { align-items: flex-start; flex-direction: column; gap: 4px; }
         }
 
         body.is-wide {
