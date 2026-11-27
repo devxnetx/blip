@@ -24,6 +24,8 @@ class SitePageTest extends TestCase
             ->assertSee('Лого')
             ->assertSee('Банери')
             ->assertSee('brand/icon.svg', false)
+            ->assertSee('brand/favicon.png', false)
+            ->assertDontSee('favicon.ico', false)
             ->assertSee('brand/icon-512.png', false)
             ->assertSee('brand/app-icon-1024.png', false)
             ->assertSee('brand/logo-stack-512.png', false)

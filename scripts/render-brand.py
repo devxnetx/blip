@@ -185,6 +185,7 @@ def main() -> None:
     marks = {size: square_mark(size, 0.92 if size <= 32 else 0.88) for size in ICON_SIZES}
     for size, image in marks.items():
         save(image, BRAND / f"icon-{size}.png")
+    save(marks[256], BRAND / "favicon.png")
 
     ico = marks[48]
     ico.save(

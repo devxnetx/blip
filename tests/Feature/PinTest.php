@@ -169,6 +169,7 @@ class PinTest extends TestCase
             ->assertDontSee('Устройства')
             ->assertSee('.maplibregl-map', false)
             ->assertSee('font-family: "Sofia Sans", sans-serif', false)
+            ->assertSee('<span><i>KO</i>staa</span>', false)
             ->assertSee('class="map-top"', false)
             ->assertSee('id="city-bar"', false)
             ->assertDontSee('id="period-today"', false)

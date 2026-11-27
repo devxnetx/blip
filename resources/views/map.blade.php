@@ -229,6 +229,7 @@
         }
 
         .home img { width: 22px; height: 28px; display: block; }
+        .home span { white-space: nowrap; }
         .home i { color: var(--pin); font-style: normal; }
 
         .hud {
@@ -1187,7 +1188,7 @@
     <div id="edges"></div>
     <header class="map-top">
         <div class="top-left">
-            <a class="home" href="{{ url('/') }}"><img src="{{ asset('brand/icon.svg') }}" alt="" width="22" height="28"><i>KO</i>staa</a>
+            <a class="home" href="{{ url('/') }}"><img src="{{ asset('brand/icon.svg') }}" alt="" width="22" height="28"><span><i>KO</i>staa</span></a>
         </div>
         <nav class="city-bar" id="city-bar" aria-label="Градове">
             <button class="city-pill" id="open-cities" type="button">Още</button>

@@ -18,7 +18,7 @@ class BrandKit
                 'kind' => 'mark',
                 'items' => [
                     self::item('SVG', 'brand/icon.svg', 'вектор', 64, 85),
-                    self::item('Favicon', 'favicon.ico', '16, 32 и 48'),
+                    self::file('Favicon', 'brand/favicon.png', 'прозрачен'),
                     ...self::squares('brand/icon-%d.png', [16, 32, 48, 64, 128, 180, 192, 256, 512, 1024]),
                 ],
             ],
