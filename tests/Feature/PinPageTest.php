@@ -132,6 +132,7 @@ class PinPageTest extends TestCase
         $this->get('/', ['User-Agent' => $iphone])
             ->assertOk()
             ->assertDontSee('class="pins-link"', false)
+            ->assertSee('class="discord-link"', false)
             ->assertSee('Виж картата');
 
         $this->get('/changelog', ['User-Agent' => $iphone])

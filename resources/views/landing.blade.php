@@ -244,17 +244,32 @@
             margin-top: 10px;
         }
 
+        .discord-link,
         .pins-link,
         .view-map {
             display: flex;
             flex: 1;
             align-items: center;
             justify-content: center;
+            gap: 6px;
             height: 38px;
             border-radius: 8px;
             text-decoration: none;
             font-size: 14px;
             font-weight: 600;
+        }
+
+        .discord-link svg,
+        .pins-link svg,
+        .view-map svg {
+            width: 16px;
+            height: 16px;
+            flex: none;
+        }
+
+        .discord-link {
+            background: #5865F2;
+            color: #fff;
         }
 
         .pins-link {
@@ -389,10 +404,11 @@
                 </a>
             </div>
             <div class="hero-actions">
+                <a class="discord-link" href="{{ \App\Support\SiteLinks::DISCORD }}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M19.27 5.33A17.4 17.4 0 0 0 15 4a.1.1 0 0 0-.1.05c-.18.33-.39.76-.53 1.09a16.1 16.1 0 0 0-4.74 0c-.14-.34-.36-.76-.54-1.09A.1.1 0 0 0 9 4a17.4 17.4 0 0 0-4.27 1.33.09.09 0 0 0-.04.03C2.2 9.05 1.5 12.67 1.84 16.24c0 .03.02.06.05.07 1.8 1.32 3.53 2.12 5.24 2.65a.1.1 0 0 0 .11-.04c.4-.55.76-1.13 1.07-1.74a.1.1 0 0 0-.05-.14 11.2 11.2 0 0 1-1.53-.73.1.1 0 0 1-.01-.17c.1-.08.2-.16.3-.24a.1.1 0 0 1 .1-.01c3.2 1.46 6.66 1.46 9.82 0a.1.1 0 0 1 .1.01c.1.08.2.16.3.24a.1.1 0 0 1-.01.17c-.49.28-1 .52-1.53.73a.1.1 0 0 0-.05.14c.32.61.68 1.19 1.07 1.74a.1.1 0 0 0 .11.04c1.72-.53 3.45-1.33 5.24-2.65a.1.1 0 0 0 .05-.07c.41-4.2-.69-7.79-2.9-10.88a.08.08 0 0 0-.04-.03zM8.52 14.1c-.96 0-1.75-.88-1.75-1.96s.77-1.96 1.75-1.96 1.76.88 1.75 1.96c0 1.08-.77 1.96-1.75 1.96zm6.96 0c-.96 0-1.75-.88-1.75-1.96s.78-1.96 1.75-1.96 1.75.88 1.75 1.96c.01 1.08-.78 1.96-1.75 1.96z"/></svg>Discord</a>
                 @unless (\App\Support\Phone::is(request()->userAgent()))
-                    <a class="pins-link" href="{{ route('pins') }}">Пинове</a>
+                    <a class="pins-link" href="{{ route('pins') }}"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>Пинове</a>
                 @endunless
-                <a class="view-map" href="{{ route('map') }}">Виж картата</a>
+                <a class="view-map" href="{{ route('map') }}"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Виж картата</a>
             </div>
         </div>
     </main>
