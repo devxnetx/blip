@@ -107,7 +107,7 @@
         .pin-open { display: flex; flex-direction: column; overflow: hidden; }
         .pin-head, .pin-foot { flex: none; background: var(--card); }
         .pin-head { padding: 18px 18px 12px; border-bottom: 1px solid var(--line); }
-        .pin-head h1 { font-family: "Instrument Serif", serif; font-size: 32px; font-weight: 400; line-height: 1.05; }
+        .pin-head h1 { font-family: "Sofia Sans", sans-serif; font-size: 32px; font-weight: 600; line-height: 1.15; }
         .pin-head .meta { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
         .pin-body { flex: 1; min-height: 0; overflow: auto; padding: 14px 18px 18px; }
         .pin-body img { display: block; width: 100%; border-radius: 14px; background: var(--paper); }
@@ -130,7 +130,7 @@
         .share-row button:hover { background: rgba(194, 65, 12, 0.08); }
         .share-status { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
         .detail { padding: 18px 18px 28px; }
-        .detail h1 { font-family: "Instrument Serif", serif; font-size: 32px; font-weight: 400; line-height: 1.05; }
+        .detail h1 { font-family: "Sofia Sans", sans-serif; font-size: 32px; font-weight: 600; line-height: 1.15; }
         .open-map { display: inline-flex; margin-top: 16px; color: var(--pin); font-weight: 700; }
         .replies { margin-top: 18px; }
         .replies article { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--paper); }

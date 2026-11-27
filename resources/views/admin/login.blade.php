@@ -6,7 +6,7 @@
     <title>Вход — Kostaa</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
     <style>
         :root { --ink: #1c1b19; --muted: #5e5a54; --card: #f6f4ef; --pin: #c2410c; --paper: #e7e4de; }
@@ -19,7 +19,7 @@
             justify-content: center;
             background: var(--paper);
             color: var(--ink);
-            font-family: "Schibsted Grotesk", sans-serif;
+            font-family: "Sofia Sans", sans-serif;
         }
         form {
             width: min(420px, calc(100% - 32px));

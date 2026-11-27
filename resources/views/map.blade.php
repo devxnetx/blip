@@ -7,7 +7,7 @@
     @include('partials.social')
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
     <meta name="theme-color" content="#1c1b19">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -35,7 +35,7 @@
         body {
             background: var(--line);
             color: var(--ink);
-            font-family: "Schibsted Grotesk", sans-serif;
+            font-family: "Sofia Sans", sans-serif;
         }
 
         #map { position: absolute; inset: 0; z-index: 0; background: var(--line); }

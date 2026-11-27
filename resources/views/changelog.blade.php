@@ -64,7 +64,7 @@
 
         .release h2 {
             margin: 0;
-            font-family: "Schibsted Grotesk", sans-serif;
+            font-family: "Sofia Sans", sans-serif;
             font-size: 24px;
             font-weight: 700;
             letter-spacing: -0.03em;

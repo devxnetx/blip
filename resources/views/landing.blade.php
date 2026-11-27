@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="{{ asset('brand/icon-192.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <style>
         :root {
             --paper: #e7e4de;
@@ -26,7 +26,7 @@
         body {
             margin: 0;
             color: var(--ink);
-            font-family: "Schibsted Grotesk", sans-serif;
+            font-family: "Sofia Sans", sans-serif;
             font-size: 17px;
             line-height: 1.5;
             background: #d4d1cb;
@@ -182,11 +182,11 @@
 
         h1 {
             margin: 0;
-            font-family: "Instrument Serif", serif;
+            font-family: "Sofia Sans", sans-serif;
             font-size: clamp(26px, 3vw, 34px);
-            font-weight: 400;
+            font-weight: 600;
             letter-spacing: -0.03em;
-            line-height: 1.05;
+            line-height: 1.15;
         }
 
         .lede {
