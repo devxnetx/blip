@@ -12,13 +12,26 @@ class SitePageTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_history_is_a_placeholder_page(): void
+    public function test_media_lists_the_icon_logo_and_banners(): void
     {
-        $this->get('/history')
+        $this->get('/history')->assertRedirect('/media');
+
+        $this->get('/media')
             ->assertOk()
-            ->assertSee('История')
-            ->assertSee('Миналите събития ще са тук.')
-            ->assertSee('href="'.route('history').'"', false);
+            ->assertSee('Медиа')
+            ->assertSee('Икона')
+            ->assertSee('Икона за приложение')
+            ->assertSee('Лого')
+            ->assertSee('Банери')
+            ->assertSee('brand/icon.svg', false)
+            ->assertSee('brand/icon-512.png', false)
+            ->assertSee('brand/app-icon-1024.png', false)
+            ->assertSee('brand/logo-stack-512.png', false)
+            ->assertSee('brand/banner-og.png', false)
+            ->assertSee('1200×630', false)
+            ->assertSee('1080×1920', false)
+            ->assertSee('href="'.route('media').'"', false)
+            ->assertDontSee('Миналите събития ще са тук.');
     }
 
     public function test_the_guide_explains_pins_upcoming_events_and_filters(): void
@@ -38,7 +51,7 @@ class SitePageTest extends TestCase
             ->assertSee('Видимо само за автора на пина')
             ->assertSee('Пет доклада')
             ->assertSee('class="map-link"', false)
-            ->assertSee('brand/icon-192.png', false)
+            ->assertSee('brand/icon.svg', false)
             ->assertSee('<details class="block" open>', false)
             ->assertDontSee('Пин тук');
 
@@ -181,8 +194,8 @@ class SitePageTest extends TestCase
             ->get('/admin/contacts/'.$stored->id)
             ->assertOk()
             ->assertSee('Нещо на картата')
-            ->assertSee('Картата не зарежда този пин.')
-            ->assertDontSee('<script>', false);
+            ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt; Картата не зарежда този пин.', false)
+            ->assertDontSee('<script>alert(1)</script>', false);
 
         $stored->refresh();
         $this->assertNotNull($stored->read_at);

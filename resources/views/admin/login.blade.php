@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
+    @include('partials.icons')
     <style>
         :root { --ink: #1c1b19; --muted: #5e5a54; --card: #f6f4ef; --pin: #c2410c; --paper: #e7e4de; }
         * { box-sizing: border-box; }
@@ -27,7 +27,8 @@
             border-radius: 22px;
             padding: 28px;
         }
-        .mark { margin: 0; font-size: 28px; letter-spacing: -0.04em; }
+        .mark { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 0; font-size: 28px; letter-spacing: -0.04em; }
+        .mark img { width: 32px; height: 42px; }
         .mark i { color: var(--pin); font-style: normal; }
         p { color: var(--muted); }
         label { display: block; margin-top: 14px; font-weight: 700; }
@@ -59,7 +60,7 @@
 <body>
     <form method="POST" action="{{ route('admin.login.store') }}">
         @csrf
-        <h1 class="mark"><i>KO</i>staa</h1>
+        <h1 class="mark"><img src="{{ asset('brand/icon.svg') }}" alt="" width="32" height="42"><span><i>KO</i>staa</span></h1>
         <p>Вход за администратори.</p>
         @if ($errors->any())
             <p class="error">{{ $errors->first() }}</p>

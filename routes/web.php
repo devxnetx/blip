@@ -36,7 +36,8 @@ Route::post('/contact', [SiteController::class, 'storeContact'])
     ->middleware('throttle:5,1')
     ->name('contact.store');
 Route::get('/support', [SiteController::class, 'support'])->name('support');
-Route::get('/history', [SiteController::class, 'history'])->name('history');
+Route::redirect('/history', '/media', 301);
+Route::get('/media', [SiteController::class, 'media'])->name('media');
 Route::get('/sitemap', [SiteController::class, 'karta'])->name('karta');
 Route::get('/api', [SiteController::class, 'api'])->name('api.docs');
 Route::get('/pins', [PinPageController::class, 'index'])->name('pins');

@@ -14,8 +14,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Kostaa">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
-    <link rel="apple-touch-icon" href="{{ asset('brand/icon-192.png') }}">
+    @include('partials.icons')
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.css">
     <style>
         :root {
@@ -215,6 +214,9 @@
 
         .home {
             position: static;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             color: var(--ink);
             background: rgba(246, 244, 239, 0.94);
             text-decoration: none;
@@ -226,6 +228,7 @@
             box-shadow: 0 1px 2px rgba(28, 27, 25, 0.22);
         }
 
+        .home img { width: 22px; height: 28px; display: block; }
         .home i { color: var(--pin); font-style: normal; }
 
         .hud {
@@ -1184,7 +1187,7 @@
     <div id="edges"></div>
     <header class="map-top">
         <div class="top-left">
-            <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
+            <a class="home" href="{{ url('/') }}"><img src="{{ asset('brand/icon.svg') }}" alt="" width="22" height="28"><i>KO</i>staa</a>
         </div>
         <nav class="city-bar" id="city-bar" aria-label="Градове">
             <button class="city-pill" id="open-cities" type="button">Още</button>

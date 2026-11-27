@@ -1,7 +1,7 @@
 <svg class="nav-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="nav-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></symbol>
     <symbol id="nav-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></symbol>
-    <symbol id="nav-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+    <symbol id="nav-media" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></symbol>
     <symbol id="nav-karta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
     <symbol id="nav-api" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 8 4 12 8 16"/><polyline points="16 8 20 12 16 16"/><line x1="14" y1="6" x2="10" y2="18"/></symbol>
     <symbol id="nav-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></symbol>
@@ -14,7 +14,7 @@
 <nav class="site-nav">
     <div class="brand-side">
         <a class="brand" href="{{ url('/') }}">
-            <img src="{{ asset('brand/icon-192.png') }}" alt="" width="36" height="36">
+            <img src="{{ asset('brand/icon.svg') }}" alt="" width="27" height="36">
             <span><i>KO</i>staa</span>
         </a>
         <button type="button" class="theme-switch" id="theme-switch" aria-pressed="false" aria-label="Тъмен режим">
@@ -34,7 +34,7 @@
         <a href="{{ route('how') }}" @class(['is-on' => request()->routeIs('how')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-how"></use></svg>Как работи</a>
         <a href="{{ route('contact') }}" @class(['is-on' => request()->routeIs('contact')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-mail"></use></svg>Контакт</a>
         <a href="{{ route('support') }}" @class(['is-on' => request()->routeIs('support')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-heart"></use></svg>Подкрепи ни</a>
-        <a href="{{ route('history') }}" @class(['is-on' => request()->routeIs('history')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-history"></use></svg>История</a>
+        <a href="{{ route('media') }}" @class(['is-on' => request()->routeIs('media')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-media"></use></svg>Медиа</a>
         <a href="{{ route('karta') }}" @class(['is-on' => request()->routeIs('karta')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-karta"></use></svg>Карта</a>
     </div>
 </nav>

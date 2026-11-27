@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
+    @include('partials.icons')
     <style>
         :root {
             --paper: #e7e4de;
@@ -124,7 +124,7 @@
         html[data-theme="dark"] .theme-switch i { background: var(--pin); }
         html[data-theme="dark"] .theme-switch i::after { transform: translateX(14px); background: #f6f4ef; }
 
-        .mark img { width: 28px; height: 28px; border-radius: 8px; display: block; }
+        .mark img { width: 22px; height: 28px; display: block; }
 
         .mark i { color: var(--pin); font-style: normal; }
 
@@ -485,7 +485,7 @@
     <div class="shell">
         <aside class="side">
             <div class="brand-row">
-                <a class="mark" href="{{ route('admin.devices') }}"><img src="{{ asset('brand/icon-192.png') }}" alt="" width="28" height="28"><span><i>KO</i>staa</span></a>
+                <a class="mark" href="{{ route('admin.devices') }}"><img src="{{ asset('brand/icon.svg') }}" alt="" width="22" height="28"><span><i>KO</i>staa</span></a>
                 <button type="button" class="theme-switch" id="theme-switch" aria-pressed="false" aria-label="Тъмен режим"><i aria-hidden="true"></i></button>
             </div>
             <nav>

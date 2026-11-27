@@ -125,7 +125,7 @@ class PinTest extends TestCase
             ->assertSee('Контакт')
             ->assertSee('Подкрепи ни')
             ->assertSee('Картата')
-            ->assertSee('История')
+            ->assertSee('Медиа')
             ->assertSee('Карта')
             ->assertSee('Discord')
             ->assertDontSee('За нас')
@@ -139,7 +139,7 @@ class PinTest extends TestCase
             ->assertSee('Тъмен режим', false)
             ->assertSee('kostaa-theme', false)
             ->assertSee('class="map-link"', false)
-            ->assertSee('brand/icon-192.png', false);
+            ->assertSee('brand/icon.svg', false);
     }
 
     public function test_the_desktop_map_views_pins_without_a_way_to_add_one(): void
@@ -184,7 +184,7 @@ class PinTest extends TestCase
             ->assertSee('name="twitter:card"', false)
             ->assertSee('summary_large_image', false)
             ->assertSee(LinkPreview::FALLBACK_DESCRIPTION, false)
-            ->assertSee('/brand/icon-512.png', false);
+            ->assertSee('/brand/banner-og.png', false);
     }
 
     public function test_a_pin_link_carries_a_preview_for_chat_apps(): void
@@ -230,7 +230,7 @@ class PinTest extends TestCase
             ->assertOk()
             ->assertSee('Бележка без снимка — Kostaa', false)
             ->assertSee(LinkPreview::FALLBACK_DESCRIPTION, false)
-            ->assertSee('/brand/icon-512.png', false)
+            ->assertSee('/brand/banner-og.png', false)
             ->assertSee('content="image/png"', false);
 
         $this->get('/map?pin='.$hidden->id)
@@ -246,7 +246,7 @@ class PinTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('property="og:image"', false)
-            ->assertSee('/brand/icon-512.png', false)
+            ->assertSee('/brand/banner-og.png', false)
             ->assertSee('Kostaa — бележка, която изчезва', false);
     }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ChangelogEntry;
 use App\Models\ContactMessage;
+use App\Support\BrandKit;
 use App\Support\ContactCheck;
 use App\Support\LinkPreview;
 use App\Support\PartnerEvents;
@@ -164,13 +165,14 @@ class SiteController extends Controller
         ]);
     }
 
-    public function history(): View
+    public function media(): View
     {
-        return view('history', [
+        return view('media', [
+            'sections' => BrandKit::sections(),
             'preview' => $this->preview(
-                'История — Kostaa',
-                'Миналите събития ще са тук.',
-                '/history',
+                'Медиа — Kostaa',
+                'Иконата, логото и банерите на Kostaa за сваляне.',
+                '/media',
             ),
         ]);
     }
