@@ -186,29 +186,25 @@
             z-index: 600;
         }
 
-        .top-left {
+        .map-top {
             position: fixed;
             z-index: 600;
-            top: 16px;
+            top: 12px;
             left: 16px;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-            max-width: calc(100% - 140px);
-        }
-
-        body.admin .top-left { max-width: calc(100% - 380px); }
-
-        .top-right {
-            position: fixed;
-            z-index: 600;
-            top: 16px;
             right: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
+
+        .top-left, .top-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: none;
+        }
+
+        .top-right { margin-left: auto; }
 
         .home {
             position: static;
@@ -294,6 +290,7 @@
         .panel[hidden],
         .nearby[hidden],
         .install[hidden],
+        .admin-scrim[hidden],
         #boot[hidden] {
             display: none !important;
         }
@@ -723,11 +720,8 @@
         .maplibregl-ctrl-attrib { font-size: 11px; }
 
         .city-bar {
-            position: fixed;
-            z-index: 600;
-            top: 12px;
-            left: 132px;
-            right: 128px;
+            flex: 1;
+            min-width: 0;
             display: flex;
             gap: 8px;
             padding: 4px 2px 8px;
@@ -756,15 +750,6 @@
         #open-cities { background: var(--ink); color: var(--card); }
 
         #open-cities-mobile { display: none; }
-
-        body.admin .city-bar {
-            top: auto;
-            bottom: 16px;
-            left: 16px;
-            right: 80px;
-        }
-
-        body.admin .maplibregl-ctrl-bottom-left { bottom: 68px; }
 
         #open-pins {
             background: var(--pin);
@@ -885,23 +870,134 @@
             color: var(--muted);
         }
 
+        .admin-scrim {
+            position: fixed;
+            inset: 0;
+            z-index: 740;
+            border: 0;
+            padding: 0;
+            background: rgba(28, 27, 25, 0.28);
+            cursor: pointer;
+        }
+
+        .admin-dock {
+            position: fixed;
+            z-index: 750;
+            top: 50%;
+            left: 0;
+            display: flex;
+            align-items: center;
+            transform: translate(-100%, -50%) translateX(44px);
+            transition: transform 0.2s ease;
+        }
+
+        .admin-dock.is-open { transform: translate(0, -50%); }
+
+        .admin-cog {
+            width: 44px;
+            height: 64px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            border: 0;
+            border-radius: 0 14px 14px 0;
+            background: var(--pin);
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 2px 8px 18px rgba(28, 27, 25, 0.22);
+        }
+
+        .admin-cog svg { width: 22px; height: 22px; display: block; }
+
+        .admin-cog:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+        .admin-menu {
+            width: min(280px, calc(100vw - 60px));
+            max-height: calc(100vh - 32px);
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 14px 12px;
+            background: var(--card);
+            color: var(--ink);
+            border-radius: 0 18px 18px 0;
+            box-shadow: 0 18px 40px rgba(28, 27, 25, 0.2);
+        }
+
+        .admin-menu .nav-label {
+            margin: 14px 12px 2px;
+            color: var(--faint);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .admin-menu .nav-label:first-child { margin-top: 0; }
+
+        .admin-menu a,
+        .admin-menu button {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            border: 0;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--ink);
+            font: inherit;
+            font-weight: 700;
+            text-decoration: none;
+            text-align: left;
+            padding: 10px 12px;
+            cursor: pointer;
+        }
+
+        .admin-menu a.on { background: var(--ink); color: var(--card); }
+        .admin-menu a.map-link { color: var(--pin); }
+        .admin-menu a.on.map-link { color: var(--card); }
+
+        .admin-menu .nav-count {
+            margin-left: auto;
+            min-width: 20px;
+            padding: 1px 6px;
+            border-radius: 999px;
+            background: var(--pin);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .admin-menu a.on .nav-count { background: var(--card); color: var(--ink); }
+
+        .admin-menu .icon { width: 18px; height: 18px; flex: none; display: block; }
+
+        .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+        .admin-foot {
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid var(--line);
+        }
+
+        .admin-foot .who {
+            display: block;
+            padding: 0 12px 4px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
         @media (max-width: 800px) {
             #boot { display: none !important; }
             .city-bar { display: none; }
             #open-cities-mobile { display: inline-flex; align-items: center; }
-            body.admin #open-cities-mobile {
-                position: fixed;
-                z-index: 600;
-                left: 16px;
-                bottom: 24px;
-            }
             body:has(#install:not([hidden])) #locate { bottom: 148px; }
-            body.admin:has(#install:not([hidden])) #open-cities-mobile { bottom: 236px; }
-            body.admin .top-left { max-width: calc(100% - 16px); }
+            body.admin .map-top { flex-wrap: wrap; }
             body.admin .top-right {
-                top: 62px;
-                left: 16px;
-                right: 16px;
+                flex: 1 0 100%;
+                margin-left: 0;
                 justify-content: flex-end;
                 flex-wrap: wrap;
             }
@@ -920,24 +1016,42 @@
     </div>
     <div id="map"></div>
     <div id="edges"></div>
-    <div class="top-left">
-        <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
-        <button class="city-pill" id="open-cities-mobile" type="button">Градове</button>
-        @auth
-            <a class="city-pill" href="{{ route('admin.devices') }}">Админ</a>
-        @endauth
-    </div>
-    <nav class="city-bar" id="city-bar" aria-label="Градове">
-        <button class="city-pill" id="open-cities" type="button">Още</button>
-    </nav>
-    <div class="top-right">
+    <header class="map-top">
+        <div class="top-left">
+            <a class="home" href="{{ url('/') }}"><i>KO</i>staa</a>
+            <button class="city-pill" id="open-cities-mobile" type="button">Градове</button>
+        </div>
+        <nav class="city-bar" id="city-bar" aria-label="Градове">
+            <button class="city-pill" id="open-cities" type="button">Още</button>
+        </nav>
+        <div class="top-right">
         @auth
             <button class="city-pill" id="open-composer" type="button">Нов пин</button>
             <button class="city-pill" id="open-unassigned" type="button">Без място</button>
         @endauth
         <button class="city-pill" id="period-today" type="button" aria-pressed="false">Днес</button>
         <button class="city-pill" id="open-pins" type="button">Пинове</button>
-    </div>
+        </div>
+    </header>
+    @auth
+        @include('admin.icons')
+        <button class="admin-scrim" id="admin-scrim" type="button" hidden aria-label="Затвори админ менюто"></button>
+        <div class="admin-dock" id="admin-dock">
+            <nav class="admin-menu" id="admin-menu" aria-label="Админ меню" aria-hidden="true" inert>
+                @include('admin.nav')
+                <div class="admin-foot">
+                    <span class="who">{{ auth()->user()->name }}</span>
+                    <form method="POST" action="{{ route('admin.logout') }}">
+                        @csrf
+                        <button type="submit">@include('admin.icon', ['name' => 'out']) Изход</button>
+                    </form>
+                </div>
+            </nav>
+            <button class="admin-cog" id="admin-cog" type="button" aria-expanded="false" aria-controls="admin-menu" aria-label="Админ меню">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+        </div>
+    @endauth
     <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span></span></button>
     <button class="hud" id="open-list" type="button" hidden aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
     <button class="toast" id="toast" type="button" hidden></button>

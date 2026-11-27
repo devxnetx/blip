@@ -47,19 +47,21 @@ class AppServiceProvider extends ServiceProvider
         ContactMessage::saved(fn () => Cache::forget('admin.unread-contacts'));
         ContactMessage::deleted(fn () => Cache::forget('admin.unread-contacts'));
 
-        View::composer('admin.layout', function ($view): void {
-            $unread = Cache::remember('admin.unread-contacts', 30, function (): int {
+        $unreadContacts = function (): int {
+            return Cache::remember('admin.unread-contacts', 30, function (): int {
                 try {
                     return ContactMessage::query()->whereNull('read_at')->count();
                 } catch (\Throwable) {
                     return 0;
                 }
             });
+        };
 
-            $view->with('unreadContacts', $unread);
+        View::composer('admin.layout', function ($view) use ($unreadContacts): void {
+            $view->with('unreadContacts', $unreadContacts());
         });
 
-        View::composer(['map', 'landing'], function ($view): void {
+        View::composer(['map', 'landing'], function ($view) use ($unreadContacts): void {
             $categories = Category::options();
             $listed = Category::listedOptions();
             $view->with([
@@ -71,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
                 'citySlugs' => collect(PinPage::directory())->mapWithKeys(
                     fn (array $city): array => [$city['name'] => $city['slug']]
                 )->all(),
+                'unreadContacts' => auth()->check() ? $unreadContacts() : 0,
             ]);
         });
     }

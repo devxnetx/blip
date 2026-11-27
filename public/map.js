@@ -1411,8 +1411,30 @@ document.getElementById('locate').addEventListener('click', () => {
 
 banner.addEventListener('click', loadPins);
 
+function setAdminMenu(open) {
+  const dock = document.getElementById('admin-dock');
+  if (!dock) {
+    return;
+  }
+  document.getElementById('admin-cog').setAttribute('aria-expanded', open ? 'true' : 'false');
+  const menu = document.getElementById('admin-menu');
+  menu.setAttribute('aria-hidden', open ? 'false' : 'true');
+  menu.inert = !open;
+  document.getElementById('admin-scrim').hidden = !open;
+  dock.classList.toggle('is-open', open);
+}
+
+const adminCog = document.getElementById('admin-cog');
+if (adminCog) {
+  adminCog.addEventListener('click', () => {
+    setAdminMenu(!document.getElementById('admin-dock').classList.contains('is-open'));
+  });
+  document.getElementById('admin-scrim').addEventListener('click', () => setAdminMenu(false));
+}
+
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
+    setAdminMenu(false);
     closePanel();
     nearbyEl.hidden = true;
     closeUnassigned();
@@ -1489,6 +1511,7 @@ async function loadCityCounts() {
 }
 
 function openCities() {
+  setAdminMenu(false);
   closePanel();
   nearbyEl.hidden = true;
   closeUnassigned();
