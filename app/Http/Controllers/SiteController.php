@@ -6,6 +6,7 @@ use App\Models\ChangelogEntry;
 use App\Models\ContactMessage;
 use App\Support\ContactCheck;
 use App\Support\LinkPreview;
+use App\Support\PartnerEvents;
 use App\Support\PinPage;
 use App\Support\SiteLinks;
 use Illuminate\Validation\Rule;
@@ -113,6 +114,44 @@ class SiteController extends Controller
             ->with('status', 'Съобщението е изпратено. Ще го прочетем.');
     }
 
+    public function api(): View
+    {
+        $sofia = collect(PartnerEvents::cities())->firstWhere('name', 'София');
+        $event = [
+            'id' => 481,
+            'title' => 'Галена',
+            'description' => 'Клубна вечер.',
+            'type' => 'event',
+            'city' => $sofia['slug'] ?? 'sofiia',
+            'city_name' => 'София',
+            'latitude' => 42.6977,
+            'longitude' => 23.3219,
+            'starts_at' => '2026-11-27T22:00:00+00:00',
+            'ends_at' => '2026-11-28T01:00:00+00:00',
+            'image_url' => null,
+            'url' => url('/pins/sofia/galena-481'),
+        ];
+
+        return view('api', [
+            'base' => url('/api/v1'),
+            'exampleCity' => $sofia['slug'] ?? 'sofiia',
+            'citiesJson' => $this->json(['cities' => PartnerEvents::cities()]),
+            'typesJson' => $this->json(['types' => PartnerEvents::types()]),
+            'timesJson' => $this->json(['times' => PartnerEvents::times()]),
+            'eventsJson' => $this->json([
+                'data' => [$event],
+                'page' => 1,
+                'limit' => 50,
+                'total' => 1,
+            ]),
+            'preview' => $this->preview(
+                'API — Kostaa',
+                'Събития по град, тип и време. Заявките искат bearer token.',
+                '/api',
+            ),
+        ]);
+    }
+
     public function karta(): View
     {
         return view('karta', [
@@ -153,6 +192,11 @@ class SiteController extends Controller
     /**
      * @return array{title: string, description: string, image: string, image_type: string, url: string}
      */
+    private function json(mixed $value): string
+    {
+        return json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+    }
+
     private function preview(string $title, string $description, string $path): array
     {
         return LinkPreview::page(

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AuthenticateApiKey;
 use App\Http\Middleware\FreshPages;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             FreshPages::class,
+        ]);
+        $middleware->alias([
+            'apikey' => AuthenticateApiKey::class,
         ]);
         $middleware->redirectGuestsTo('/admin/login');
         $middleware->redirectUsersTo('/admin/devices');

@@ -185,6 +185,7 @@ class PinPage
             ['label' => 'Подкрепи ни', 'path' => '/support'],
             ['label' => 'История', 'path' => '/history'],
             ['label' => 'Карта', 'path' => '/sitemap'],
+            ['label' => 'API', 'path' => '/api'],
             ['label' => 'Discord', 'path' => 'https://discord.com/channels/1574875809603133562'],
         ];
 

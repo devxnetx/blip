@@ -3,6 +3,7 @@
     <symbol id="nav-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></symbol>
     <symbol id="nav-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
     <symbol id="nav-karta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
+    <symbol id="nav-api" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 8 4 12 8 16"/><polyline points="16 8 20 12 16 16"/><line x1="14" y1="6" x2="10" y2="18"/></symbol>
     <symbol id="nav-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></symbol>
     <symbol id="nav-changelog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
     <symbol id="nav-how" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
@@ -26,10 +27,10 @@
             <a href="{{ route('map') }}" @class(['map-link', 'is-on' => request()->routeIs('map')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-map"></use></svg>Картата</a>
             <a class="discord-link" href="https://discord.com/channels/1574875809603133562" target="_blank" rel="noopener noreferrer"><svg class="nav-icon" aria-hidden="true"><use href="#nav-discord"></use></svg>Discord</a>
             <a href="{{ route('changelog') }}" @class(['is-on' => request()->routeIs('changelog')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-changelog"></use></svg>Changelog</a>
+            <a href="{{ route('api.docs') }}" @class(['is-on' => request()->routeIs('api.docs')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-api"></use></svg>API</a>
         </div>
     </div>
     <div class="links">
-        <a href="{{ url('/') }}" @class(['is-on' => request()->is('/')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-home"></use></svg>Начало</a>
         <a href="{{ route('how') }}" @class(['is-on' => request()->routeIs('how')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-how"></use></svg>Как работи</a>
         <a href="{{ route('contact') }}" @class(['is-on' => request()->routeIs('contact')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-mail"></use></svg>Контакт</a>
         <a href="{{ route('support') }}" @class(['is-on' => request()->routeIs('support')])><svg class="nav-icon" aria-hidden="true"><use href="#nav-heart"></use></svg>Подкрепи ни</a>

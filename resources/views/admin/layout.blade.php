@@ -411,6 +411,7 @@
                 <p class="nav-label">Система</p>
                 <a href="{{ route('admin.contacts') }}" @class(['on' => request()->routeIs('admin.contacts*')])>@include('admin.icon', ['name' => 'mail']) Съобщения @if (($unreadContacts ?? 0) > 0)<span class="nav-count">{{ $unreadContacts }}</span>@endif</a>
                 <a href="{{ route('admin.users') }}" @class(['on' => request()->routeIs('admin.users*')])>@include('admin.icon', ['name' => 'users']) Потребители</a>
+                <a href="{{ route('admin.api-keys') }}" @class(['on' => request()->routeIs('admin.api-keys*')])>@include('admin.icon', ['name' => 'link']) API ключове</a>
                 <a href="{{ route('admin.imports') }}" @class(['on' => request()->routeIs('admin.imports')])>@include('admin.icon', ['name' => 'clock']) Импорти</a>
                 <a href="{{ route('admin.settings') }}" @class(['on' => request()->routeIs('admin.settings*')])>@include('admin.icon', ['name' => 'sliders']) Настройки</a>
                 <p class="nav-label">Development</p>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChangelogController;
 use App\Http\Controllers\Admin\ContactMessageController;
@@ -37,6 +38,7 @@ Route::post('/contact', [SiteController::class, 'storeContact'])
 Route::get('/support', [SiteController::class, 'support'])->name('support');
 Route::get('/history', [SiteController::class, 'history'])->name('history');
 Route::get('/sitemap', [SiteController::class, 'karta'])->name('karta');
+Route::get('/api', [SiteController::class, 'api'])->name('api.docs');
 Route::get('/pins', [PinPageController::class, 'index'])->name('pins');
 Route::get('/pins/{city}', [PinPageController::class, 'city'])->where('city', '[a-z0-9-]+')->name('pins.city');
 Route::get('/pins/{city}/{pin}', [PinPageController::class, 'show'])->where(['city' => '[a-z0-9-]+', 'pin' => '[a-z0-9-]+'])->name('pins.show');
@@ -88,6 +90,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/users/{user}/edit', [UserController::class, 'edit'])->name('admin.users.edit');
     Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
     Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+    Route::get('/admin/api-keys', [ApiKeyController::class, 'index'])->name('admin.api-keys');
+    Route::post('/admin/api-keys', [ApiKeyController::class, 'store'])->name('admin.api-keys.store');
+    Route::post('/admin/api-keys/{apiKey}/revoke', [ApiKeyController::class, 'revoke'])->name('admin.api-keys.revoke');
     Route::get('/admin/settings', [SettingsController::class, 'edit'])->name('admin.settings');
     Route::put('/admin/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
     Route::get('/admin/categories', [CategoryController::class, 'index'])->name('admin.categories');
