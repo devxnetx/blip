@@ -167,6 +167,8 @@ class PinTest extends TestCase
             ->assertDontSee('id="unassigned"', false)
             ->assertDontSee('id="admin-cog"', false)
             ->assertDontSee('Устройства')
+            ->assertSee('.maplibregl-map', false)
+            ->assertSee('font-family: "Sofia Sans", sans-serif', false)
             ->assertSee('class="map-top"', false)
             ->assertSee('id="city-bar"', false)
             ->assertDontSee('id="period-today"', false)

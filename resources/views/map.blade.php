@@ -122,6 +122,12 @@
 
         .bubble small.soon { color: #ff5c5c; }
 
+        .maplibregl-map,
+        .bubble,
+        .count {
+            font-family: "Sofia Sans", sans-serif;
+        }
+
         .tail {
             width: 0;
             height: 0;

@@ -53,6 +53,8 @@ class PinPageTest extends TestCase
             ->assertSee('Пинове')
             ->assertSee('class="map-link"', false)
             ->assertSee('id="pin-map"', false)
+            ->assertSee('.maplibregl-map', false)
+            ->assertSee('font-family: "Sofia Sans", sans-serif', false)
             ->assertDontSee('id="admin-cog"', false);
 
         $this->get('/pins/stara-zagora')

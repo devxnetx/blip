@@ -187,6 +187,11 @@
         }
         .bubble small { display: block; flex: none; margin: 0; padding: 0; color: #cfcabe; font-size: 11px; font-weight: 600; line-height: 1.2; }
         .bubble small.soon { color: #ff5c5c; }
+        .maplibregl-map,
+        .board,
+        .bubble {
+            font-family: "Sofia Sans", sans-serif;
+        }
         .pin-head .soon, .pin-row .soon { color: #dc2626; }
         .pin-row.on .soon { color: #ff8a8a; }
         .tail {

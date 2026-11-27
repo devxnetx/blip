@@ -132,6 +132,12 @@
 
         .bubble .meta { min-width: 0; }
 
+        .bubble,
+        .bubble strong,
+        .bubble em {
+            font-family: "Sofia Sans", sans-serif;
+        }
+
         .bubble strong {
             display: block;
             font-size: 15px;
