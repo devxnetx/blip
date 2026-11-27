@@ -799,8 +799,9 @@
             color: #fff;
         }
 
+        .admin-actions { display: none; }
+
         #open-unassigned {
-            display: none;
             background: var(--ink);
             color: #fff;
         }
@@ -819,15 +820,17 @@
         }
 
         @media (min-width: 801px) {
-            #open-unassigned {
-                display: inline-flex;
-                align-items: center;
+            .admin-actions {
                 position: fixed;
                 z-index: 600;
                 right: 76px;
                 bottom: 24px;
-                height: 48px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
+
+            .admin-actions .city-pill { height: 48px; }
 
             #map-filters {
                 width: min(320px, calc(50vw - 28px));
@@ -1064,7 +1067,7 @@
 
         @media (max-width: 800px) {
             #boot { display: none !important; }
-            .map-top, .admin-dock, .admin-scrim, #map-filters, #open-unassigned { display: none !important; }
+            .map-top, .admin-dock, .admin-scrim, #map-filters, .admin-actions { display: none !important; }
             .maplibregl-ctrl-bottom-left { display: none; }
             .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
 
@@ -1181,10 +1184,7 @@
             <button class="city-pill" id="open-cities" type="button">Още</button>
         </nav>
         <div class="top-right">
-        @auth
-            <button class="city-pill" id="open-composer" type="button">Нов пин</button>
-        @endauth
-        <button class="city-pill" id="open-pins" type="button">Пинове</button>
+            <button class="city-pill" id="open-pins" type="button">Пинове</button>
         </div>
     </header>
     <div class="phone-time" id="phone-time" role="group" aria-label="Кога">
@@ -1212,7 +1212,10 @@
         </div>
     @endauth
     @auth
-        <button class="city-pill" id="open-unassigned" type="button">Без място</button>
+        <div class="admin-actions">
+            <button class="city-pill" id="open-composer" type="button">Нов пин</button>
+            <button class="city-pill" id="open-unassigned" type="button">Без място</button>
+        </div>
     @endauth
     <div class="phone-dock">
         <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span class="locate-simple"></span><span class="locate-cross" aria-hidden="true"><i class="ring"></i><i class="h"></i><i class="v"></i><i class="dot"></i></span></button>
