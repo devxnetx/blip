@@ -110,6 +110,7 @@ let nearbyRows = [];
 let listCategory = '';
 let loadTimer = 0;
 let picking = false;
+let relocating = false;
 let placingId = null;
 let unassignedRows = [];
 let draftMarker = null;
@@ -744,7 +745,7 @@ function markerElement(html, onClick) {
   element.innerHTML = html;
   element.addEventListener('click', (event) => {
     event.stopPropagation();
-    if (picking || placingId) {
+    if (picking || placingId || relocating) {
       return;
     }
     onClick();
@@ -1098,6 +1099,10 @@ function renderPanel() {
   });
 
   const imported = Boolean(selected.imported);
+  const ban = document.getElementById('ban-device');
+  if (ban) {
+    ban.hidden = imported;
+  }
   document.getElementById('panel-sent').hidden = imported || selected.mine || !selected.replied;
   document.getElementById('reply-form').hidden = imported || selected.mine || selected.replied;
   document.getElementById('report').hidden = imported || selected.mine || selected.reported;
@@ -1105,7 +1110,27 @@ function renderPanel() {
   document.getElementById('remove').hidden = !selected.mine || imported;
 }
 
+function stopRelocatePick() {
+  relocating = false;
+  const button = document.getElementById('relocate-pick');
+  if (button) {
+    button.textContent = 'Избери на картата';
+  }
+  if (!picking && !placingId) {
+    map.getCanvas().style.cursor = '';
+  }
+}
+
+function closeRelocate() {
+  stopRelocatePick();
+  const box = document.getElementById('relocate');
+  if (box) {
+    box.hidden = true;
+  }
+}
+
 async function openPin(pin) {
+  closeRelocate();
   selected = pin;
   replies = [];
   replyError = '';
@@ -1146,6 +1171,7 @@ async function openPin(pin) {
 }
 
 function closePanel() {
+  closeRelocate();
   const wasOpen = !panel.hidden;
   selected = null;
   replies = [];
@@ -2320,6 +2346,121 @@ if (banButton) {
   });
 }
 
+const relocateBox = document.getElementById('relocate');
+const openRelocate = document.getElementById('open-relocate');
+if (relocateBox && openRelocate) {
+  const relocateAddress = document.getElementById('relocate-address');
+  const relocateError = document.getElementById('relocate-error');
+  const relocatePick = document.getElementById('relocate-pick');
+  let relocateLock = false;
+
+  function showRelocateError(message) {
+    relocateError.hidden = false;
+    relocateError.textContent = message;
+  }
+
+  async function moveSelected(body) {
+    if (!selected || relocateLock) {
+      return;
+    }
+    relocateLock = true;
+    relocateError.hidden = true;
+    try {
+      const response = await fetch(`/admin/pins/${selected.id}/move`, {
+        method: 'POST',
+        headers: { ...adminHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 401 || response.status === 419) {
+        window.alert('Влез пак като администратор.');
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+      const moved = await response.json();
+      pins = [moved, ...pins.filter((pin) => pin.id !== moved.id)];
+      selected = moved;
+      empty.hidden = pins.length !== 0;
+      viewTouched = true;
+      drawMarkers();
+      if (Number.isFinite(Number(moved.latitude)) && Number.isFinite(Number(moved.longitude))) {
+        map.easeTo({
+          center: [Number(moved.longitude), Number(moved.latitude)],
+          zoom: Math.max(map.getZoom(), 15),
+          pitch: map.getPitch(),
+          bearing: map.getBearing(),
+          duration: 500,
+        });
+      }
+      closeRelocate();
+      panel.hidden = false;
+      renderPanel();
+    } catch (err) {
+      showRelocateError(err.message || 'Мястото не е записано.');
+      if (selected) {
+        panel.hidden = false;
+      }
+    } finally {
+      relocateLock = false;
+    }
+  }
+
+  openRelocate.addEventListener('click', () => {
+    if (!selected) {
+      return;
+    }
+    stopPicking();
+    placingId = null;
+    relocateAddress.value = '';
+    relocateError.hidden = true;
+    relocateBox.hidden = false;
+  });
+
+  document.getElementById('relocate-close').addEventListener('click', () => {
+    closeRelocate();
+    if (selected) {
+      panel.hidden = false;
+    }
+  });
+
+  document.getElementById('relocate-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const address = relocateAddress.value.trim();
+    if (!address) {
+      showRelocateError('Напиши адрес или избери място на картата.');
+      return;
+    }
+    stopRelocatePick();
+    moveSelected({ address });
+  });
+
+  relocatePick.addEventListener('click', () => {
+    if (!selected) {
+      return;
+    }
+    stopPicking();
+    placingId = null;
+    relocating = true;
+    map.getCanvas().style.cursor = 'crosshair';
+    relocatePick.textContent = 'Кликни върху картата';
+    relocateError.hidden = true;
+    if (!window.matchMedia('(min-width: 801px)').matches) {
+      panel.hidden = true;
+    }
+  });
+
+  map.on('click', (event) => {
+    if (!relocating || !selected || relocateLock) {
+      return;
+    }
+    moveSelected({
+      latitude: event.lngLat.lat,
+      longitude: event.lngLat.lng,
+    });
+  });
+}
+
 function stopPicking() {
   picking = false;
   map.getCanvas().style.cursor = '';
@@ -2360,6 +2501,7 @@ if (composer && openComposer) {
   const pinError = document.getElementById('pin-error');
 
   openComposer.addEventListener('click', () => {
+    closeRelocate();
     panel.hidden = true;
     setPinsOpen(false);
     const cities = document.getElementById('cities-modal');
@@ -2401,6 +2543,7 @@ if (composer && openComposer) {
   });
 
   document.getElementById('pick-spot').addEventListener('click', () => {
+    closeRelocate();
     placingId = null;
     picking = true;
     map.getCanvas().style.cursor = 'crosshair';
@@ -2540,6 +2683,7 @@ if (unassignedEl && openUnassigned) {
       ].filter(Boolean).join(' · ');
       button.append(message, meta);
       button.addEventListener('click', () => {
+        closeRelocate();
         placingId = pin.id;
         stopPicking();
         map.getCanvas().style.cursor = 'crosshair';
@@ -2565,6 +2709,7 @@ if (unassignedEl && openUnassigned) {
   }
 
   openUnassigned.addEventListener('click', () => {
+    closeRelocate();
     panel.hidden = true;
     setPinsOpen(false);
     document.getElementById('cities-modal').hidden = true;

@@ -15,7 +15,7 @@
                     @csrf
                     <button class="good" type="submit">@include('admin.icon', ['name' => 'back']) Върни</button>
                 </form>
-            @else
+            @elseif (! $device->isImporter())
                 <form method="POST" action="{{ route('admin.devices.ban', $device) }}" onsubmit="return confirm('Забраняваш ли това устройство? Активните пинове изчезват от картата.')">
                     @csrf
                     <button class="danger" type="submit">@include('admin.icon', ['name' => 'ban']) Забрани</button>

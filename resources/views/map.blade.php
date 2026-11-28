@@ -306,6 +306,7 @@
 
         .panel[hidden],
         .nearby[hidden],
+        .relocate[hidden],
         .install[hidden],
         .admin-scrim[hidden],
         .list-menu[hidden],
@@ -370,6 +371,33 @@
         .boot-word i { color: var(--pin); font-style: normal; }
 
         .panel { z-index: 10000; }
+
+        .relocate {
+            position: fixed;
+            z-index: 10000;
+            top: 16px;
+            right: calc(16px + min(380px, calc(100% - 32px)) + 12px);
+            width: min(260px, calc(100vw - 440px));
+            padding: 16px;
+            border-radius: 18px;
+            background: var(--card);
+            box-shadow: 0 18px 40px rgba(28, 27, 25, 0.16);
+        }
+
+        .relocate h2 { font-size: 16px; }
+
+        .relocate input {
+            width: 100%;
+            margin-top: 12px;
+            border: 0;
+            border-radius: 12px;
+            background: #fff;
+            padding: 12px 14px;
+            font: inherit;
+            color: var(--ink);
+        }
+
+        .pin-head .text-btn { margin-top: 8px; }
 
         .panel:not([hidden]) {
             display: flex;
@@ -1081,6 +1109,15 @@
             .maplibregl-ctrl-bottom-left { display: none; }
             .panel, .nearby, #cities-modal { left: 0; right: 0; top: 0; bottom: 0; width: auto; border-radius: 0; }
 
+            .relocate {
+                top: auto;
+                right: 12px;
+                left: 12px;
+                bottom: max(16px, env(safe-area-inset-bottom));
+                width: auto;
+                z-index: 10001;
+            }
+
             .phone-time {
                 position: fixed;
                 z-index: 600;
@@ -1230,6 +1267,9 @@
                 <span id="panel-category" hidden></span>
                 <span id="panel-time"></span>
             </p>
+            @auth
+                <button class="text-btn" id="open-relocate" type="button">Премести</button>
+            @endauth
         </div>
         <div class="pin-scroll">
             <div class="pin-split">
@@ -1264,6 +1304,21 @@
             <p class="faint" id="copy-status" hidden></p>
         </div>
     </aside>
+
+    @auth
+        <section class="relocate" id="relocate" hidden>
+            <div class="row">
+                <h2>Премести</h2>
+                <button class="linkish" id="relocate-close" type="button">Затвори</button>
+            </div>
+            <form id="relocate-form">
+                <input id="relocate-address" type="text" maxlength="180" placeholder="Нов адрес" autocomplete="off" aria-label="Нов адрес">
+                <button class="primary" type="submit">Запиши адреса</button>
+                <button class="dark" id="relocate-pick" type="button">Избери на картата</button>
+                <p class="faint" id="relocate-error" hidden></p>
+            </form>
+        </section>
+    @endauth
 
     <section class="nearby" id="nearby" hidden>
         <div class="row">

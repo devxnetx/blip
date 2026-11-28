@@ -160,6 +160,8 @@ class PinTest extends TestCase
             ->assertDontSee('Пин тук')
             ->assertDontSee('Пусни пин')
             ->assertDontSee('Забрани устройството')
+            ->assertDontSee('id="open-relocate"', false)
+            ->assertDontSee('id="relocate"', false)
             ->assertDontSee('Избери на картата')
             ->assertDontSee('Без място')
             ->assertDontSee('Предстоящо')

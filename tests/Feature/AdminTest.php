@@ -9,6 +9,7 @@ use App\Models\PinImport;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -24,6 +25,7 @@ class AdminTest extends TestCase
         $this->get('/admin/pins')->assertRedirect('/admin/login');
         $this->get('/admin/categories')->assertRedirect('/admin/login');
         $this->postJson('/admin/pins/1/ban')->assertUnauthorized();
+        $this->postJson('/admin/pins/1/move')->assertUnauthorized();
         $this->getJson('/admin/pins/unassigned')->assertUnauthorized();
         $this->postJson('/admin/pins/unassigned', [])->assertUnauthorized();
 
@@ -163,6 +165,10 @@ class AdminTest extends TestCase
             ->assertSee('Избери на картата')
             ->assertSee('Пусни пин')
             ->assertSee('Забрани устройството')
+            ->assertSee('id="open-relocate"', false)
+            ->assertSee('id="relocate"', false)
+            ->assertSee('Нов адрес')
+            ->assertSee('Запиши адреса')
             ->assertSee('id="pick-spot"', false);
 
         $this->actingAs($admin)
@@ -714,5 +720,95 @@ class AdminTest extends TestCase
                 'import_days_ahead' => 120,
             ])
             ->assertSessionHasErrors('import_days_ahead');
+    }
+
+    public function test_an_admin_moves_a_pin_and_cannot_ban_an_importer(): void
+    {
+        $admin = User::query()->where('name', 'ZenSorcerer')->firstOrFail();
+        $ends = now()->addDays(2)->startOfSecond();
+        $hash = hash('sha256', 'kostaa-import:facebook');
+        Device::record($hash, 'Facebook събития');
+        $pin = Pin::query()->create([
+            'device_hash' => $hash,
+            'message' => 'Концерт в грешния квартал',
+            'category' => 'event',
+            'kind' => Pin::KIND_UPCOMING,
+            'source' => PinImport::SOURCE_FACEBOOK,
+            'external_id' => 'fb-1',
+            'latitude' => 42.70,
+            'longitude' => 23.32,
+            'starts_at' => now()->addDay(),
+            'duration_minutes' => 180,
+            'expires_at' => $ends,
+            'placed_manually' => false,
+        ]);
+
+        $moved = $this->actingAs($admin)->postJson('/admin/pins/'.$pin->id.'/move', [
+            'latitude' => 42.4258,
+            'longitude' => 25.6345,
+        ])->assertOk()
+            ->assertJsonPath('latitude', 42.4258)
+            ->assertJsonPath('longitude', 25.6345)
+            ->assertJsonPath('kind', 'upcoming');
+
+        $pin->refresh();
+        $this->assertTrue($pin->placed_manually);
+        $this->assertTrue($pin->expires_at->equalTo($ends));
+        $this->assertSame(42.4258, $pin->latitude);
+
+        config(['blip.nominatim_pause_ms' => 0]);
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response([[
+                'lat' => '42.13600',
+                'lon' => '24.74900',
+                'category' => 'highway',
+                'type' => 'residential',
+                'address' => [
+                    'city' => 'Пловдив',
+                    'road' => 'Главна',
+                    'house_number' => '10',
+                ],
+            ]]),
+        ]);
+
+        $this->actingAs($admin)->postJson('/admin/pins/'.$pin->id.'/move', [
+            'address' => 'Пловдив, ул. Главна 10',
+        ])->assertOk()
+            ->assertJsonPath('latitude', 42.136)
+            ->assertJsonPath('longitude', 24.749);
+
+        $this->actingAs($admin)->postJson('/admin/pins/'.$pin->id.'/move', [])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('address');
+
+        $this->actingAs($admin)->postJson('/admin/pins/'.$pin->id.'/ban')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('device');
+
+        $device = Device::query()->where('device_hash', $hash)->firstOrFail();
+        $this->assertFalse($device->isBanned());
+        $this->assertTrue($pin->fresh()->expires_at->equalTo($ends));
+
+        $this->actingAs($admin)
+            ->get('/admin/devices/'.$device->id)
+            ->assertOk()
+            ->assertDontSee(route('admin.devices.ban', $device), false);
+
+        $this->actingAs($admin)
+            ->post('/admin/devices/'.$device->id.'/ban')
+            ->assertRedirect()
+            ->assertSessionHasErrors('device');
+
+        $this->assertFalse($device->fresh()->isBanned());
+
+        $phone = Device::record(hash('sha256', 'phone-boris'), 'Телефонът на Борис');
+
+        $this->actingAs($admin)
+            ->get('/admin/devices')
+            ->assertOk()
+            ->assertDontSee(route('admin.devices.ban', $device), false)
+            ->assertSee(route('admin.devices.ban', $phone), false);
+
+        $this->assertSame($moved->json('id'), $pin->id);
     }
 }

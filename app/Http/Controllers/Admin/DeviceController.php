@@ -64,6 +64,12 @@ class DeviceController extends Controller
 
     public function ban(Device $device): RedirectResponse
     {
+        if ($device->isImporter()) {
+            return back()->withErrors([
+                'device' => 'Импортер не се забранява.',
+            ]);
+        }
+
         $device->ban();
 
         return back()->with('status', 'Устройството е забранено. Активните пинове са скрити.');

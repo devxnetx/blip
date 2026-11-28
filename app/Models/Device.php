@@ -68,6 +68,17 @@ class Device extends Model
         return $this->banned_at !== null;
     }
 
+    public function isImporter(): bool
+    {
+        foreach (array_keys(PinImport::LABELS) as $source) {
+            if (hash_equals(hash('sha256', 'kostaa-import:'.$source), $this->device_hash)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function shortHash(): string
     {
         return substr($this->device_hash, 0, 8);

@@ -109,6 +109,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/pins/unassigned', [AdminPinController::class, 'storeUnassigned'])->name('admin.pins.unassigned.store');
     Route::get('/admin/pins/{pin}', [AdminPinController::class, 'show'])->whereNumber('pin')->name('admin.pins.show');
     Route::post('/admin/pins/{pin}/place', [AdminPinController::class, 'place'])->name('admin.pins.place');
+    Route::post('/admin/pins/{pin}/move', [AdminPinController::class, 'move'])->name('admin.pins.move');
     Route::post('/admin/pins/{pin}/hide', [AdminPinController::class, 'hide'])->name('admin.pins.hide');
     Route::post('/admin/pins/{pin}/ban', [AdminPinController::class, 'ban'])->name('admin.pins.ban');
 });

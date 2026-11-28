@@ -271,6 +271,29 @@ class Pin extends Model
         $this->save();
     }
 
+    /**
+     * Move a pin that is already on the map. Importers leave a manual place alone.
+     */
+    public function relocate(float $latitude, float $longitude): void
+    {
+        if ($this->suppressed_at !== null || $this->expires_at === null || ! $this->expires_at->isFuture()) {
+            throw ValidationException::withMessages([
+                'pin' => 'Този пин вече е скрит.',
+            ]);
+        }
+
+        if ($this->kind === self::KIND_UNASSIGNED) {
+            $this->assignLocation($latitude, $longitude);
+
+            return;
+        }
+
+        $this->latitude = $latitude;
+        $this->longitude = $longitude;
+        $this->placed_manually = true;
+        $this->save();
+    }
+
     public function sourceLabel(): ?string
     {
         if ($this->source === null || $this->source === '') {

@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\Pin;
 use App\Services\Discord\CityNotifier;
 use App\Models\PinImport;
+use App\Services\SportenKalendar\NominatimGeocoder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -217,6 +218,58 @@ class PinController extends Controller
         return response()->json($pin->toApi(false));
     }
 
+    public function move(Request $request, Pin $pin, NominatimGeocoder $geocoder): JsonResponse
+    {
+        $data = $request->validate([
+            'address' => ['nullable', 'string', 'max:180'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+        ], [
+            'address.max' => 'Адресът може да е до 180 знака.',
+            'latitude.required_with' => 'Избери място на картата.',
+            'longitude.required_with' => 'Избери място на картата.',
+            'latitude.between' => 'Избери място на картата.',
+            'longitude.between' => 'Избери място на картата.',
+        ]);
+
+        $address = trim((string) ($data['address'] ?? ''));
+        $hasPoint = isset($data['latitude'], $data['longitude'])
+            && $data['latitude'] !== null
+            && $data['longitude'] !== null;
+
+        if ($address === '' && ! $hasPoint) {
+            throw ValidationException::withMessages([
+                'address' => 'Напиши адрес или избери място на картата.',
+            ]);
+        }
+
+        if ($hasPoint) {
+            $latitude = (float) $data['latitude'];
+            $longitude = (float) $data['longitude'];
+        } else {
+            try {
+                $point = $geocoder->locate($address);
+            } catch (\RuntimeException) {
+                throw ValidationException::withMessages([
+                    'address' => 'Адресът не се намери. Опитай пак след малко.',
+                ]);
+            }
+
+            if ($point === null) {
+                throw ValidationException::withMessages([
+                    'address' => 'Адресът не се намери.',
+                ]);
+            }
+
+            $latitude = $point['latitude'];
+            $longitude = $point['longitude'];
+        }
+
+        $pin->relocate($latitude, $longitude);
+
+        return response()->json($pin->fresh()->toApi(false));
+    }
+
     public function hide(Pin $pin): RedirectResponse
     {
         if ($pin->expires_at->isFuture()) {
@@ -232,6 +285,12 @@ class PinController extends Controller
     public function ban(Pin $pin): JsonResponse
     {
         $device = Device::record($pin->device_hash);
+
+        if ($device->isImporter()) {
+            throw ValidationException::withMessages([
+                'device' => 'Импортер не се забранява.',
+            ]);
+        }
 
         return response()->json([
             'banned' => true,
