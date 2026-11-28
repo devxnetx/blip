@@ -881,9 +881,16 @@ function pinSparkPoint(spec, distance, originX, originY, width, height) {
 }
 
 function pinSparkWave(distance, time) {
-  const along = distance * 0.07;
-  return Math.sin(along * 1.05 + time * 1.6) * 0.75
-    + Math.sin(along * 2.1 - time * 2.2) * 0.25;
+  const along = distance * 0.28;
+  return Math.sin(along * 2.2 + time * 3.2) * 0.5
+    + Math.sin(along * 5.4 - time * 4.6) * 0.32
+    + Math.sin(along * 11 + time * 6.4) * 0.18;
+}
+
+function pinSparkHeat(distance, time) {
+  const spot = Math.sin(distance * 0.23 + 1.4) * Math.sin(distance * 0.41 + 2.8);
+  const pulse = 0.5 + 0.5 * Math.sin(time * 6 + Math.round(distance / 28) * 2.3);
+  return Math.max(0, spot) * pulse;
 }
 
 function paintPinSpark(canvas, time) {
@@ -913,33 +920,46 @@ function paintPinSpark(canvas, time) {
   context.clearRect(0, 0, width + pad * 2, height + pad * 2);
   const spec = pinSparkPerimeter(width, height, 14);
   const steps = Math.max(72, Math.round(spec.length / 2.2));
-  const place = (distance) => {
+  const place = (distance, amount) => {
     const point = pinSparkPoint(spec, distance, pad, pad, width, height);
-    const offset = pinSparkWave(distance, time) * 0.55;
+    const offset = pinSparkWave(distance, time) * amount;
     return {
       x: point.x + point.nx * offset,
       y: point.y + point.ny * offset,
     };
   };
-  context.save();
-  context.lineCap = 'round';
-  context.lineJoin = 'round';
-  context.lineWidth = 2.2;
-  context.strokeStyle = 'rgba(255, 118, 32, 0.95)';
-  context.shadowColor = 'rgba(255, 118, 32, 0.95)';
-  context.shadowBlur = 5;
-  context.beginPath();
-  for (let index = 0; index <= steps; index += 1) {
-    const point = place((index / steps) * spec.length);
-    if (index === 0) {
-      context.moveTo(point.x, point.y);
-    } else {
-      context.lineTo(point.x, point.y);
+  const trace = (amount, lineWidth, color, blur, hotOnly) => {
+    context.save();
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.lineWidth = lineWidth;
+    context.strokeStyle = color;
+    context.shadowColor = color;
+    context.shadowBlur = blur;
+    context.beginPath();
+    let drawing = false;
+    for (let index = 0; index <= steps; index += 1) {
+      const distance = (index / steps) * spec.length;
+      if (hotOnly && pinSparkHeat(distance, time) < 0.22) {
+        drawing = false;
+        continue;
+      }
+      const point = place(distance, amount);
+      if (!drawing) {
+        context.moveTo(point.x, point.y);
+        drawing = true;
+      } else {
+        context.lineTo(point.x, point.y);
+      }
     }
-  }
-  context.closePath();
-  context.stroke();
-  context.restore();
+    if (!hotOnly) {
+      context.closePath();
+    }
+    context.stroke();
+    context.restore();
+  };
+  trace(1.05, 2.3, 'rgba(255, 106, 24, 0.95)', 6, false);
+  trace(1.35, 1.5, 'rgba(255, 186, 96, 0.95)', 3, true);
 }
 
 function startPinSpark(bubble) {
