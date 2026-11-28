@@ -785,4 +785,36 @@ class PinTest extends TestCase
             ->assertOk()
             ->assertJsonCount(0, 'pins');
     }
+
+    public function test_search_matches_latin_letters_to_cyrillic_as_well(): void
+    {
+        $ends = now()->addDays(2);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'cyrillic-concert'),
+            'message' => 'концерт в парка',
+            'latitude' => 42.43,
+            'longitude' => 25.64,
+            'expires_at' => $ends,
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'latin-concert'),
+            'message' => 'Koncert night',
+            'latitude' => 42.7,
+            'longitude' => 23.32,
+            'expires_at' => $ends,
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'other-show'),
+            'message' => 'Театър',
+            'latitude' => 42.15,
+            'longitude' => 24.75,
+            'expires_at' => $ends,
+        ]);
+
+        $messages = collect($this->getJson('/api/pins/search?q=koncert')->assertOk()->json('pins'))
+            ->pluck('message')
+            ->all();
+
+        $this->assertEqualsCanonicalizing(['концерт в парка', 'Koncert night'], $messages);
+    }
 }

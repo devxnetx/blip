@@ -2064,17 +2064,79 @@ const pinHits = document.getElementById('pin-hits');
 let searchHits = [];
 let searchToken = 0;
 
+const CYRILLIC_GROUPS = [
+  ['sht', 'щ'],
+  ['iya', 'ия'],
+  ['zh', 'ж'],
+  ['ts', 'ц'],
+  ['ch', 'ч'],
+  ['sh', 'ш'],
+  ['yu', 'ю'],
+  ['ya', 'я'],
+];
+
+const CYRILLIC_LETTERS = {
+  a: 'а', b: 'б', c: 'ц', d: 'д', e: 'е', f: 'ф', g: 'г', h: 'х', i: 'и',
+  j: 'й', k: 'к', l: 'л', m: 'м', n: 'н', o: 'о', p: 'п', r: 'р', s: 'с',
+  t: 'т', u: 'у', v: 'в', w: 'в', x: 'х', y: 'й', z: 'з',
+};
+
+function toCyrillic(text) {
+  const chars = [...String(text).toLowerCase()];
+  let result = '';
+  for (let index = 0; index < chars.length;) {
+    const three = chars.slice(index, index + 3).join('');
+    const two = chars.slice(index, index + 2).join('');
+    const long = CYRILLIC_GROUPS.find(([latin]) => latin.length === 3 && latin === three);
+    if (long) {
+      result += long[1];
+      index += 3;
+      continue;
+    }
+    if (two === 'ia' && !/\p{L}/u.test(chars[index + 2] || '')) {
+      result += 'ия';
+      index += 2;
+      continue;
+    }
+    const short = CYRILLIC_GROUPS.find(([latin]) => latin.length === 2 && latin === two);
+    if (short) {
+      result += short[1];
+      index += 2;
+      continue;
+    }
+    result += CYRILLIC_LETTERS[chars[index]] || chars[index];
+    index += 1;
+  }
+  return result;
+}
+
+function queryForms(text) {
+  const value = String(text || '').trim();
+  if (!value) {
+    return [];
+  }
+  const cyrillic = toCyrillic(value);
+  if (cyrillic.toLowerCase() === value.toLowerCase()) {
+    return [value];
+  }
+  return [value, cyrillic];
+}
+
 function highlightHtml(text, query) {
   const value = String(text || '');
   const full = query.trim();
   const needles = [];
-  if (full) {
-    needles.push(full);
-  }
-  full.split(/\s+/).forEach((word) => {
-    if (word && !needles.some((needle) => needle.toLowerCase() === word.toLowerCase())) {
-      needles.push(word);
+  queryForms(full).forEach((form) => {
+    if (!needles.some((needle) => needle.toLowerCase() === form.toLowerCase())) {
+      needles.push(form);
     }
+  });
+  full.split(/\s+/).forEach((word) => {
+    queryForms(word).forEach((form) => {
+      if (form && !needles.some((needle) => needle.toLowerCase() === form.toLowerCase())) {
+        needles.push(form);
+      }
+    });
   });
   needles.sort((a, b) => b.length - a.length);
   const lower = value.toLowerCase();
@@ -2112,7 +2174,10 @@ function searchSnippet(text, query) {
     return '';
   }
   const lower = value.toLowerCase();
-  const parts = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const parts = query.trim().toLowerCase().split(/\s+/).filter(Boolean).flatMap((part) => {
+    const cyrillic = toCyrillic(part);
+    return cyrillic === part ? [part] : [part, cyrillic];
+  });
   let at = parts.length ? lower.indexOf(parts[0]) : 0;
   parts.forEach((part) => {
     const found = lower.indexOf(part);

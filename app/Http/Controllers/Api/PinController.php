@@ -8,6 +8,7 @@ use App\Models\Pin;
 use App\Models\Reply;
 use App\Models\Report;
 use App\Services\Discord\CityNotifier;
+use App\Support\LatinBulgarian;
 use App\Support\MapCities;
 use App\Support\UpcomingHorizon;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -134,18 +135,26 @@ class PinController extends Controller
             fn (string $word): bool => $word !== '',
         )));
         $words = array_slice($words, 0, 8);
+        $terms = [];
+        foreach ($words as $word) {
+            foreach (LatinBulgarian::forms($word) as $form) {
+                $terms[] = $form;
+            }
+        }
+        $terms = array_values(array_unique($terms));
+        $phrases = LatinBulgarian::forms($needle);
 
         $deviceHash = $this->optionalDeviceHash($request);
         $pins = Pin::query()
             ->onMap()
             ->whereNull('suppressed_at')
-            ->where(function ($builder) use ($words): void {
-                foreach ($words as $word) {
-                    $this->orLike($builder, 'message', $word);
-                    $this->orLike($builder, 'description', $word);
+            ->where(function ($builder) use ($terms): void {
+                foreach ($terms as $term) {
+                    $this->orLike($builder, 'message', $term);
+                    $this->orLike($builder, 'description', $term);
                 }
             })
-            ->orderByRaw($this->relevanceSql($words).' DESC', $this->relevanceBindings($needle, $words))
+            ->orderByRaw($this->relevanceSql(count($phrases), count($terms)).' DESC', $this->relevanceBindings($phrases, $terms))
             ->orderBy('starts_at')
             ->limit(10)
             ->get();
@@ -407,18 +416,17 @@ class PinController extends Controller
         $query->orWhereRaw($column.' LIKE ? ESCAPE ?', [$this->like($value), '\\']);
     }
 
-    /**
-     * @param  list<string>  $words
-     */
-    private function relevanceSql(array $words): string
+    private function relevanceSql(int $phrases, int $terms): string
     {
-        $parts = [
-            '(CASE WHEN message = ? THEN 160 ELSE 0 END)',
-            '(CASE WHEN message LIKE ? ESCAPE ? THEN 80 ELSE 0 END)',
-            '(CASE WHEN description LIKE ? ESCAPE ? THEN 40 ELSE 0 END)',
-        ];
+        $parts = [];
 
-        foreach ($words as $word) {
+        for ($index = 0; $index < $phrases; $index++) {
+            $parts[] = '(CASE WHEN message = ? THEN 160 ELSE 0 END)';
+            $parts[] = '(CASE WHEN message LIKE ? ESCAPE ? THEN 80 ELSE 0 END)';
+            $parts[] = '(CASE WHEN description LIKE ? ESCAPE ? THEN 40 ELSE 0 END)';
+        }
+
+        for ($index = 0; $index < $terms; $index++) {
             $parts[] = '(CASE WHEN message LIKE ? ESCAPE ? THEN 8 ELSE 0 END)';
             $parts[] = '(CASE WHEN description LIKE ? ESCAPE ? THEN 3 ELSE 0 END)';
         }
@@ -427,17 +435,26 @@ class PinController extends Controller
     }
 
     /**
-     * @param  list<string>  $words
+     * @param  list<string>  $phrases
+     * @param  list<string>  $terms
      * @return list<string>
      */
-    private function relevanceBindings(string $needle, array $words): array
+    private function relevanceBindings(array $phrases, array $terms): array
     {
-        $bindings = [$needle, $this->like($needle), '\\', $this->like($needle), '\\'];
+        $bindings = [];
 
-        foreach ($words as $word) {
-            $bindings[] = $this->like($word);
+        foreach ($phrases as $phrase) {
+            $bindings[] = $phrase;
+            $bindings[] = $this->like($phrase);
             $bindings[] = '\\';
-            $bindings[] = $this->like($word);
+            $bindings[] = $this->like($phrase);
+            $bindings[] = '\\';
+        }
+
+        foreach ($terms as $term) {
+            $bindings[] = $this->like($term);
+            $bindings[] = '\\';
+            $bindings[] = $this->like($term);
             $bindings[] = '\\';
         }
 
