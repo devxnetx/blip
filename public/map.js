@@ -880,11 +880,10 @@ function pinSparkPoint(spec, distance, originX, originY, width, height) {
   };
 }
 
-function pinSparkWave(distance, time, strand) {
-  const along = distance * 0.11;
-  return Math.sin(along * 1.15 + time * 6.2 + strand * 2.2) * 0.62
-    + Math.sin(along * 2.8 - time * 9.4 + strand * 1.3) * 0.28
-    + Math.sin(along * 6.1 + time * 15.5 + strand) * 0.1;
+function pinSparkWave(distance, time) {
+  const along = distance * 0.07;
+  return Math.sin(along * 1.05 + time * 1.6) * 0.75
+    + Math.sin(along * 2.1 - time * 2.2) * 0.25;
 }
 
 function paintPinSpark(canvas, time) {
@@ -914,53 +913,31 @@ function paintPinSpark(canvas, time) {
   context.clearRect(0, 0, width + pad * 2, height + pad * 2);
   const spec = pinSparkPerimeter(width, height, 14);
   const steps = Math.max(72, Math.round(spec.length / 2.2));
-  const place = (distance, strand, amplitude) => {
+  const place = (distance) => {
     const point = pinSparkPoint(spec, distance, pad, pad, width, height);
-    const offset = pinSparkWave(distance, time, strand) * amplitude;
+    const offset = pinSparkWave(distance, time) * 0.55;
     return {
       x: point.x + point.nx * offset,
       y: point.y + point.ny * offset,
     };
   };
-  const strokeStrand = (strand, amplitude, lineWidth, color, blur) => {
-    context.save();
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    context.lineWidth = lineWidth;
-    context.strokeStyle = color;
-    context.shadowColor = color;
-    context.shadowBlur = blur;
-    context.beginPath();
-    for (let index = 0; index <= steps; index += 1) {
-      const point = place((index / steps) * spec.length, strand, amplitude);
-      if (index === 0) {
-        context.moveTo(point.x, point.y);
-      } else {
-        context.lineTo(point.x, point.y);
-      }
-    }
-    context.closePath();
-    context.stroke();
-    context.restore();
-  };
-  strokeStrand(0, 1.35, 2.4, 'rgba(255, 118, 32, 0.95)', 7);
-  strokeStrand(1, 2.05, 1.15, 'rgba(255, 244, 230, 0.92)', 2);
-  const bead = (time * 140) % spec.length;
   context.save();
   context.lineCap = 'round';
-  context.lineWidth = 2.4;
-  context.strokeStyle = 'rgba(255, 250, 244, 0.98)';
-  context.shadowColor = 'rgba(255, 186, 120, 0.95)';
-  context.shadowBlur = 6;
+  context.lineJoin = 'round';
+  context.lineWidth = 2.2;
+  context.strokeStyle = 'rgba(255, 118, 32, 0.95)';
+  context.shadowColor = 'rgba(255, 118, 32, 0.95)';
+  context.shadowBlur = 5;
   context.beginPath();
-  for (let index = 0; index <= 18; index += 1) {
-    const point = place(bead - 16 + (32 * index) / 18, 3, 1.1);
+  for (let index = 0; index <= steps; index += 1) {
+    const point = place((index / steps) * spec.length);
     if (index === 0) {
       context.moveTo(point.x, point.y);
     } else {
       context.lineTo(point.x, point.y);
     }
   }
+  context.closePath();
   context.stroke();
   context.restore();
 }
