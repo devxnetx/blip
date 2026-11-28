@@ -187,6 +187,8 @@ class PinTest extends TestCase
             ->assertSee('id="pin-search"', false)
             ->assertDontSee('id="pin-electric"', false)
             ->assertDontSee('class="electric"', false)
+            ->assertSee('.pin-spark', false)
+            ->assertSee('.bubble-card.is-selected .bubble', false)
             ->assertSee('Търси събитие', false)
             ->assertSee('id="tour"', false)
             ->assertSee('id="tour-next"', false)

@@ -791,7 +791,210 @@ function fitBubblePhoto(element) {
   }
 }
 
+let pinSparkFrame = 0;
+let pinSparkTime = 0;
+let pinSparkStamp = 0;
+
+function stopPinSpark() {
+  if (pinSparkFrame) {
+    cancelAnimationFrame(pinSparkFrame);
+    pinSparkFrame = 0;
+  }
+  pinSparkStamp = 0;
+}
+
+function pinSparkPerimeter(width, height, radius) {
+  const curve = Math.min(radius, width / 2, height / 2);
+  const straightX = Math.max(0, width - curve * 2);
+  const straightY = Math.max(0, height - curve * 2);
+  const corner = (Math.PI * curve) / 2;
+  return {
+    curve,
+    straightX,
+    straightY,
+    corner,
+    length: straightX * 2 + straightY * 2 + corner * 4,
+  };
+}
+
+function pinSparkPoint(spec, distance, originX, originY, width, height) {
+  const { curve, straightX, straightY, corner, length } = spec;
+  let rest = distance % length;
+  if (rest < 0) {
+    rest += length;
+  }
+  const right = originX + width;
+  const bottom = originY + height;
+  if (rest <= straightX) {
+    return { x: originX + curve + rest, y: originY, nx: 0, ny: -1 };
+  }
+  rest -= straightX;
+  if (rest <= corner) {
+    const angle = -Math.PI / 2 + (curve ? rest / curve : 0);
+    return {
+      x: right - curve + Math.cos(angle) * curve,
+      y: originY + curve + Math.sin(angle) * curve,
+      nx: Math.cos(angle),
+      ny: Math.sin(angle),
+    };
+  }
+  rest -= corner;
+  if (rest <= straightY) {
+    return { x: right, y: originY + curve + rest, nx: 1, ny: 0 };
+  }
+  rest -= straightY;
+  if (rest <= corner) {
+    const angle = curve ? rest / curve : 0;
+    return {
+      x: right - curve + Math.cos(angle) * curve,
+      y: bottom - curve + Math.sin(angle) * curve,
+      nx: Math.cos(angle),
+      ny: Math.sin(angle),
+    };
+  }
+  rest -= corner;
+  if (rest <= straightX) {
+    return { x: right - curve - rest, y: bottom, nx: 0, ny: 1 };
+  }
+  rest -= straightX;
+  if (rest <= corner) {
+    const angle = Math.PI / 2 + (curve ? rest / curve : 0);
+    return {
+      x: originX + curve + Math.cos(angle) * curve,
+      y: bottom - curve + Math.sin(angle) * curve,
+      nx: Math.cos(angle),
+      ny: Math.sin(angle),
+    };
+  }
+  rest -= corner;
+  if (rest <= straightY) {
+    return { x: originX, y: bottom - curve - rest, nx: -1, ny: 0 };
+  }
+  rest -= straightY;
+  const angle = Math.PI + (curve ? rest / curve : 0);
+  return {
+    x: originX + curve + Math.cos(angle) * curve,
+    y: originY + curve + Math.sin(angle) * curve,
+    nx: Math.cos(angle),
+    ny: Math.sin(angle),
+  };
+}
+
+function pinSparkWave(distance, time, strand) {
+  const along = distance * 0.11;
+  return Math.sin(along * 1.15 + time * 6.2 + strand * 2.2) * 0.62
+    + Math.sin(along * 2.8 - time * 9.4 + strand * 1.3) * 0.28
+    + Math.sin(along * 6.1 + time * 15.5 + strand) * 0.1;
+}
+
+function paintPinSpark(canvas, time) {
+  const pad = 14;
+  const bubble = canvas.parentElement;
+  if (!bubble) {
+    return;
+  }
+  const width = bubble.clientWidth;
+  const height = bubble.clientHeight;
+  if (width < 2 || height < 2) {
+    return;
+  }
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const pixelWidth = Math.round((width + pad * 2) * ratio);
+  const pixelHeight = Math.round((height + pad * 2) * ratio);
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+    canvas.style.width = `${width + pad * 2}px`;
+    canvas.style.height = `${height + pad * 2}px`;
+    canvas.style.left = `${-pad}px`;
+    canvas.style.top = `${-pad}px`;
+  }
+  const context = canvas.getContext('2d');
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  context.clearRect(0, 0, width + pad * 2, height + pad * 2);
+  const spec = pinSparkPerimeter(width, height, 14);
+  const steps = Math.max(72, Math.round(spec.length / 2.2));
+  const place = (distance, strand, amplitude) => {
+    const point = pinSparkPoint(spec, distance, pad, pad, width, height);
+    const offset = pinSparkWave(distance, time, strand) * amplitude;
+    return {
+      x: point.x + point.nx * offset,
+      y: point.y + point.ny * offset,
+    };
+  };
+  const strokeStrand = (strand, amplitude, lineWidth, color, blur) => {
+    context.save();
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.lineWidth = lineWidth;
+    context.strokeStyle = color;
+    context.shadowColor = color;
+    context.shadowBlur = blur;
+    context.beginPath();
+    for (let index = 0; index <= steps; index += 1) {
+      const point = place((index / steps) * spec.length, strand, amplitude);
+      if (index === 0) {
+        context.moveTo(point.x, point.y);
+      } else {
+        context.lineTo(point.x, point.y);
+      }
+    }
+    context.closePath();
+    context.stroke();
+    context.restore();
+  };
+  strokeStrand(0, 1.35, 2.4, 'rgba(255, 118, 32, 0.95)', 7);
+  strokeStrand(1, 2.05, 1.15, 'rgba(255, 244, 230, 0.92)', 2);
+  const bead = (time * 140) % spec.length;
+  context.save();
+  context.lineCap = 'round';
+  context.lineWidth = 2.4;
+  context.strokeStyle = 'rgba(255, 250, 244, 0.98)';
+  context.shadowColor = 'rgba(255, 186, 120, 0.95)';
+  context.shadowBlur = 6;
+  context.beginPath();
+  for (let index = 0; index <= 18; index += 1) {
+    const point = place(bead - 16 + (32 * index) / 18, 3, 1.1);
+    if (index === 0) {
+      context.moveTo(point.x, point.y);
+    } else {
+      context.lineTo(point.x, point.y);
+    }
+  }
+  context.stroke();
+  context.restore();
+}
+
+function startPinSpark(bubble) {
+  stopPinSpark();
+  if (!bubble || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.className = 'pin-spark';
+  canvas.setAttribute('aria-hidden', 'true');
+  bubble.appendChild(canvas);
+  const tick = (now) => {
+    if (!canvas.isConnected) {
+      pinSparkFrame = 0;
+      return;
+    }
+    if (document.hidden) {
+      pinSparkStamp = now;
+      pinSparkFrame = requestAnimationFrame(tick);
+      return;
+    }
+    const elapsed = pinSparkStamp ? Math.min(0.05, (now - pinSparkStamp) / 1000) : 0.016;
+    pinSparkStamp = now;
+    pinSparkTime += elapsed;
+    paintPinSpark(canvas, pinSparkTime);
+    pinSparkFrame = requestAnimationFrame(tick);
+  };
+  pinSparkFrame = requestAnimationFrame(tick);
+}
+
 function drawMarkers() {
+  stopPinSpark();
   markers.forEach((marker) => marker.remove());
   markers = [];
   const items = groupPins(shownPins(), currentRegion());
@@ -837,7 +1040,11 @@ function drawMarkers() {
       .setLngLat([pin.longitude, pin.latitude])
       .addTo(map);
     fitBubblePhoto(element);
-    marker.getElement().style.zIndex = String(1000 + (pin.stackY || 0) + (pin.stackX > 0 ? 1 : 0));
+    const sparked = selected && selected.id === pin.id;
+    marker.getElement().style.zIndex = String((sparked ? 4000 : 0) + 1000 + (pin.stackY || 0) + (pin.stackX > 0 ? 1 : 0));
+    if (sparked) {
+      startPinSpark(element.querySelector('.bubble'));
+    }
     markers.push(marker);
   });
   drawEdges();

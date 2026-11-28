@@ -73,6 +73,21 @@
             padding: 8px;
         }
 
+        .bubble-card.is-selected .bubble {
+            position: relative;
+            box-shadow: 0 0 0 1.5px #ff8a3d, 0 0 8px 1px rgba(255, 106, 26, 0.7);
+        }
+
+        .pin-spark {
+            position: absolute;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .pin-spark { display: none; }
+        }
+
         .bubble img {
             width: 0;
             height: 0;
