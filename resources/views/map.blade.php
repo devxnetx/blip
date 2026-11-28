@@ -311,6 +311,7 @@
         .admin-scrim[hidden],
         .list-menu[hidden],
         #pin-search[hidden],
+        #tour[hidden],
         #boot[hidden] {
             display: none !important;
         }
@@ -596,6 +597,62 @@
             color: var(--muted);
             font-weight: 600;
         }
+
+        #tour {
+            position: fixed;
+            inset: 0;
+            z-index: 13000;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        #tour-shield {
+            position: absolute;
+            inset: 0;
+            pointer-events: auto;
+        }
+
+        #tour-hole {
+            position: absolute;
+            border-radius: 18px;
+            box-shadow:
+                0 0 0 3px #c2410c,
+                0 0 18px 4px rgba(194, 65, 12, 0.8),
+                0 0 0 9999px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+        }
+
+        #tour-card {
+            position: absolute;
+            width: min(300px, calc(100vw - 24px));
+            padding: 16px;
+            border-radius: 18px;
+            background: var(--card);
+            color: var(--ink);
+            box-shadow: 0 18px 40px rgba(28, 27, 25, 0.28);
+            pointer-events: auto;
+        }
+
+        #tour-card p { margin: 0; }
+
+        #tour-count {
+            color: var(--faint);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        #tour-card h2 {
+            margin: 6px 0 0;
+            font-size: 18px;
+        }
+
+        #tour-text {
+            margin-top: 8px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        #tour-next { margin-top: 14px; }
 
         .nearby:not([hidden]) {
             display: flex;
@@ -1493,6 +1550,16 @@
                 </div>
             </form>
             <div id="pin-hits"></div>
+        </div>
+    </div>
+    <div id="tour" hidden>
+        <div id="tour-shield"></div>
+        <div id="tour-hole"></div>
+        <div id="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+            <p id="tour-count"></p>
+            <h2 id="tour-title"></h2>
+            <p id="tour-text"></p>
+            <button class="primary" id="tour-next" type="button">Напред</button>
         </div>
     </div>
     <button class="toast" id="toast" type="button" hidden></button>

@@ -841,6 +841,7 @@ function drawMarkers() {
     markers.push(marker);
   });
   drawEdges();
+  syncTour();
 }
 
 function spreadEdges(chips) {
@@ -1059,6 +1060,7 @@ async function loadPins() {
       }
     }
     drawMarkers();
+    scheduleTour();
   } catch {
     if (id === requestId) {
       banner.hidden = false;
@@ -1743,6 +1745,10 @@ if (adminCog) {
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
+    const tour = document.getElementById('tour');
+    if (tour && !tour.hidden) {
+      return;
+    }
     const search = document.getElementById('pin-search');
     if (search && !search.hidden) {
       closePinSearch();
@@ -2042,6 +2048,310 @@ document.getElementById('pin-search-form').addEventListener('submit', (event) =>
   event.preventDefault();
 });
 pinQuery.addEventListener('input', runPinSearch);
+
+const tour = document.getElementById('tour');
+const tourHole = document.getElementById('tour-hole');
+const tourCard = document.getElementById('tour-card');
+const tourTitle = document.getElementById('tour-title');
+const tourText = document.getElementById('tour-text');
+const tourCount = document.getElementById('tour-count');
+const tourNext = document.getElementById('tour-next');
+const TOUR_KEY = 'kostaa-map-tour';
+let tourStarted = false;
+let tourTimer = 0;
+let tourToken = 0;
+let tourIndex = -1;
+let tourPlaced = false;
+let tourSteps = [];
+
+function tourSeen() {
+  try {
+    return localStorage.getItem(TOUR_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function rememberTour() {
+  try {
+    localStorage.setItem(TOUR_KEY, '1');
+  } catch {
+    // A private browser still gets the tour once in this tab.
+  }
+}
+
+function tourTargets() {
+  const desktop = desktopMap();
+  return [
+    {
+      id: 'cities',
+      title: 'Още градове',
+      text: 'Тук отваряш останалите градове и търсиш град по име.',
+      target: () => document.getElementById(desktop ? 'open-cities' : 'open-cities-mobile'),
+    },
+    {
+      id: 'pins',
+      title: 'Пинове',
+      text: 'Пинове показва събитията в града и филтрите за време, вид и място.',
+      target: () => document.getElementById(desktop ? 'open-pins' : 'open-list'),
+    },
+    {
+      id: 'pin',
+      title: 'Пин',
+      text: 'Натисни пин и се отваря изглед с подробности за събитието.',
+      target: () => document.querySelector('.bubble-card.is-selected')
+        || document.getElementById('panel'),
+      prepare: () => showTourPin(),
+    },
+    {
+      id: 'search',
+      title: 'Търсене',
+      text: 'Тук търсиш по дума из всички събития, без град и без филтър.',
+      target: () => document.getElementById(desktop ? 'open-search' : 'open-search-mobile'),
+      prepare: () => {
+        closePanel();
+      },
+    },
+  ];
+}
+
+function visibleTourPin() {
+  if (!map || !placed) {
+    return null;
+  }
+  const bounds = map.getBounds();
+  const box = {
+    north: bounds.getNorth(),
+    south: bounds.getSouth(),
+    east: bounds.getEast(),
+    west: bounds.getWest(),
+  };
+  const center = map.getCenter();
+  const rows = shownPins().filter((pin) => covers(pin, box));
+  rows.sort((a, b) => (
+    kmBetween(center.lat, center.lng, a.latitude, a.longitude)
+    - kmBetween(center.lat, center.lng, b.latitude, b.longitude)
+  ));
+  return rows[0] || null;
+}
+
+function waitForMapMove(limit) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      map.off('moveend', finish);
+      resolve();
+    };
+    map.once('moveend', finish);
+    window.setTimeout(finish, limit);
+  });
+}
+
+async function showTourPin() {
+  const pin = visibleTourPin();
+  if (!pin) {
+    return false;
+  }
+  if (desktopMap()) {
+    openPin(pin);
+    focusPin(pin, { padPanel: true });
+  } else {
+    selected = pin;
+    panel.hidden = true;
+    const latitude = Number(pin.latitude);
+    const longitude = Number(pin.longitude);
+    placed = true;
+    viewTouched = true;
+    map.easeTo({
+      center: [longitude, latitude],
+      zoom: zoomForDelta(latitude, 0.008),
+      padding: { top: 72, right: 16, bottom: 200, left: 16 },
+      duration: 700,
+    });
+    if (map.isStyleLoaded()) {
+      drawMarkers();
+    }
+  }
+  await waitForMapMove(1200);
+  if (map.isStyleLoaded()) {
+    drawMarkers();
+  }
+  return true;
+}
+
+function placeTour(rect) {
+  const pad = 8;
+  tourHole.style.left = `${Math.round(rect.left - pad)}px`;
+  tourHole.style.top = `${Math.round(rect.top - pad)}px`;
+  tourHole.style.width = `${Math.round(rect.width + pad * 2)}px`;
+  tourHole.style.height = `${Math.round(rect.height + pad * 2)}px`;
+  const margin = 12;
+  const gap = 16;
+  const width = Math.min(300, window.innerWidth - margin * 2);
+  tourCard.style.width = `${width}px`;
+  const height = tourCard.offsetHeight || 160;
+  const spots = [
+    { left: rect.left, top: rect.bottom + gap },
+    { left: rect.right - width, top: rect.bottom + gap },
+    { left: rect.left - gap - width, top: rect.top },
+    { left: rect.right + gap, top: rect.top },
+    { left: rect.left, top: rect.top - gap - height },
+  ];
+  const fits = (spot) => spot.left >= margin
+    && spot.top >= margin
+    && spot.left + width <= window.innerWidth - margin
+    && spot.top + height <= window.innerHeight - margin;
+  const spot = spots.find(fits) || {
+    left: Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin)),
+    top: Math.max(margin, Math.min(rect.bottom + gap, window.innerHeight - height - margin)),
+  };
+  tourCard.style.left = `${Math.round(spot.left)}px`;
+  tourCard.style.top = `${Math.round(spot.top)}px`;
+}
+
+function tourTargetElement() {
+  const step = tourSteps[tourIndex];
+  if (!step) {
+    return null;
+  }
+  if (step.id !== 'pin') {
+    return step.target();
+  }
+  const bubble = document.querySelector('.bubble-card.is-selected');
+  if (bubble) {
+    const rect = bubble.getBoundingClientRect();
+    if (rect.width > 2 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth) {
+      return bubble;
+    }
+  }
+  const sheet = document.getElementById('panel');
+  if (sheet && !sheet.hidden) {
+    return sheet;
+  }
+  return bubble || null;
+}
+
+function tourRect() {
+  const target = tourTargetElement();
+  if (!target) {
+    return null;
+  }
+  const rect = target.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) {
+    return null;
+  }
+  if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
+    return null;
+  }
+  return rect;
+}
+
+function syncTour() {
+  if (!tourPlaced) {
+    return;
+  }
+  const rect = tourRect();
+  if (rect) {
+    placeTour(rect);
+  }
+}
+
+function setTourBlocked(blocked) {
+  Array.from(document.body.children).forEach((node) => {
+    if (node.id !== 'tour') {
+      node.inert = blocked;
+    }
+  });
+}
+
+function endTour() {
+  tourToken += 1;
+  tourPlaced = false;
+  tourIndex = -1;
+  tour.hidden = true;
+  setTourBlocked(false);
+  rememberTour();
+}
+
+async function goTour(index) {
+  const token = ++tourToken;
+  tourPlaced = false;
+  if (index >= tourSteps.length) {
+    endTour();
+    return;
+  }
+  tourIndex = index;
+  tour.hidden = false;
+  tourCard.hidden = true;
+  const step = tourSteps[index];
+  if (step.prepare) {
+    const ready = await step.prepare();
+    if (token !== tourToken) {
+      return;
+    }
+    if (ready === false) {
+      goTour(index + 1);
+      return;
+    }
+  }
+  const target = tourTargetElement();
+  if (target && target.scrollIntoView) {
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  const rect = tourRect();
+  if (!rect) {
+    goTour(index + 1);
+    return;
+  }
+  tourCount.textContent = `${index + 1} от ${tourSteps.length}`;
+  tourTitle.textContent = step.title;
+  tourText.textContent = step.text;
+  tourNext.textContent = index === tourSteps.length - 1 ? 'Готово' : 'Напред';
+  tourCard.hidden = false;
+  placeTour(rect);
+  tourPlaced = true;
+  tourNext.focus();
+}
+
+function startTour() {
+  if (tourStarted || tourSeen() || holdLink) {
+    return;
+  }
+  if (!placed || map.isMoving()) {
+    scheduleTour();
+    return;
+  }
+  tourStarted = true;
+  closePinSearch();
+  document.getElementById('cities-modal').hidden = true;
+  setPinsOpen(false);
+  closeUnassigned();
+  setAdminMenu(false);
+  setTourBlocked(true);
+  tourSteps = tourTargets();
+  goTour(0);
+}
+
+function scheduleTour() {
+  if (tourStarted || tourSeen() || holdLink) {
+    return;
+  }
+  window.clearTimeout(tourTimer);
+  tourTimer = window.setTimeout(startTour, 800);
+}
+
+tourNext.addEventListener('click', () => {
+  if (tour.hidden) {
+    return;
+  }
+  goTour(tourIndex + 1);
+});
+
+window.addEventListener('resize', syncTour);
 
 const installEl = document.getElementById('install');
 const installGo = document.getElementById('install-go');
