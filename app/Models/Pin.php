@@ -337,6 +337,63 @@ class Pin extends Model
         return $best;
     }
 
+    /**
+     * City for an admin street search. A pin far from every city uses Stara Zagora.
+     *
+     * @return array{name: string, latitude: float, longitude: float}
+     */
+    public function addressCity(): array
+    {
+        $fallback = [
+            'name' => 'Стара Загора',
+            'latitude' => 42.4258,
+            'longitude' => 25.6345,
+        ];
+        $cities = config('blip.facebook_cities', []);
+        $best = null;
+        $bestMeters = INF;
+
+        foreach (is_array($cities) ? $cities : [] as $city) {
+            if (! is_array($city) || ! isset($city['name'], $city['latitude'], $city['longitude'])) {
+                continue;
+            }
+
+            if ($city['name'] === 'Стара Загора') {
+                $fallback = [
+                    'name' => 'Стара Загора',
+                    'latitude' => (float) $city['latitude'],
+                    'longitude' => (float) $city['longitude'],
+                ];
+            }
+
+            if ($this->latitude === null || $this->longitude === null) {
+                continue;
+            }
+
+            $meters = self::metersBetween(
+                (float) $this->latitude,
+                (float) $this->longitude,
+                (float) $city['latitude'],
+                (float) $city['longitude'],
+            );
+
+            if ($meters < $bestMeters) {
+                $bestMeters = $meters;
+                $best = [
+                    'name' => (string) $city['name'],
+                    'latitude' => (float) $city['latitude'],
+                    'longitude' => (float) $city['longitude'],
+                ];
+            }
+        }
+
+        if ($best !== null && $bestMeters <= 40000) {
+            return $best;
+        }
+
+        return $fallback;
+    }
+
     public function isPublic(): bool
     {
         return $this->kind !== self::KIND_UNASSIGNED

@@ -196,6 +196,22 @@ function startsWithinDays(pin, days, now = Date.now()) {
 
 const CITY_RADIUS_KM = 18;
 
+function relocateCityName(pin) {
+  if (!pin || !Number.isFinite(Number(pin.latitude)) || !Number.isFinite(Number(pin.longitude))) {
+    return 'Стара Загора';
+  }
+  let best = '';
+  let bestKm = 40;
+  CITIES.forEach((city) => {
+    const km = kmBetween(Number(pin.latitude), Number(pin.longitude), city.latitude, city.longitude);
+    if (km <= bestKm) {
+      bestKm = km;
+      best = city.name;
+    }
+  });
+  return best || 'Стара Загора';
+}
+
 function cityNameFor(pin) {
   let best = '';
   let bestKm = CITY_RADIUS_KM;
@@ -2436,6 +2452,7 @@ if (relocateBox && openRelocate) {
         }
         renderPanel();
         addressLanded = true;
+        document.getElementById('relocate-city').textContent = `${relocateCityName(moved)},`;
         flyToMovedPin(moved);
         return;
       }
@@ -2463,6 +2480,7 @@ if (relocateBox && openRelocate) {
     relocateAddress.value = '';
     relocateError.hidden = true;
     addressLanded = false;
+    document.getElementById('relocate-city').textContent = `${relocateCityName(selected)},`;
     relocateBox.hidden = false;
   });
 

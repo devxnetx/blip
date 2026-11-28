@@ -247,6 +247,9 @@ class PinController extends Controller
             $latitude = (float) $data['latitude'];
             $longitude = (float) $data['longitude'];
         } else {
+            $city = $pin->addressCity();
+            $address = $this->addressInCity($city['name'], $address);
+
             try {
                 $point = $geocoder->locate($address);
             } catch (\RuntimeException) {
@@ -255,7 +258,12 @@ class PinController extends Controller
                 ]);
             }
 
-            if ($point === null) {
+            if ($point === null || Pin::metersBetween(
+                $point['latitude'],
+                $point['longitude'],
+                $city['latitude'],
+                $city['longitude'],
+            ) > 30000) {
                 throw ValidationException::withMessages([
                     'address' => 'Адресът не се намери.',
                 ]);
@@ -268,6 +276,15 @@ class PinController extends Controller
         $pin->relocate($latitude, $longitude);
 
         return response()->json($pin->fresh()->toApi(false));
+    }
+
+    private function addressInCity(string $city, string $address): string
+    {
+        if (mb_stripos($address, $city) !== false) {
+            return $address;
+        }
+
+        return $city.', '.$address;
     }
 
     public function hide(Pin $pin): RedirectResponse

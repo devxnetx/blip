@@ -9,6 +9,7 @@ use App\Models\PinImport;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -167,7 +168,8 @@ class AdminTest extends TestCase
             ->assertSee('Забрани устройството')
             ->assertSee('id="open-relocate"', false)
             ->assertSee('id="relocate"', false)
-            ->assertSee('Нов адрес')
+            ->assertSee('Улица и номер')
+            ->assertSee('id="relocate-city"', false)
             ->assertSee('Запиши адреса')
             ->assertSee('id="pick-spot"', false);
 
@@ -758,24 +760,52 @@ class AdminTest extends TestCase
 
         config(['blip.nominatim_pause_ms' => 0]);
         Http::fake([
-            'nominatim.openstreetmap.org/*' => Http::response([[
-                'lat' => '42.13600',
-                'lon' => '24.74900',
-                'category' => 'highway',
-                'type' => 'residential',
-                'address' => [
-                    'city' => 'Пловдив',
-                    'road' => 'Главна',
-                    'house_number' => '10',
-                ],
-            ]]),
+            'nominatim.openstreetmap.org/*' => Http::sequence()
+                ->push([[
+                    'lat' => '42.70000',
+                    'lon' => '23.32000',
+                    'category' => 'highway',
+                    'type' => 'residential',
+                    'address' => [
+                        'city' => 'Стара Загора',
+                        'road' => 'Главна',
+                        'house_number' => '10',
+                    ],
+                ]])
+                ->push([[
+                    'lat' => '42.43100',
+                    'lon' => '25.64000',
+                    'category' => 'highway',
+                    'type' => 'residential',
+                    'address' => [
+                        'city' => 'Стара Загора',
+                        'road' => 'Главна',
+                        'house_number' => '10',
+                    ],
+                ]]),
         ]);
 
         $this->actingAs($admin)->postJson('/admin/pins/'.$pin->id.'/move', [
-            'address' => 'Пловдив, ул. Главна 10',
+            'address' => 'ул. Главна 10',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('address');
+
+        $pin->refresh();
+        $this->assertSame(42.4258, $pin->latitude);
+        Http::assertSent(function ($request) {
+            $payload = mb_strtolower(json_encode($request->data(), JSON_UNESCAPED_UNICODE));
+
+            return str_contains($request->url(), 'nominatim.openstreetmap.org')
+                && str_contains($payload, 'стара загора');
+        });
+
+        Cache::flush();
+
+        $this->actingAs($admin)->postJson('/admin/pins/'.$pin->id.'/move', [
+            'address' => 'ул. Главна 10',
         ])->assertOk()
-            ->assertJsonPath('latitude', 42.136)
-            ->assertJsonPath('longitude', 24.749);
+            ->assertJsonPath('latitude', 42.431)
+            ->assertJsonPath('longitude', 25.64);
 
         $this->actingAs($admin)->postJson('/admin/pins/'.$pin->id.'/move', [])
             ->assertUnprocessable()

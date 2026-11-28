@@ -386,9 +386,14 @@
 
         .relocate h2 { font-size: 16px; }
 
+        .relocate-city {
+            margin: 12px 0 0;
+            font-weight: 700;
+        }
+
         .relocate input {
             width: 100%;
-            margin-top: 12px;
+            margin-top: 6px;
             border: 0;
             border-radius: 12px;
             background: #fff;
@@ -1312,7 +1317,8 @@
                 <button class="linkish" id="relocate-close" type="button">Затвори</button>
             </div>
             <form id="relocate-form">
-                <input id="relocate-address" type="text" maxlength="180" placeholder="Нов адрес" autocomplete="off" aria-label="Нов адрес">
+                <p class="relocate-city" id="relocate-city">Стара Загора,</p>
+                <input id="relocate-address" type="text" maxlength="180" placeholder="Улица и номер" autocomplete="off" aria-label="Улица и номер">
                 <button class="primary" type="submit">Запиши адреса</button>
                 <button class="dark" id="relocate-pick" type="button">Избери на картата</button>
                 <p class="faint" id="relocate-error" hidden></p>
