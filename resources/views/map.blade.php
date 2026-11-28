@@ -409,51 +409,7 @@
         .panel:not([hidden]) {
             display: flex;
             flex-direction: column;
-            overflow: visible;
-        }
-
-        .electric {
-            position: absolute;
-            inset: -3px;
-            border-radius: 26px;
-            pointer-events: none;
-            z-index: 4;
-        }
-
-        .electric-glow,
-        .electric-line {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            pointer-events: none;
-        }
-
-        .electric-glow {
-            inset: -8px;
-            box-shadow: 0 0 18px 3px rgba(194, 65, 12, 0.8);
-        }
-
-        .electric-line {
-            border: 2px solid #ffe1d2;
-            filter: url(#pin-electric);
-        }
-
-        .bubble-card.is-selected { position: relative; }
-
-        .bubble-card.is-selected::before {
-            content: "";
-            position: absolute;
-            inset: -5px -4px -12px;
-            border: 2px solid #ffe1d2;
-            border-radius: 16px;
-            filter: url(#pin-electric);
-            box-shadow: 0 0 14px 2px rgba(194, 65, 12, 0.85);
-            pointer-events: none;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .electric-line,
-            .bubble-card.is-selected::before { filter: none; }
+            overflow: hidden;
         }
 
         #open-search {
@@ -1469,36 +1425,10 @@
                 border: 1px solid rgba(28, 27, 25, 0.16);
                 box-shadow: 0 3px 6px rgba(0, 0, 0, 0.32);
             }
-
-            .electric { inset: 8px; border-radius: 18px; }
         }
     </style>
 </head>
 <body @class(['admin' => auth()->check()])>
-    <svg class="sprite" aria-hidden="true">
-        <filter id="pin-electric" color-interpolation-filters="sRGB" x="-25%" y="-25%" width="150%" height="150%">
-            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="8" result="noise1" seed="1"></feTurbulence>
-            <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
-                <animate attributeName="dy" values="700;0" dur="6s" repeatCount="indefinite"></animate>
-            </feOffset>
-            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="8" result="noise2" seed="1"></feTurbulence>
-            <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
-                <animate attributeName="dy" values="0;-700" dur="6s" repeatCount="indefinite"></animate>
-            </feOffset>
-            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="8" result="noise3" seed="2"></feTurbulence>
-            <feOffset in="noise3" dx="0" dy="0" result="offsetNoise3">
-                <animate attributeName="dx" values="490;0" dur="6s" repeatCount="indefinite"></animate>
-            </feOffset>
-            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="8" result="noise4" seed="2"></feTurbulence>
-            <feOffset in="noise4" dx="0" dy="0" result="offsetNoise4">
-                <animate attributeName="dx" values="0;-490" dur="6s" repeatCount="indefinite"></animate>
-            </feOffset>
-            <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1"></feComposite>
-            <feComposite in="offsetNoise3" in2="offsetNoise4" result="part2"></feComposite>
-            <feBlend in="part1" in2="part2" mode="color-dodge" result="combinedNoise"></feBlend>
-            <feDisplacementMap in="SourceGraphic" in2="combinedNoise" scale="18" xChannelSelector="R" yChannelSelector="B"></feDisplacementMap>
-        </filter>
-    </svg>
     <div id="boot">
         <div>
             <div class="boot-pin" aria-hidden="true"><span></span></div>
@@ -1567,7 +1497,6 @@
     <p class="empty" id="empty" hidden>Нищо в този изглед.</p>
 
     <aside class="panel" id="panel" hidden>
-        <div class="electric" aria-hidden="true"><div class="electric-glow"></div><div class="electric-line"></div></div>
         <div class="pin-head">
             <div class="row">
                 <h2 id="panel-message"></h2>
