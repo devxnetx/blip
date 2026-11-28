@@ -246,6 +246,9 @@ function phoneWindowMs() {
 }
 
 function pinInWindow(pin, now = Date.now()) {
+  if (selected && pin.id === selected.id) {
+    return true;
+  }
   if (desktopMap()) {
     if (!matchesDesktopFilters(pin)) {
       return false;
@@ -814,8 +817,9 @@ function drawMarkers() {
     const kindHtml = kind ? `<small>${escapeHtml(kind)}</small>` : '';
     const whenHtml = when ? `<small class="${timeHot(pin) ? 'soon' : ''}">${escapeHtml(when)}</small>` : '';
     const tailClass = pin.tail === 'right' || pin.tail === 'left' ? ` tail-${pin.tail}` : '';
+    const selectedClass = selected && selected.id === pin.id ? ' is-selected' : '';
     const element = markerElement(
-      `<div class="bubble-wrap"><div class="bubble-card${tailClass}"><div class="bubble">${image}<div class="meta"><span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div></div><div class="tail"></div></div></div>`,
+      `<div class="bubble-wrap"><div class="bubble-card${tailClass}${selectedClass}"><div class="bubble">${image}<div class="meta"><span>${escapeHtml(pin.message)}</span>${kindHtml}${whenHtml}</div></div><div class="tail"></div></div></div>`,
       () => {
         const region = currentRegion();
         const close = region && region.latitudeDelta <= REVEAL_DELTA;
@@ -1162,6 +1166,9 @@ async function openPin(pin) {
     scroller.scrollTop = 0;
   }
   renderPanel();
+  if (map.isStyleLoaded()) {
+    drawMarkers();
+  }
 
   if (pin.imported) {
     return;
@@ -1192,6 +1199,9 @@ function closePanel() {
   selected = null;
   replies = [];
   panel.hidden = true;
+  if (map.isStyleLoaded()) {
+    drawMarkers();
+  }
   if (wasOpen) {
     if (viewBeforePin) {
       restoreView();
@@ -1733,6 +1743,11 @@ if (adminCog) {
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
+    const search = document.getElementById('pin-search');
+    if (search && !search.hidden) {
+      closePinSearch();
+      return;
+    }
     closeListMenu();
     setAdminMenu(false);
     closePanel();
@@ -1832,6 +1847,201 @@ document.getElementById('city-search').addEventListener('input', renderCityChoic
 document.getElementById('cities-close').addEventListener('click', () => {
   document.getElementById('cities-modal').hidden = true;
 });
+
+const pinSearch = document.getElementById('pin-search');
+const pinQuery = document.getElementById('pin-query');
+const pinHits = document.getElementById('pin-hits');
+let searchHits = [];
+let searchToken = 0;
+
+function highlightHtml(text, query) {
+  const value = String(text || '');
+  const full = query.trim();
+  const needles = [];
+  if (full) {
+    needles.push(full);
+  }
+  full.split(/\s+/).forEach((word) => {
+    if (word && !needles.some((needle) => needle.toLowerCase() === word.toLowerCase())) {
+      needles.push(word);
+    }
+  });
+  needles.sort((a, b) => b.length - a.length);
+  const lower = value.toLowerCase();
+  const marks = [];
+  needles.forEach((needle) => {
+    const token = needle.toLowerCase();
+    let from = 0;
+    while (token && from < value.length) {
+      const at = lower.indexOf(token, from);
+      if (at < 0) {
+        break;
+      }
+      const end = at + token.length;
+      if (!marks.some((mark) => at < mark.end && end > mark.start)) {
+        marks.push({ start: at, end });
+      }
+      from = end;
+    }
+  });
+  marks.sort((a, b) => a.start - b.start);
+  let html = '';
+  let cursor = 0;
+  marks.forEach((mark) => {
+    html += escapeHtml(value.slice(cursor, mark.start));
+    html += `<mark class="hit">${escapeHtml(value.slice(mark.start, mark.end))}</mark>`;
+    cursor = mark.end;
+  });
+  html += escapeHtml(value.slice(cursor));
+  return html;
+}
+
+function searchSnippet(text, query) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!value) {
+    return '';
+  }
+  const lower = value.toLowerCase();
+  const parts = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  let at = parts.length ? lower.indexOf(parts[0]) : 0;
+  parts.forEach((part) => {
+    const found = lower.indexOf(part);
+    if (found >= 0 && (at < 0 || found < at)) {
+      at = found;
+    }
+  });
+  if (at < 0) {
+    at = 0;
+  }
+  const start = Math.max(0, at - 48);
+  const slice = value.slice(start, start + 160);
+  return `${start > 0 ? '…' : ''}${slice}${start + 160 < value.length ? '…' : ''}`;
+}
+
+function renderSearchHits(settled) {
+  const query = pinQuery.value;
+  if (!query.trim()) {
+    pinHits.replaceChildren();
+    pinSearch.classList.remove('has-rows');
+    return;
+  }
+  if (searchHits.length === 0) {
+    pinHits.replaceChildren();
+    if (!settled) {
+      pinSearch.classList.remove('has-rows');
+      return;
+    }
+    const empty = document.createElement('p');
+    empty.className = 'pin-search-empty';
+    empty.textContent = 'Няма такова събитие.';
+    pinHits.append(empty);
+    pinSearch.classList.add('has-rows');
+    return;
+  }
+  pinHits.replaceChildren(...searchHits.map((pin) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pin-hit';
+    const title = document.createElement('strong');
+    title.innerHTML = highlightHtml(pin.message, query);
+    button.append(title);
+    const aboutText = String(pin.description || '');
+    const matched = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+      .some((part) => aboutText.toLowerCase().includes(part));
+    if (matched) {
+      const about = document.createElement('em');
+      about.innerHTML = highlightHtml(searchSnippet(aboutText, query), query);
+      button.append(about);
+    }
+    const where = cityNameFor(pin);
+    const when = bubbleWhen(pin);
+    const meta = [where, when].filter(Boolean).join(' · ');
+    if (meta) {
+      const line = document.createElement('small');
+      line.textContent = meta;
+      button.append(line);
+    }
+    button.addEventListener('click', () => showFoundPin(pin));
+    return button;
+  }));
+  pinSearch.classList.add('has-rows');
+}
+
+function openPinSearch() {
+  setAdminMenu(false);
+  setPinsOpen(false);
+  closeUnassigned();
+  document.getElementById('cities-modal').hidden = true;
+  pinSearch.hidden = false;
+  pinQuery.focus();
+}
+
+function closePinSearch() {
+  pinSearch.hidden = true;
+}
+
+function showFoundPin(pin) {
+  closePinSearch();
+  document.getElementById('cities-modal').hidden = true;
+  setPinsOpen(false);
+  closeUnassigned();
+  pins = [pin, ...pins.filter((item) => item.id !== pin.id)];
+  openPin(pin);
+  if (!focusPin(pin, { padPanel: true })) {
+    const latitude = Number(pin.latitude);
+    const longitude = Number(pin.longitude);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      viewTouched = true;
+      forgetView();
+      placed = true;
+      map.easeTo({
+        center: [longitude, latitude],
+        zoom: zoomForDelta(latitude, LINK_DELTA),
+        pitch: Math.max(map.getPitch(), 48),
+        duration: 700,
+      });
+    }
+  }
+}
+
+async function runPinSearch() {
+  const query = pinQuery.value.trim();
+  const token = ++searchToken;
+  if (!query) {
+    searchHits = [];
+    renderSearchHits(true);
+    return;
+  }
+  renderSearchHits(false);
+  try {
+    const response = await fetch(`/api/pins/search?q=${encodeURIComponent(query)}`, { headers: headers() });
+    if (token !== searchToken) {
+      return;
+    }
+    if (!response.ok) {
+      return;
+    }
+    const body = await response.json();
+    if (token !== searchToken) {
+      return;
+    }
+    searchHits = body.pins || [];
+    renderSearchHits(true);
+  } catch {
+    if (token === searchToken) {
+      searchHits = [];
+      renderSearchHits(true);
+    }
+  }
+}
+
+document.getElementById('open-search').addEventListener('click', openPinSearch);
+document.getElementById('open-search-mobile').addEventListener('click', openPinSearch);
+document.getElementById('pin-search-scrim').addEventListener('click', closePinSearch);
+document.getElementById('pin-search-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+});
+pinQuery.addEventListener('input', runPinSearch);
 
 const installEl = document.getElementById('install');
 const installGo = document.getElementById('install-go');

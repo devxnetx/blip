@@ -310,6 +310,7 @@
         .install[hidden],
         .admin-scrim[hidden],
         .list-menu[hidden],
+        #pin-search[hidden],
         #boot[hidden] {
             display: none !important;
         }
@@ -407,7 +408,193 @@
         .panel:not([hidden]) {
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: visible;
+        }
+
+        .electric {
+            position: absolute;
+            inset: -3px;
+            border-radius: 26px;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        .electric-glow,
+        .electric-line {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        .electric-glow {
+            inset: -8px;
+            box-shadow: 0 0 18px 3px rgba(194, 65, 12, 0.8);
+        }
+
+        .electric-line {
+            border: 2px solid #ffe1d2;
+            filter: url(#pin-electric);
+        }
+
+        .bubble-card.is-selected { position: relative; }
+
+        .bubble-card.is-selected::before {
+            content: "";
+            position: absolute;
+            inset: -5px -4px -12px;
+            border: 2px solid #ffe1d2;
+            border-radius: 16px;
+            filter: url(#pin-electric);
+            box-shadow: 0 0 14px 2px rgba(194, 65, 12, 0.85);
+            pointer-events: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .electric-line,
+            .bubble-card.is-selected::before { filter: none; }
+        }
+
+        #open-search {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            justify-content: center;
+        }
+
+        #open-search svg, #open-search-mobile svg { display: block; }
+
+        #open-search-mobile { display: none; }
+
+        #pin-search {
+            position: fixed;
+            inset: 0;
+            z-index: 11500;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 14vh 16px 24px;
+        }
+
+        .pin-search-scrim {
+            position: absolute;
+            inset: 0;
+            border: 0;
+            padding: 0;
+            background: rgba(0, 0, 0, 0.7);
+            cursor: pointer;
+        }
+
+        .pin-search-box {
+            position: relative;
+            z-index: 1;
+            width: min(584px, 100%);
+        }
+
+        .pin-search-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 22px;
+            color: #fff;
+            font-size: 52px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+
+        .pin-search-logo img { width: 40px; height: 50px; display: block; }
+        .pin-search-logo i { color: var(--pin); font-style: normal; }
+
+        .pin-query-wrap { position: relative; }
+
+        .pin-query-wrap svg {
+            position: absolute;
+            left: 18px;
+            top: 16px;
+            color: #8a8478;
+            pointer-events: none;
+        }
+
+        #pin-query {
+            width: 100%;
+            height: 52px;
+            border: 0;
+            border-radius: 26px;
+            padding: 0 22px 0 50px;
+            background: #fff;
+            color: var(--ink);
+            font: inherit;
+            font-size: 18px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+        }
+
+        #pin-query:focus { outline: 2px solid var(--pin); outline-offset: 2px; }
+
+        #pin-query::-webkit-search-cancel-button { display: none; }
+
+        #pin-search.has-rows #pin-query {
+            border-radius: 24px 24px 0 0;
+            box-shadow: none;
+        }
+
+        #pin-hits {
+            background: #fff;
+            border-radius: 0 0 24px 24px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+            max-height: min(420px, 52vh);
+            overflow: auto;
+        }
+
+        #pin-search:not(.has-rows) #pin-hits { display: none; }
+
+        .pin-hit {
+            display: block;
+            width: 100%;
+            text-align: left;
+            border: 0;
+            border-top: 1px solid var(--line);
+            background: #fff;
+            padding: 12px 18px;
+            color: var(--ink);
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .pin-hit:hover, .pin-hit:focus { background: #f6f4ef; }
+
+        .pin-hit strong, .pin-hit em, .pin-hit small { display: block; }
+
+        .pin-hit strong { font-size: 16px; font-style: normal; font-weight: 700; }
+
+        .pin-hit em {
+            margin-top: 2px;
+            color: var(--muted);
+            font-size: 14px;
+            font-style: normal;
+            font-weight: 500;
+        }
+
+        .pin-hit small {
+            margin-top: 4px;
+            color: var(--faint);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .pin-hit mark,
+        mark.hit {
+            background: transparent;
+            color: var(--pin);
+            font-weight: 700;
+        }
+
+        .pin-search-empty {
+            margin: 0;
+            padding: 14px 18px;
+            color: var(--muted);
+            font-weight: 600;
         }
 
         .nearby:not([hidden]) {
@@ -1216,10 +1403,45 @@
                 font-size: 16px;
                 box-shadow: 0 3px 6px rgba(0, 0, 0, 0.32);
             }
+
+            #open-search-mobile {
+                display: grid;
+                place-items: center;
+                background: #1c1b19;
+                color: #f6f4ef;
+                border: 1px solid rgba(28, 27, 25, 0.16);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.32);
+            }
+
+            .electric { inset: 8px; border-radius: 18px; }
         }
     </style>
 </head>
 <body @class(['admin' => auth()->check()])>
+    <svg class="sprite" aria-hidden="true">
+        <filter id="pin-electric" color-interpolation-filters="sRGB" x="-25%" y="-25%" width="150%" height="150%">
+            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="8" result="noise1" seed="1"></feTurbulence>
+            <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
+                <animate attributeName="dy" values="700;0" dur="6s" repeatCount="indefinite"></animate>
+            </feOffset>
+            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="8" result="noise2" seed="1"></feTurbulence>
+            <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
+                <animate attributeName="dy" values="0;-700" dur="6s" repeatCount="indefinite"></animate>
+            </feOffset>
+            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="8" result="noise3" seed="2"></feTurbulence>
+            <feOffset in="noise3" dx="0" dy="0" result="offsetNoise3">
+                <animate attributeName="dx" values="490;0" dur="6s" repeatCount="indefinite"></animate>
+            </feOffset>
+            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="8" result="noise4" seed="2"></feTurbulence>
+            <feOffset in="noise4" dx="0" dy="0" result="offsetNoise4">
+                <animate attributeName="dx" values="0;-490" dur="6s" repeatCount="indefinite"></animate>
+            </feOffset>
+            <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1"></feComposite>
+            <feComposite in="offsetNoise3" in2="offsetNoise4" result="part2"></feComposite>
+            <feBlend in="part1" in2="part2" mode="color-dodge" result="combinedNoise"></feBlend>
+            <feDisplacementMap in="SourceGraphic" in2="combinedNoise" scale="18" xChannelSelector="R" yChannelSelector="B"></feDisplacementMap>
+        </filter>
+    </svg>
     <div id="boot">
         <div>
             <div class="boot-pin" aria-hidden="true"><span></span></div>
@@ -1234,6 +1456,7 @@
         </div>
         <nav class="city-bar" id="city-bar" aria-label="Градове">
             <button class="city-pill" id="open-cities" type="button">Още</button>
+            <button class="city-pill" id="open-search" type="button" aria-label="Търси"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button>
         </nav>
         <div class="top-right">
             <button class="city-pill" id="open-pins" type="button">Пинове</button>
@@ -1256,13 +1479,28 @@
     <div class="phone-dock">
         <button class="hud" id="locate" type="button" aria-label="Центрирай на моето място"><span class="locate-simple"></span><span class="locate-cross" aria-hidden="true"><i class="ring"></i><i class="h"></i><i class="v"></i><i class="dot"></i></span></button>
         <button class="hud" id="open-list" type="button" aria-label="Пинове наблизо"><span class="bars"><i></i><i></i><i></i></span></button>
+        <button class="hud" id="open-search-mobile" type="button" aria-label="Търси"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button>
         <button class="city-pill" id="open-cities-mobile" type="button">Градове</button>
+    </div>
+    <div id="pin-search" hidden>
+        <button class="pin-search-scrim" id="pin-search-scrim" type="button" aria-label="Затвори търсенето"></button>
+        <div class="pin-search-box">
+            <div class="pin-search-logo"><img src="{{ asset('brand/icon.svg') }}" alt="" width="40" height="50"><span><i>KO</i>staa</span></div>
+            <form id="pin-search-form" role="search">
+                <div class="pin-query-wrap">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+                    <input id="pin-query" type="search" maxlength="120" placeholder="Търси събитие" autocomplete="off" enterkeyhint="search" aria-label="Търси събитие">
+                </div>
+            </form>
+            <div id="pin-hits"></div>
+        </div>
     </div>
     <button class="toast" id="toast" type="button" hidden></button>
     <button class="banner" id="banner" type="button" hidden>Картата не успя да зареди пиновете. Опитай пак.</button>
     <p class="empty" id="empty" hidden>Нищо в този изглед.</p>
 
     <aside class="panel" id="panel" hidden>
+        <div class="electric" aria-hidden="true"><div class="electric-glow"></div><div class="electric-line"></div></div>
         <div class="pin-head">
             <div class="row">
                 <h2 id="panel-message"></h2>

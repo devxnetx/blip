@@ -183,6 +183,10 @@ class PinTest extends TestCase
             ->assertSee('Всичко')
             ->assertSee('id="open-list"', false)
             ->assertSee('id="open-cities-mobile"', false)
+            ->assertSee('id="open-search"', false)
+            ->assertSee('id="pin-search"', false)
+            ->assertSee('id="pin-electric"', false)
+            ->assertSee('Търси събитие', false)
             ->assertSee('property="og:title"', false)
             ->assertSee('name="twitter:card"', false)
             ->assertSee('summary_large_image', false)
@@ -694,5 +698,85 @@ class PinTest extends TestCase
         $this->assertSame(1, $cities->firstWhere('name', 'Варна')['count']);
         $this->assertSame(0, $cities->firstWhere('name', 'Пловдив')['count']);
         $this->assertSame(2, $cities->sum('count'));
+    }
+
+    public function test_search_finds_events_anywhere_and_ranks_the_closer_title(): void
+    {
+        $ends = now()->addDays(3);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'exact'),
+            'message' => 'Концерт',
+            'latitude' => 42.6977,
+            'longitude' => 23.3219,
+            'expires_at' => $ends,
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'title'),
+            'message' => 'Концерт в залата',
+            'description' => 'Билетите са на касата.',
+            'latitude' => 43.2141,
+            'longitude' => 27.9147,
+            'kind' => Pin::KIND_UPCOMING,
+            'starts_at' => now()->addDays(40),
+            'expires_at' => now()->addDays(40)->addHours(3),
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'blurb'),
+            'message' => 'Вечер на площада',
+            'description' => 'Голям Концерт довечера.',
+            'latitude' => 42.15,
+            'longitude' => 24.75,
+            'expires_at' => $ends,
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'expired-search'),
+            'message' => 'Концерт вчера',
+            'latitude' => 42.7,
+            'longitude' => 23.3,
+            'expires_at' => now()->subHour(),
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'hidden-search'),
+            'message' => 'Концерт скрит',
+            'latitude' => 42.7,
+            'longitude' => 23.3,
+            'expires_at' => $ends,
+            'suppressed_at' => now(),
+        ]);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', 'unassigned-search'),
+            'message' => 'Концерт без място',
+            'kind' => Pin::KIND_UNASSIGNED,
+            'latitude' => 42.7,
+            'longitude' => 23.3,
+            'expires_at' => $ends,
+        ]);
+
+        foreach (range(1, 12) as $number) {
+            Pin::query()->create([
+                'device_hash' => hash('sha256', 'jazz-'.$number),
+                'message' => 'Джаз '.$number,
+                'latitude' => 42.5,
+                'longitude' => 25.6,
+                'expires_at' => $ends,
+            ]);
+        }
+
+        $found = $this->getJson('/api/pins/search?q='.urlencode('Концерт'))
+            ->assertOk()
+            ->assertJsonCount(3, 'pins')
+            ->assertJsonPath('pins.0.message', 'Концерт')
+            ->assertJsonPath('pins.1.message', 'Концерт в залата')
+            ->assertJsonPath('pins.2.message', 'Вечер на площада');
+
+        $this->assertStringContainsString('private', (string) $found->headers->get('cache-control'));
+
+        $this->getJson('/api/pins/search?q='.urlencode('Джаз'))
+            ->assertOk()
+            ->assertJsonCount(10, 'pins');
+
+        $this->getJson('/api/pins/search?q=')
+            ->assertOk()
+            ->assertJsonCount(0, 'pins');
     }
 }

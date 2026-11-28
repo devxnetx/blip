@@ -9,6 +9,9 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/cities', [PinController::class, 'cities']);
 Route::get('/pins', [PinController::class, 'index']);
 Route::get('/pins/latest', [PinController::class, 'latest']);
+Route::get('/pins/search', [PinController::class, 'search'])
+    ->withoutMiddleware('throttle:api')
+    ->middleware('throttle:240,1');
 Route::get('/pins/{pin}', [PinController::class, 'show']);
 Route::post('/pins', [PinController::class, 'store'])->middleware('throttle:20,1');
 Route::get('/pins/{pin}/replies', [PinController::class, 'replies']);

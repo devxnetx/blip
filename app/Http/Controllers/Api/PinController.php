@@ -115,6 +115,65 @@ class PinController extends Controller
             ->header('Cache-Control', 'public, max-age=20');
     }
 
+    public function search(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $needle = trim((string) ($data['q'] ?? ''));
+        if ($needle === '') {
+            return response()->json(['pins' => []])
+                ->header('Cache-Control', 'private, no-store');
+        }
+
+        Pin::pruneExpired();
+
+        $words = array_values(array_unique(array_filter(
+            preg_split('/\s+/u', $needle) ?: [],
+            fn (string $word): bool => $word !== '',
+        )));
+        $words = array_slice($words, 0, 8);
+
+        $deviceHash = $this->optionalDeviceHash($request);
+        $pins = Pin::query()
+            ->onMap()
+            ->whereNull('suppressed_at')
+            ->where(function ($builder) use ($words): void {
+                foreach ($words as $word) {
+                    $this->orLike($builder, 'message', $word);
+                    $this->orLike($builder, 'description', $word);
+                }
+            })
+            ->orderByRaw($this->relevanceSql($words).' DESC', $this->relevanceBindings($needle, $words))
+            ->orderBy('starts_at')
+            ->limit(10)
+            ->get();
+
+        $repliedIds = collect();
+        $reportedIds = collect();
+
+        if ($deviceHash !== null && $pins->isNotEmpty()) {
+            $ids = $pins->pluck('id');
+            $repliedIds = Reply::query()
+                ->where('device_hash', $deviceHash)
+                ->whereIn('pin_id', $ids)
+                ->pluck('pin_id');
+            $reportedIds = Report::query()
+                ->where('device_hash', $deviceHash)
+                ->whereIn('pin_id', $ids)
+                ->pluck('pin_id');
+        }
+
+        return response()->json([
+            'pins' => $pins->map(fn (Pin $pin) => $pin->toApi(
+                $deviceHash !== null && hash_equals($pin->device_hash, $deviceHash),
+                $repliedIds->contains($pin->id),
+                $reportedIds->contains($pin->id),
+            ))->values(),
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
     public function show(Request $request, Pin $pin): JsonResponse
     {
         $this->ensureActive($pin);
@@ -341,6 +400,53 @@ class PinController extends Controller
             'reported' => true,
             'deleted' => $deleted,
         ]);
+    }
+
+    private function orLike($query, string $column, string $value): void
+    {
+        $query->orWhereRaw($column.' LIKE ? ESCAPE ?', [$this->like($value), '\\']);
+    }
+
+    /**
+     * @param  list<string>  $words
+     */
+    private function relevanceSql(array $words): string
+    {
+        $parts = [
+            '(CASE WHEN message = ? THEN 160 ELSE 0 END)',
+            '(CASE WHEN message LIKE ? ESCAPE ? THEN 80 ELSE 0 END)',
+            '(CASE WHEN description LIKE ? ESCAPE ? THEN 40 ELSE 0 END)',
+        ];
+
+        foreach ($words as $word) {
+            $parts[] = '(CASE WHEN message LIKE ? ESCAPE ? THEN 8 ELSE 0 END)';
+            $parts[] = '(CASE WHEN description LIKE ? ESCAPE ? THEN 3 ELSE 0 END)';
+        }
+
+        return implode(' + ', $parts);
+    }
+
+    /**
+     * @param  list<string>  $words
+     * @return list<string>
+     */
+    private function relevanceBindings(string $needle, array $words): array
+    {
+        $bindings = [$needle, $this->like($needle), '\\', $this->like($needle), '\\'];
+
+        foreach ($words as $word) {
+            $bindings[] = $this->like($word);
+            $bindings[] = '\\';
+            $bindings[] = $this->like($word);
+            $bindings[] = '\\';
+        }
+
+        return $bindings;
+    }
+
+    private function like(string $value): string
+    {
+        return '%'.addcslashes($value, '%_\\').'%';
     }
 
     private function deviceHash(Request $request): string
