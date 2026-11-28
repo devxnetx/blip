@@ -7,6 +7,7 @@ use App\Models\Reply;
 use App\Support\LinkPreview;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -816,5 +817,94 @@ class PinTest extends TestCase
             ->all();
 
         $this->assertEqualsCanonicalizing(['концерт в парка', 'Koncert night'], $messages);
+    }
+
+    public function test_search_summarizes_a_city_and_time_words(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-28 10:00:00', 'Europe/Sofia'));
+
+        try {
+            $this->timedPin('zagora-today', 'Днес в залата', 42.4258, 25.6345, 0, 4);
+            $this->timedPin('zagora-tomorrow', 'Утре в залата', 42.4258, 25.6345, 1, 32);
+            $this->timedPin('zagora-later', 'След десет дни', 42.43, 25.64, 10, 18);
+            $this->timedPin('zagora-far', 'След двайсет и пет дни', 42.43, 25.64, 25, 4);
+            $this->timedPin('sofia-today', 'София днес', 42.6977, 23.3219, 0, 8);
+
+            $city = $this->getJson('/api/pins/search?q='.urlencode('stara zagora'))
+                ->assertOk()
+                ->assertJsonPath('hints.0.kind', 'city')
+                ->assertJsonPath('hints.0.city', 'Стара Загора')
+                ->assertJsonPath('hints.0.suggested', false)
+                ->assertJsonPath('hints.0.today', 1)
+                ->assertJsonPath('hints.0.tomorrow', 1)
+                ->assertJsonPath('hints.0.days', 3)
+                ->assertJsonPath('hints.0.span', 20);
+
+            $this->assertCount(1, $city->json('hints'));
+
+            $this->getJson('/api/pins/search?q=dnes&here='.urlencode('Стара Загора'))
+                ->assertOk()
+                ->assertJsonPath('hints.0.kind', 'today')
+                ->assertJsonPath('hints.0.city', 'Стара Загора')
+                ->assertJsonPath('hints.0.suggested', true)
+                ->assertJsonPath('hints.0.count', 1);
+
+            $this->getJson('/api/pins/search?q='.urlencode('dnes v stara zagora'))
+                ->assertOk()
+                ->assertJsonPath('hints.0.kind', 'today')
+                ->assertJsonPath('hints.0.city', 'Стара Загора')
+                ->assertJsonPath('hints.0.suggested', false)
+                ->assertJsonPath('hints.0.count', 1);
+
+            $this->getJson('/api/pins/search?q='.urlencode('dnes stara zagora'))
+                ->assertOk()
+                ->assertJsonPath('hints.0.kind', 'today')
+                ->assertJsonPath('hints.0.city', 'Стара Загора')
+                ->assertJsonPath('hints.0.suggested', false)
+                ->assertJsonPath('hints.0.count', 1);
+
+            $this->getJson('/api/pins/search?q='.urlencode('утре в софия'))
+                ->assertOk()
+                ->assertJsonPath('hints.0.kind', 'tomorrow')
+                ->assertJsonPath('hints.0.city', 'София')
+                ->assertJsonPath('hints.0.suggested', false)
+                ->assertJsonPath('hints.0.count', 1);
+
+            $this->getJson('/api/pins/search?q='.urlencode('tiq dni').'&here='.urlencode('Стара Загора'))
+                ->assertOk()
+                ->assertJsonPath('hints.0.kind', 'soon')
+                ->assertJsonPath('hints.0.count', 2)
+                ->assertJsonPath('hints.0.span', 4)
+                ->assertJsonPath('hints.0.suggested', true)
+                ->assertJsonPath('hints.1.kind', 'today')
+                ->assertJsonPath('hints.1.count', 1)
+                ->assertJsonPath('hints.2.kind', 'tomorrow')
+                ->assertJsonPath('hints.2.count', 1);
+
+            $this->getJson('/api/pins/search?q=today&here='.urlencode('Пловдив'))
+                ->assertOk()
+                ->assertJsonPath('hints.0.city', 'Пловдив')
+                ->assertJsonPath('hints.0.suggested', true)
+                ->assertJsonPath('hints.0.count', 0);
+
+            $this->getJson('/api/pins/search?q='.urlencode('dnes koncert'))
+                ->assertOk()
+                ->assertJsonPath('hints', []);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    private function timedPin(string $hash, string $message, float $latitude, float $longitude, int $day, int $hours): void
+    {
+        $starts = now()->timezone('Europe/Sofia')->addDays($day)->setTime(18, 0);
+        Pin::query()->create([
+            'device_hash' => hash('sha256', $hash),
+            'message' => $message,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'starts_at' => $starts,
+            'expires_at' => $starts->copy()->addHours($hours),
+        ]);
     }
 }

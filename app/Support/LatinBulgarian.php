@@ -39,6 +39,7 @@ class LatinBulgarian
         'n' => 'н',
         'o' => 'о',
         'p' => 'п',
+        'q' => 'я',
         'r' => 'р',
         's' => 'с',
         't' => 'т',
@@ -68,6 +69,17 @@ class LatinBulgarian
         }
 
         return [$text, $cyrillic];
+    }
+
+    /**
+     * Lowercase Cyrillic, with ъ written as а, so "tarnovo" and "Търново" meet.
+     */
+    public static function fold(string $text): string
+    {
+        return strtr(mb_strtolower(self::toCyrillic($text)), [
+            'ъ' => 'а',
+            'ь' => '',
+        ]);
     }
 
     public static function toCyrillic(string $text): string

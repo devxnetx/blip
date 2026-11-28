@@ -15,6 +15,11 @@ class LatinBulgarianTest extends TestCase
         $this->assertSame('софия', LatinBulgarian::toCyrillic('sofiya'));
         $this->assertSame('чалга', LatinBulgarian::toCyrillic('chalga'));
         $this->assertSame('диана', LatinBulgarian::toCyrillic('diana'));
+        $this->assertSame('тия', LatinBulgarian::toCyrillic('tiq'));
+        $this->assertSame(
+            LatinBulgarian::fold('Велико Търново'),
+            LatinBulgarian::fold('veliko tarnovo'),
+        );
         $this->assertSame(['Концерт'], LatinBulgarian::forms('Концерт'));
     }
 }

@@ -555,6 +555,11 @@
             font-weight: 600;
         }
 
+        .pin-hit .hint-place {
+            color: var(--faint);
+            font-weight: 600;
+        }
+
         .pin-hit mark,
         mark.hit {
             background: transparent;

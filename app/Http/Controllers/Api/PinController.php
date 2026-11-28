@@ -10,6 +10,7 @@ use App\Models\Report;
 use App\Services\Discord\CityNotifier;
 use App\Support\LatinBulgarian;
 use App\Support\MapCities;
+use App\Support\SearchHints;
 use App\Support\UpcomingHorizon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -120,11 +121,12 @@ class PinController extends Controller
     {
         $data = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
+            'here' => ['nullable', 'string', 'max:80'],
         ]);
 
         $needle = trim((string) ($data['q'] ?? ''));
         if ($needle === '') {
-            return response()->json(['pins' => []])
+            return response()->json(['pins' => [], 'hints' => []])
                 ->header('Cache-Control', 'private, no-store');
         }
 
@@ -180,6 +182,7 @@ class PinController extends Controller
                 $repliedIds->contains($pin->id),
                 $reportedIds->contains($pin->id),
             ))->values(),
+            'hints' => SearchHints::forQuery($needle, $data['here'] ?? null),
         ])->header('Cache-Control', 'private, no-store');
     }
 

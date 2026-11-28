@@ -2077,7 +2077,7 @@ const CYRILLIC_GROUPS = [
 
 const CYRILLIC_LETTERS = {
   a: 'а', b: 'б', c: 'ц', d: 'д', e: 'е', f: 'ф', g: 'г', h: 'х', i: 'и',
-  j: 'й', k: 'к', l: 'л', m: 'м', n: 'н', o: 'о', p: 'п', r: 'р', s: 'с',
+  j: 'й', k: 'к', l: 'л', m: 'м', n: 'н', o: 'о', p: 'п', q: 'я', r: 'р', s: 'с',
   t: 'т', u: 'у', v: 'в', w: 'в', x: 'х', y: 'й', z: 'з',
 };
 
@@ -2193,14 +2193,124 @@ function searchSnippet(text, query) {
   return `${start > 0 ? '…' : ''}${slice}${start + 160 < value.length ? '…' : ''}`;
 }
 
+let searchHints = [];
+
+function currentCityName() {
+  if (!map || typeof map.getCenter !== 'function') {
+    return 'Стара Загора';
+  }
+  const center = map.getCenter();
+  let best = '';
+  let bestKm = CITY_RADIUS_KM;
+  CITIES.forEach((city) => {
+    const km = kmBetween(center.lat, center.lng, city.latitude, city.longitude);
+    if (km <= bestKm) {
+      bestKm = km;
+      best = city.name;
+    }
+  });
+  return best || 'Стара Загора';
+}
+
+function eventCount(count) {
+  return `${count} ${count === 1 ? 'събитие' : 'събития'}`;
+}
+
+function hintTitle(hint) {
+  if (hint.kind === 'city') {
+    return hint.city;
+  }
+  if (hint.kind === 'tomorrow') {
+    return 'Утре';
+  }
+  if (hint.kind === 'soon') {
+    return 'Тия дни';
+  }
+  return 'Днес';
+}
+
+function hintDetail(hint) {
+  if (hint.kind === 'city') {
+    return `Днес ${eventCount(hint.today)}, утре ${hint.tomorrow}, общо за ${hint.span} дни ${eventCount(hint.days)}`;
+  }
+  if (hint.kind === 'soon') {
+    return `${eventCount(hint.count)} за ${hint.span} дни`;
+  }
+  return eventCount(hint.count);
+}
+
+function hintButton(hint) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'pin-hit';
+  const title = document.createElement('strong');
+  title.textContent = hintTitle(hint);
+  if (hint.kind !== 'city' && hint.city) {
+    title.append(' ');
+    if (hint.suggested) {
+      const place = document.createElement('span');
+      place.className = 'hint-place';
+      place.textContent = hint.city;
+      title.append(place);
+    } else {
+      title.append(`в ${hint.city}`);
+    }
+  }
+  button.append(title);
+  const detail = document.createElement('em');
+  detail.textContent = hintDetail(hint);
+  button.append(detail);
+  button.addEventListener('click', () => openSearchHint(hint));
+  return button;
+}
+
+function openSearchHint(hint) {
+  closePinSearch();
+  viewTouched = true;
+  forgetView();
+  placed = true;
+  listCity = hint.city || '';
+  paintCityFilter();
+  const url = new URL(window.location.href);
+  if (hint.kind === 'today' && desktopMap()) {
+    period = 'today';
+    url.searchParams.set('period', 'today');
+    url.searchParams.delete('ahead');
+  } else if (hint.kind === 'soon') {
+    period = '';
+    url.searchParams.delete('period');
+    if (desktopMap()) {
+      desktopAhead = '4';
+      url.searchParams.set('ahead', '4');
+    } else {
+      phoneAhead = '4';
+      url.searchParams.delete('ahead');
+    }
+  } else if (desktopMap() && period === 'today') {
+    period = '';
+    url.searchParams.delete('period');
+    if (desktopAhead === '10' || desktopAhead === 'all') {
+      url.searchParams.delete('ahead');
+    } else {
+      url.searchParams.set('ahead', desktopAhead);
+    }
+  }
+  history.replaceState(null, '', url);
+  paintDesktopTime();
+  paintPhoneAhead();
+  showCity(Number(hint.latitude), Number(hint.longitude), { span: hint.kind === 'today' ? 0.12 : 0.08 });
+  reloadForWindow();
+}
+
 function renderSearchHits(settled) {
   const query = pinQuery.value;
   if (!query.trim()) {
+    searchHints = [];
     pinHits.replaceChildren();
     pinSearch.classList.remove('has-rows');
     return;
   }
-  if (searchHits.length === 0) {
+  if (searchHits.length === 0 && searchHints.length === 0) {
     pinHits.replaceChildren();
     if (!settled) {
       pinSearch.classList.remove('has-rows');
@@ -2213,7 +2323,11 @@ function renderSearchHits(settled) {
     pinSearch.classList.add('has-rows');
     return;
   }
-  pinHits.replaceChildren(...searchHits.map((pin) => {
+  const queryParts = query.trim().toLowerCase().split(/\s+/).filter(Boolean).flatMap((part) => {
+    const cyrillic = toCyrillic(part);
+    return cyrillic === part ? [part] : [part, cyrillic];
+  });
+  const events = searchHits.map((pin) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'pin-hit';
@@ -2221,8 +2335,7 @@ function renderSearchHits(settled) {
     title.innerHTML = highlightHtml(pin.message, query);
     button.append(title);
     const aboutText = String(pin.description || '');
-    const matched = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
-      .some((part) => aboutText.toLowerCase().includes(part));
+    const matched = queryParts.some((part) => aboutText.toLowerCase().includes(part));
     if (matched) {
       const about = document.createElement('em');
       about.innerHTML = highlightHtml(searchSnippet(aboutText, query), query);
@@ -2238,7 +2351,8 @@ function renderSearchHits(settled) {
     }
     button.addEventListener('click', () => showFoundPin(pin));
     return button;
-  }));
+  });
+  pinHits.replaceChildren(...searchHints.map(hintButton), ...events);
   pinSearch.classList.add('has-rows');
 }
 
@@ -2284,12 +2398,15 @@ async function runPinSearch() {
   const token = ++searchToken;
   if (!query) {
     searchHits = [];
+    searchHints = [];
     renderSearchHits(true);
     return;
   }
+  searchHints = [];
   renderSearchHits(false);
   try {
-    const response = await fetch(`/api/pins/search?q=${encodeURIComponent(query)}`, { headers: headers() });
+    const params = new URLSearchParams({ q: query, here: currentCityName() });
+    const response = await fetch(`/api/pins/search?${params}`, { headers: headers() });
     if (token !== searchToken) {
       return;
     }
@@ -2301,10 +2418,12 @@ async function runPinSearch() {
       return;
     }
     searchHits = body.pins || [];
+    searchHints = body.hints || [];
     renderSearchHits(true);
   } catch {
     if (token === searchToken) {
       searchHits = [];
+      searchHints = [];
       renderSearchHits(true);
     }
   }
