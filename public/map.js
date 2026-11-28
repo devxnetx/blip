@@ -1177,7 +1177,11 @@ function closePanel() {
   replies = [];
   panel.hidden = true;
   if (wasOpen) {
-    restoreView();
+    if (viewBeforePin) {
+      restoreView();
+    } else {
+      map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+    }
   }
 }
 
@@ -2353,10 +2357,53 @@ if (relocateBox && openRelocate) {
   const relocateError = document.getElementById('relocate-error');
   const relocatePick = document.getElementById('relocate-pick');
   let relocateLock = false;
+  let addressLanded = false;
 
   function showRelocateError(message) {
     relocateError.hidden = false;
     relocateError.textContent = message;
+  }
+
+  function flyToMovedPin(moved) {
+    const latitude = Number(moved.latitude);
+    const longitude = Number(moved.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return;
+    }
+    viewTouched = true;
+    forgetView();
+    introToken += 1;
+    const desktop = window.matchMedia('(min-width: 801px)').matches;
+    let padding;
+    if (desktop) {
+      const edges = [panel.getBoundingClientRect().left];
+      if (!relocateBox.hidden) {
+        edges.push(relocateBox.getBoundingClientRect().left);
+      }
+      const leftEdge = Math.min(...edges.filter((value) => value > 0));
+      const covered = Number.isFinite(leftEdge) ? window.innerWidth - leftEdge : 440;
+      padding = {
+        top: 80,
+        right: Math.min(Math.round(covered + 20), window.innerWidth - 160),
+        bottom: 48,
+        left: 48,
+      };
+    } else {
+      padding = {
+        top: 72,
+        right: 16,
+        bottom: Math.round((relocateBox.hidden ? 0 : relocateBox.getBoundingClientRect().height) + 28),
+        left: 16,
+      };
+    }
+    map.easeTo({
+      center: [longitude, latitude],
+      zoom: 16,
+      padding,
+      pitch: Math.max(map.getPitch(), 48),
+      bearing: map.getBearing(),
+      duration: 1100,
+    });
   }
 
   async function moveSelected(body) {
@@ -2382,20 +2429,21 @@ if (relocateBox && openRelocate) {
       pins = [moved, ...pins.filter((pin) => pin.id !== moved.id)];
       selected = moved;
       empty.hidden = pins.length !== 0;
-      viewTouched = true;
       drawMarkers();
-      if (Number.isFinite(Number(moved.latitude)) && Number.isFinite(Number(moved.longitude))) {
-        map.easeTo({
-          center: [Number(moved.longitude), Number(moved.latitude)],
-          zoom: Math.max(map.getZoom(), 15),
-          pitch: map.getPitch(),
-          bearing: map.getBearing(),
-          duration: 500,
-        });
+      if (body.address != null) {
+        if (!window.matchMedia('(min-width: 801px)').matches) {
+          panel.hidden = true;
+        }
+        renderPanel();
+        addressLanded = true;
+        flyToMovedPin(moved);
+        return;
       }
+      addressLanded = false;
       closeRelocate();
       panel.hidden = false;
       renderPanel();
+      flyToMovedPin(moved);
     } catch (err) {
       showRelocateError(err.message || 'Мястото не е записано.');
       if (selected) {
@@ -2414,13 +2462,21 @@ if (relocateBox && openRelocate) {
     placingId = null;
     relocateAddress.value = '';
     relocateError.hidden = true;
+    addressLanded = false;
     relocateBox.hidden = false;
   });
 
   document.getElementById('relocate-close').addEventListener('click', () => {
+    const pin = selected;
+    const landed = addressLanded;
+    addressLanded = false;
     closeRelocate();
-    if (selected) {
-      panel.hidden = false;
+    if (!pin) {
+      return;
+    }
+    panel.hidden = false;
+    if (landed) {
+      flyToMovedPin(pin);
     }
   });
 

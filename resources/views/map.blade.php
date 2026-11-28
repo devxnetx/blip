@@ -377,7 +377,7 @@
             z-index: 10000;
             top: 16px;
             right: calc(16px + min(380px, calc(100% - 32px)) + 12px);
-            width: min(260px, calc(100vw - 440px));
+            width: min(380px, calc(100vw - 488px));
             padding: 16px;
             border-radius: 18px;
             background: var(--card);
